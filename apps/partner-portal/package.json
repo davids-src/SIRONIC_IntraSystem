@@ -1,0 +1,20 @@
+{
+  "name": "@crm/partner-portal-app",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "lint": "next lint",
+    "start": "next start",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "test": "echo \"No tests yet for partner portal app\""
+  },
+  "dependencies": {
+    "@crm/rbac": "workspace:*",
+    "@crm/types": "workspace:*",
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

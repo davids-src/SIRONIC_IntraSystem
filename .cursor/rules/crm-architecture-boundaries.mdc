@@ -1,0 +1,42 @@
+---
+description: Enforce monorepo architecture boundaries and modular design
+alwaysApply: true
+---
+
+# CRM Architecture Boundaries
+
+## Core Stack
+- Use `Next.js` App Router (`15+`) with strict `TypeScript`.
+- Use `MongoDB` + `Mongoose`.
+- Use `Zod` for validation.
+- Use `TanStack Query` for client data fetching/caching.
+
+## Monorepo and Separation of Concerns
+- Keep strict boundaries between:
+  - `apps/crm`
+  - `apps/partner-portal`
+  - `packages/*`
+- Keep shared concerns in packages, not app-local duplicates:
+  - `packages/shared`
+  - `packages/lib`
+  - `packages/types`
+  - `packages/modules`
+
+## Design Principles
+- Apply Clean Architecture and modular design in every feature.
+- Prefer composition over inheritance.
+- Follow `SOLID`, `DRY`, and `KISS`.
+- Keep business logic in domain/services layers, never in React components.
+- Keep API routes/controllers thin; delegate to services/use-cases.
+
+## Type Safety Requirements
+- Enforce strict compiler behavior:
+  - `"strict": true`
+  - `"noImplicitAny": true`
+  - `"noUncheckedIndexedAccess": true`
+- Do not introduce `any` except in tightly scoped, documented interop boundaries.
+
+## Extensibility
+- New modules must plug into existing patterns without cross-app coupling.
+- New models, services, and routes must be strongly typed end-to-end.
+- If implementation breaks boundaries or modularity, refactor before continuing.

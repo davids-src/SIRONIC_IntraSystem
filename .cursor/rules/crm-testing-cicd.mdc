@@ -1,0 +1,40 @@
+---
+description: Enforce testing thresholds, hooks, and CI/CD quality gates
+alwaysApply: true
+---
+
+# CRM Testing and CI/CD Standards
+
+## Testing Requirements
+- Every new feature/module must include tests before merge.
+- Maintain `90%+` coverage for core business logic.
+- Include both unit and integration tests for domain-critical paths.
+- Use:
+  - `Jest`
+  - `React Testing Library`
+  - `MongoMemoryServer` for database-backed integration tests
+
+## Business Logic Coverage
+- Prioritize tests around services, domain logic, RBAC decisions, and module workflows.
+- Do not leave mission-critical logic untested in routes/components.
+- Add regression tests for bug fixes.
+
+## Local Quality Gates
+- Configure `Husky` + `lint-staged`.
+- Pre-commit must run:
+  - Type check
+  - Lint
+  - Format
+- Pre-push must run:
+  - Full build
+  - Full test suite
+
+## GitHub Workflow Requirements
+- Non-`main` branches: run tests + type-check.
+- `main` branch: build Docker images for:
+  - `crm`
+  - `partner-portal`
+
+## Merge Readiness
+- If tests, typing, or build checks fail, fix before proceeding.
+- Do not accept shortcuts that weaken automated quality gates.

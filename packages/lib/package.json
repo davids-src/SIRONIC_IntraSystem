@@ -1,0 +1,22 @@
+{
+  "name": "@crm/lib",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "lint": "echo \"No lint configured for @crm/lib\"",
+    "test": "jest --config jest.config.mjs --passWithNoTests"
+  },
+  "dependencies": {
+    "@crm/types": "workspace:*",
+    "mongoose": "^8.15.1",
+    "zod": "^3.24.3"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^10.1.4"
+  }
+}
