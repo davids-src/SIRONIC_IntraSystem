@@ -2,10 +2,7 @@ import { createProductDraft, generateSku, validateProduct } from "../src/invento
 
 describe("inventory module foundation", () => {
   it("generates category-prefixed SKUs", () => {
-    const sku = generateSku(
-      { _id: "cat-1", name: "Electrical", skuPrefix: "ELEC" },
-      42,
-    );
+    const sku = generateSku({ _id: "cat-1", name: "Electrical", skuPrefix: "ELEC" }, 42);
     expect(sku).toBe("ELEC-000042");
   });
 

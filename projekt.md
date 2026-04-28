@@ -1,7 +1,7 @@
 04_28
 
 Hol tart most
-Monorepo felállt (apps/*, packages/*, Turbo, pnpm workspace, strict TS baseline).
+Monorepo felállt (apps/_, packages/_, Turbo, pnpm workspace, strict TS baseline).
 Két Next app fut:
 apps/crm
 apps/partner-portal

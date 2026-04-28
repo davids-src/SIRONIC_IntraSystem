@@ -1,1 +1,1 @@
-pnpm build && pnpm test
+corepack pnpm build && corepack pnpm test

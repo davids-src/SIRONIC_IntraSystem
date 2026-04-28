@@ -13,7 +13,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <div style={{ minHeight: "100vh", display: "grid", gridTemplateColumns: "240px 1fr" }}>
+        <div
+          style={{
+            minHeight: "100vh",
+            display: "grid",
+            gridTemplateColumns: "240px 1fr",
+          }}
+        >
           <aside
             style={{
               borderRight: "1px solid #27272a",
