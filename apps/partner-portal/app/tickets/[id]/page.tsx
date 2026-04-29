@@ -11,6 +11,7 @@ import {
   Send,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { use } from "react";
 
 // Hardcoded single ticket for UI demo
 const mockTicket: Ticket = {
@@ -82,9 +83,13 @@ const statusColorMap: Record<
   closed: "default",
 };
 
-export default function PartnerTicketDetailPage({ params }: { params: { id: string } }) {
+export default function PartnerTicketDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const router = useRouter();
-  const ticket = mockTicket; // In real app, fetch based on params.id
+  const ticket = mockTicket; // In real app, fetch based on use(params).id
 
   const typeLabels: Record<string, string> = {
     incident: "Hibabejelentés",

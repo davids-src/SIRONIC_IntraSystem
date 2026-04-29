@@ -2,7 +2,7 @@
 
 import { PageHeader, Card, Button, Input, Badge, Table } from "@crm/ui";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, use } from "react";
 import {
   Save,
   FileSignature,
@@ -16,10 +16,10 @@ import {
 export default function CompletionCertificateFormPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   const router = useRouter();
-  const isNew = params.id === "new";
+  const isNew = use(params).id === "new";
 
   // Form state mock
   const [status, setStatus] = useState(isNew ? "draft" : "signed");

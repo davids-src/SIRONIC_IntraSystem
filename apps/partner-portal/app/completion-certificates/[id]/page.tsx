@@ -8,7 +8,7 @@ import { FileSignature, Download, CheckCircle2, Eye } from "lucide-react";
 export default function PartnerCompletionCertificateDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   const router = useRouter();
 

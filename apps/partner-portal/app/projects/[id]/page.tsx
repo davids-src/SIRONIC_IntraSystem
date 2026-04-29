@@ -17,7 +17,11 @@ import {
   AlertCircle,
 } from "lucide-react";
 
-export default function PartnerProjectDetailPage({ params }: { params: { id: string } }) {
+export default function PartnerProjectDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("overview");
 

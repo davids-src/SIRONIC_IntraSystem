@@ -18,7 +18,11 @@ import {
   Plus,
 } from "lucide-react";
 
-export default function ProjectDetailPage({ params }: { params: { id: string } }) {
+export default function ProjectDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("overview");
 

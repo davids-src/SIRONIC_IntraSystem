@@ -1,6 +1,8 @@
 "use client";
 
+import { use } from "react";
 import { PageHeader, Card, Badge, Button, Input } from "@crm/ui";
+import { useRouter } from "next/navigation";
 import type { Ticket, TicketComment } from "@crm/types";
 import {
   MessageSquare,
@@ -86,8 +88,12 @@ const statusColorMap: Record<
   closed: "default",
 };
 
-export default function TicketDetailPage({ params }: { params: { id: string } }) {
-  const ticket = mockTicket; // In real app, fetch based on params.id
+export default function TicketDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const ticket = mockTicket; // In real app, fetch based on use(params).id
 
   const typeLabels: Record<string, string> = {
     incident: "Hibabejelentés",

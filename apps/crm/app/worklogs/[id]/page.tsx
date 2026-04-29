@@ -2,12 +2,12 @@
 
 import { PageHeader, Card, Button, Input, Badge } from "@crm/ui";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, use } from "react";
 import { Save, FileSignature, FileText, CheckCircle2, Plus, Trash2 } from "lucide-react";
 
-export default function WorklogFormPage({ params }: { params: { id: string } }) {
+export default function WorklogFormPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
-  const isNew = params.id === "new";
+  const isNew = use(params).id === "new";
 
   // Form state mock
   const [status, setStatus] = useState("draft");

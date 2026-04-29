@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { FileSignature, Download, CheckCircle2 } from "lucide-react";
 
-export default function PartnerWorklogDetailPage({ params }: { params: { id: string } }) {
+export default function PartnerWorklogDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const router = useRouter();
 
   // Mock State

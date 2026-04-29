@@ -16,7 +16,11 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
-export default function OrganizationDetailPage({ params }: { params: { id: string } }) {
+export default function OrganizationDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("services");
 
