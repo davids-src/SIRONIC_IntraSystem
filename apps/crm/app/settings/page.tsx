@@ -64,73 +64,145 @@ const configurableLists: Array<{
 
 export default function SettingsPage() {
   return (
-    <div className="space-y-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       <PageHeader
         title="Beállítások"
         subtitle="Konfigurálható listák a rugalmas, operátor-vezérelt működéshez"
       />
 
       {/* Email notifications link */}
-      <Link href="/settings/email-notifications" className="block">
-        <Card className="p-5 hover:shadow-md transition-shadow cursor-pointer">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+      <Link
+        href="/settings/email-notifications"
+        style={{ display: "block", textDecoration: "none" }}
+      >
+        <Card
+          className="p-5"
+          style={{ cursor: "pointer", transition: "box-shadow 0.2s" }}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(0, 0, 0, 0.1)")
+          }
+          onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "none")}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
               <div
                 style={{
                   width: "40px",
                   height: "40px",
                   borderRadius: "8px",
-                  backgroundColor: "var(--color-accent-muted, #fef2f2)",
+                  backgroundColor: "var(--accent-badge-bg, #3b0a0a)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                 }}
               >
-                <Mail size={20} style={{ color: "var(--color-accent, #e53935)" }} />
+                <Mail size={20} style={{ color: "var(--accent-primary, #e53935)" }} />
               </div>
               <div>
-                <h2 className="text-base font-bold text-[var(--color-text-primary)]">
+                <h2
+                  style={{
+                    fontSize: "1rem",
+                    fontWeight: 700,
+                    color: "var(--text-primary)",
+                    margin: 0,
+                  }}
+                >
                   E-mail értesítések
                 </h2>
-                <p className="text-sm text-[var(--color-text-muted)] mt-0.5">
+                <p
+                  style={{
+                    fontSize: "0.875rem",
+                    color: "var(--text-muted)",
+                    margin: "2px 0 0 0",
+                  }}
+                >
                   Automatikus e-mail értesítések kezelése modulonként
                 </p>
               </div>
             </div>
-            <ChevronRight size={20} className="text-[var(--color-text-muted)]" />
+            <ChevronRight size={20} style={{ color: "var(--text-muted)" }} />
           </div>
         </Card>
       </Link>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+          gap: "24px",
+        }}
+      >
         {configurableLists.map((list) => (
-          <Card key={list.key} className="p-6 space-y-4">
-            <div className="flex items-start justify-between gap-4">
+          <Card
+            key={list.key}
+            className="p-6"
+            style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                gap: "16px",
+              }}
+            >
               <div>
-                <h2 className="text-lg font-bold text-[var(--color-text-primary)]">
+                <h2
+                  style={{
+                    fontSize: "1.125rem",
+                    fontWeight: 700,
+                    color: "var(--text-primary)",
+                    margin: 0,
+                  }}
+                >
                   {list.label_hu}
                 </h2>
-                <p className="text-sm text-[var(--color-text-muted)] mt-1">
+                <p
+                  style={{
+                    fontSize: "0.875rem",
+                    color: "var(--text-muted)",
+                    margin: "4px 0 0 0",
+                  }}
+                >
                   {list.description}
                 </p>
               </div>
-              <div className="flex gap-2">
-                <Button variant="secondary" className="h-9">
-                  <Plus size={16} className="mr-2" />
+              <div style={{ display: "flex", gap: "8px" }}>
+                <Button variant="secondary" style={{ height: "36px" }}>
+                  <Plus size={16} style={{ marginRight: "8px" }} />
                   Új
                 </Button>
               </div>
             </div>
 
-            <div className="space-y-3">
-              <div className="text-xs uppercase font-bold tracking-wider text-[var(--color-text-muted)]">
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  textTransform: "uppercase",
+                  fontWeight: 700,
+                  letterSpacing: "0.05em",
+                  color: "var(--text-muted)",
+                }}
+              >
                 Példák
               </div>
-              <div className="flex gap-2 flex-wrap">
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                 {list.examples.map((ex) => (
                   <span
                     key={ex}
-                    className="px-3 py-1 rounded-md border border-[var(--color-border-subtle)] text-sm"
+                    style={{
+                      padding: "4px 12px",
+                      borderRadius: "6px",
+                      border: "1px solid var(--border-subtle)",
+                      fontSize: "0.875rem",
+                    }}
                   >
                     {ex}
                   </span>
@@ -138,19 +210,42 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="pt-2 border-t border-[var(--color-border-subtle)]">
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-xs uppercase font-bold tracking-wider text-[var(--color-text-muted)]">
+            <div
+              style={{ paddingTop: "8px", borderTop: "1px solid var(--border-subtle)" }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "12px",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "0.75rem",
+                    textTransform: "uppercase",
+                    fontWeight: 700,
+                    letterSpacing: "0.05em",
+                    color: "var(--text-muted)",
+                  }}
+                >
                   Műveletek
                 </div>
-                <div className="flex items-center gap-2">
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   {list.operations.includes("add") && <Plus size={16} />}
                   {list.operations.includes("rename") && <Pencil size={16} />}
                   {list.operations.includes("delete") && <Trash2 size={16} />}
                   {list.operations.includes("reorder") && <ArrowUpDown size={16} />}
                 </div>
               </div>
-              <div className="text-sm text-[var(--color-text-muted)] mt-2">
+              <div
+                style={{
+                  fontSize: "0.875rem",
+                  color: "var(--text-muted)",
+                  marginTop: "8px",
+                }}
+              >
                 (UI demo) A tényleges szerkesztés itt majd API/DB-val kerül be.
               </div>
             </div>

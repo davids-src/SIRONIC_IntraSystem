@@ -2,7 +2,7 @@
 
 import { PageHeader, Card, Button, Badge } from "@crm/ui";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, use } from "react";
 import { FileSignature, Download, CheckCircle2, Eye } from "lucide-react";
 
 export default function PartnerCompletionCertificateDetailPage({
@@ -11,6 +11,8 @@ export default function PartnerCompletionCertificateDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const router = useRouter();
+  const resolvedParams = use(params);
+  const id = resolvedParams.id;
 
   // Mock State
   const [signed, setSigned] = useState(false);

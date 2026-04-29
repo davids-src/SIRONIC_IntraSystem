@@ -162,7 +162,7 @@ export default function PartnerDashboardPage() {
   );
 
   return (
-    <PartnerShell>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       <PageHeader
         title="Vezérlőpult"
         subtitle={`Partner nézet · Ajánlatok: ${canViewOffers ? "✓ elérhető" : "✗ nincs hozzáférés"}`}
@@ -316,6 +316,6 @@ export default function PartnerDashboardPage() {
           </div>
         </div>
       </Card>
-    </PartnerShell>
+    </div>
   );
 }

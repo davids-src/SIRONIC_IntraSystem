@@ -4,6 +4,7 @@ import * as React from "react";
 import { colors, spacing } from "../tokens";
 import { Sidebar, type SidebarProps } from "./Sidebar";
 import { Topbar, type TopbarProps } from "./Topbar";
+import { usePathname } from "next/navigation";
 
 export interface AppShellProps {
   sidebar: SidebarProps;
@@ -12,6 +13,8 @@ export interface AppShellProps {
 }
 
 export function AppShell({ sidebar, topbar, children }: AppShellProps) {
+  const pathname = usePathname() || "/";
+
   const [locale, setLocale] = React.useState<string>(() => {
     if (typeof window === "undefined") return "hu";
     return localStorage.getItem("sironic-locale") ?? "hu";
@@ -22,12 +25,6 @@ export function AppShell({ sidebar, topbar, children }: AppShellProps) {
     localStorage.setItem("sironic-locale", l);
     document.cookie = `sironic-locale=${l}; path=/; max-age=31536000`;
   };
-
-  // Detect current path for active nav highlight
-  const [currentPath, setCurrentPath] = React.useState("/");
-  React.useEffect(() => {
-    setCurrentPath(window.location.pathname);
-  }, []);
 
   // Mobile sidebar state
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
@@ -76,7 +73,7 @@ export function AppShell({ sidebar, topbar, children }: AppShellProps) {
       <div className="app-shell-layout">
         <Sidebar
           {...sidebar}
-          currentPath={currentPath}
+          currentPath={pathname}
           mobileOpen={mobileMenuOpen}
           onMobileClose={() => setMobileMenuOpen(false)}
         />

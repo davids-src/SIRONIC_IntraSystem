@@ -207,7 +207,7 @@ export default function CrmDashboardPage() {
   );
 
   return (
-    <CrmShell>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       <PageHeader
         title="Vezérlőpult"
         subtitle={`Rendszergazda nézet · Kontaktok: ${canViewOrganizations ? "✓ elérhető" : "✗ nincs hozzáférés"}`}
@@ -386,6 +386,6 @@ export default function CrmDashboardPage() {
           </div>
         </div>
       </Card>
-    </CrmShell>
+    </div>
   );
 }

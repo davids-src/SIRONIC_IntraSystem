@@ -87,23 +87,30 @@ const partnerUser: SidebarUser = {
   avatarInitials: "PF",
 };
 
+import { usePathname } from "next/navigation";
+
 export function PartnerShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname() || "";
+
+  if (pathname.endsWith("/print")) {
+    return <div style={{ minHeight: "100vh", backgroundColor: "#fff" }}>{children}</div>;
+  }
+
   return (
     <AppShell
       sidebar={{
-        appName: "Partner Portal",
+        appName: "SIRONIC Partner",
         appIcon: <ShieldCheck size={20} />,
         navItems: partnerNavItems,
         currentPath: "",
         user: partnerUser,
       }}
       topbar={{
-        breadcrumb: "Partner Portal",
+        breadcrumb: "SIRONIC Partner",
         notificationCount: 1,
-        userInitials: "PF",
+        userInitials: "KT",
         userMenuItems: [
           { label: "Cégprofil", onClick: () => {} },
-          { label: "Beállítások", onClick: () => {} },
           { label: "Kijelentkezés", onClick: () => {} },
         ],
       }}

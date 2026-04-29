@@ -3,11 +3,21 @@
 import { PageHeader, Card, Button, Input, Badge } from "@crm/ui";
 import { useRouter } from "next/navigation";
 import { useState, use } from "react";
-import { Save, FileSignature, FileText, CheckCircle2, Plus, Trash2 } from "lucide-react";
+import {
+  Save,
+  FileSignature,
+  FileText,
+  CheckCircle2,
+  Plus,
+  Trash2,
+  Download,
+} from "lucide-react";
 
 export default function WorklogFormPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
-  const isNew = use(params).id === "new";
+  const resolvedParams = use(params);
+  const id = resolvedParams.id;
+  const isNew = id === "new";
 
   // Form state mock
   const [status, setStatus] = useState("draft");
@@ -51,9 +61,12 @@ export default function WorklogFormPage({ params }: { params: Promise<{ id: stri
               </Button>
             )}
             {status === "finalized" && (
-              <Button type="button" variant="secondary">
-                <FileText size={16} className="mr-2 text-[var(--color-text-muted)]" />
-                PDF Letöltése
+              <Button
+                variant="secondary"
+                onClick={() => window.open(`/worklogs/${id}/print`, "_blank")}
+              >
+                <Download size={16} style={{ marginRight: "8px" }} />
+                Megtekintés / PDF
               </Button>
             )}
           </div>

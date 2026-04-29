@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { PartnerShell } from "./partner-shell";
 
 export const metadata: Metadata = {
   title: "SIRONIC Partner Portal",
@@ -11,7 +12,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="hu">
-      <body>{children}</body>
+      <body>
+        <PartnerShell>{children}</PartnerShell>
+      </body>
     </html>
   );
 }

@@ -2,7 +2,7 @@
 
 import { PageHeader, Card, Button, Input, Badge } from "@crm/ui";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, use } from "react";
 import { FileSignature, Download, CheckCircle2 } from "lucide-react";
 
 export default function PartnerWorklogDetailPage({
@@ -11,6 +11,8 @@ export default function PartnerWorklogDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const router = useRouter();
+  const resolvedParams = use(params);
+  const id = resolvedParams.id;
 
   // Mock State
   const [signed, setSigned] = useState(false);
@@ -25,9 +27,12 @@ export default function PartnerWorklogDetailPage({
             <Button variant="secondary" onClick={() => router.push("/worklogs")}>
               Vissza
             </Button>
-            <Button variant="primary">
-              <Download size={16} className="mr-2" />
-              PDF Letöltése
+            <Button
+              variant="secondary"
+              onClick={() => window.open(`/worklogs/${id}/print`, "_blank")}
+            >
+              <Download size={16} style={{ marginRight: "8px" }} />
+              Megtekintés / PDF
             </Button>
           </div>
         }

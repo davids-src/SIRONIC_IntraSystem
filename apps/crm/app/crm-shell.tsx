@@ -65,7 +65,15 @@ const seedUser: SidebarUser = {
   avatarInitials: "AD",
 };
 
+import { usePathname } from "next/navigation";
+
 export function CrmShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname() || "";
+
+  if (pathname.endsWith("/print")) {
+    return <div style={{ minHeight: "100vh", backgroundColor: "#fff" }}>{children}</div>;
+  }
+
   return (
     <AppShell
       sidebar={{

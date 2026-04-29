@@ -265,7 +265,7 @@ export default function EmailNotificationsPage() {
   const totalToggles = Object.keys(settings).length;
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       <PageHeader
         title="E-mail értesítések"
         subtitle="Automatikus e-mail értesítések be- és kikapcsolása modulonként"
@@ -273,48 +273,70 @@ export default function EmailNotificationsPage() {
 
       {/* Summary bar */}
       <Card className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <div
               style={{
                 width: "36px",
                 height: "36px",
                 borderRadius: "8px",
-                backgroundColor: "var(--color-accent-muted, #fef2f2)",
+                backgroundColor: "var(--accent-badge-bg, #3b0a0a)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <Mail size={18} style={{ color: "var(--color-accent, #e53935)" }} />
+              <Mail size={18} style={{ color: "var(--accent-primary, #e53935)" }} />
             </div>
             <div>
               <p
-                className="text-sm font-semibold"
-                style={{ color: "var(--color-text-primary)" }}
+                style={{
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                  color: "var(--text-primary)",
+                  margin: 0,
+                }}
               >
                 {totalEnabled} / {totalToggles} értesítés aktív
               </p>
-              <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+              <p
+                style={{
+                  fontSize: "0.75rem",
+                  color: "var(--text-muted)",
+                  margin: "2px 0 0 0",
+                }}
+              >
                 SMTP: no-reply@sironic.hu
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div style={{ display: "flex", gap: "8px" }}>
             <button
               onClick={() => {
                 const all: Record<string, boolean> = {};
                 for (const k of Object.keys(settings)) all[k] = true;
                 setSettings(all);
               }}
-              className="px-3 py-1.5 text-xs font-medium rounded-md border"
               style={{
-                borderColor: "var(--color-border-subtle, #e5e7eb)",
-                color: "var(--color-text-primary)",
-                backgroundColor: "var(--color-bg, #ffffff)",
+                padding: "6px 12px",
+                fontSize: "0.75rem",
+                fontWeight: 500,
+                borderRadius: "6px",
+                border: "1px solid var(--border-subtle, #e5e7eb)",
+                color: "var(--text-primary)",
+                backgroundColor: "transparent",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
               }}
             >
-              <Bell size={12} className="inline mr-1.5" />
+              <Bell size={12} style={{ marginRight: "6px" }} />
               Mind be
             </button>
             <button
@@ -323,14 +345,20 @@ export default function EmailNotificationsPage() {
                 for (const k of Object.keys(settings)) all[k] = false;
                 setSettings(all);
               }}
-              className="px-3 py-1.5 text-xs font-medium rounded-md border"
               style={{
-                borderColor: "var(--color-border-subtle, #e5e7eb)",
-                color: "var(--color-text-muted)",
-                backgroundColor: "var(--color-bg, #ffffff)",
+                padding: "6px 12px",
+                fontSize: "0.75rem",
+                fontWeight: 500,
+                borderRadius: "6px",
+                border: "1px solid var(--border-subtle, #e5e7eb)",
+                color: "var(--text-muted)",
+                backgroundColor: "transparent",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
               }}
             >
-              <BellOff size={12} className="inline mr-1.5" />
+              <BellOff size={12} style={{ marginRight: "6px" }} />
               Mind ki
             </button>
           </div>
@@ -338,45 +366,60 @@ export default function EmailNotificationsPage() {
       </Card>
 
       {/* Notification groups */}
-      <div className="space-y-4">
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         {notificationGroups.map((group) => {
           const groupEnabled = group.toggles.every((t) => settings[t.key]);
           const groupPartial =
             group.toggles.some((t) => settings[t.key]) && !groupEnabled;
 
           return (
-            <Card key={group.key} className="overflow-hidden">
+            <Card key={group.key} className="p-0 overflow-hidden">
               {/* Group header */}
               <div
-                className="flex items-center justify-between px-6 py-4"
                 style={{
-                  borderBottom: "1px solid var(--color-border-subtle, #e5e7eb)",
-                  backgroundColor: "var(--color-bg-secondary, #fafafa)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "16px 24px",
+                  borderBottom: "1px solid var(--border-subtle, #e5e7eb)",
+                  backgroundColor: "rgba(255, 255, 255, 0.02)",
                 }}
               >
-                <div className="flex items-center gap-3">
-                  <span style={{ color: "var(--color-accent, #e53935)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <span
+                    style={{
+                      color: "var(--accent-primary, #e53935)",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
                     {group.icon}
                   </span>
                   <h3
-                    className="text-sm font-bold"
-                    style={{ color: "var(--color-text-primary)" }}
+                    style={{
+                      fontSize: "0.875rem",
+                      fontWeight: 700,
+                      color: "var(--text-primary)",
+                      margin: 0,
+                    }}
                   >
                     {group.title}
                   </h3>
                   <span
-                    className="text-xs px-2 py-0.5 rounded-full"
                     style={{
+                      fontSize: "0.75rem",
+                      padding: "2px 8px",
+                      borderRadius: "999px",
                       backgroundColor: groupEnabled
-                        ? "var(--color-accent-muted, #fef2f2)"
+                        ? "var(--accent-badge-bg, #3b0a0a)"
                         : groupPartial
-                          ? "var(--color-warning-muted, #fffbeb)"
-                          : "var(--color-bg-tertiary, #f3f4f6)",
+                          ? "rgba(245, 158, 11, 0.1)"
+                          : "rgba(255, 255, 255, 0.05)",
                       color: groupEnabled
-                        ? "var(--color-accent, #e53935)"
+                        ? "var(--accent-primary, #e53935)"
                         : groupPartial
-                          ? "#d97706"
-                          : "var(--color-text-muted, #6b7280)",
+                          ? "#f59e0b"
+                          : "var(--text-muted)",
                     }}
                   >
                     {group.toggles.filter((t) => settings[t.key]).length}/
@@ -391,29 +434,40 @@ export default function EmailNotificationsPage() {
               </div>
 
               {/* Individual toggles */}
-              <div
-                className="divide-y"
-                style={{ borderColor: "var(--color-border-subtle, #f3f4f6)" }}
-              >
-                {group.toggles.map((toggle) => (
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {group.toggles.map((toggle, idx) => (
                   <div
                     key={toggle.key}
-                    className="flex items-center justify-between px-6 py-3.5"
                     style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "14px 24px",
+                      borderBottom:
+                        idx < group.toggles.length - 1
+                          ? "1px solid var(--border-subtle, #f3f4f6)"
+                          : "none",
                       opacity: settings[toggle.key] ? 1 : 0.6,
                       transition: "opacity 0.15s ease",
                     }}
                   >
-                    <div className="pr-4">
+                    <div style={{ paddingRight: "16px" }}>
                       <p
-                        className="text-sm font-medium"
-                        style={{ color: "var(--color-text-primary)" }}
+                        style={{
+                          fontSize: "0.875rem",
+                          fontWeight: 500,
+                          color: "var(--text-primary)",
+                          margin: 0,
+                        }}
                       >
                         {toggle.label}
                       </p>
                       <p
-                        className="text-xs mt-0.5"
-                        style={{ color: "var(--color-text-muted)" }}
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "var(--text-muted)",
+                          margin: "2px 0 0 0",
+                        }}
                       >
                         {toggle.description}
                       </p>
@@ -433,7 +487,7 @@ export default function EmailNotificationsPage() {
 
       {/* Save hint */}
       <Card className="p-4">
-        <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+        <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", margin: 0 }}>
           (UI demo) A beállítások mentése API/DB integráció után kerül megvalósításra.
         </p>
       </Card>

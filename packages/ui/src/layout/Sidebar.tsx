@@ -308,6 +308,8 @@ export function Sidebar({
   );
 }
 
+import Link from "next/link";
+
 function SidebarNavItem({
   item,
   isActive,
@@ -320,7 +322,7 @@ function SidebarNavItem({
   const [hovered, setHovered] = React.useState(false);
 
   return (
-    <a
+    <Link
       href={item.href}
       onClick={onNavigate}
       style={{
@@ -363,6 +365,6 @@ function SidebarNavItem({
         {item.icon}
       </span>
       {item.label}
-    </a>
+    </Link>
   );
 }
