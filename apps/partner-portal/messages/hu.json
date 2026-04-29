@@ -1,0 +1,28 @@
+{
+  "nav": {
+    "dashboard": "Vezérlőpult",
+    "offers": "Ajánlatok",
+    "inventory": "Készlet",
+    "company_profile": "Cégprofil",
+    "settings": "Beállítások"
+  },
+  "common": {
+    "save": "Mentés",
+    "cancel": "Mégse",
+    "delete": "Törlés",
+    "edit": "Szerkesztés",
+    "search": "Keresés",
+    "loading": "Betöltés...",
+    "no_data": "Nincs megjeleníthető adat"
+  },
+  "dashboard": {
+    "title": "Vezérlőpult",
+    "subtitle": "Üdvözöl a SIRONIC Partner Portal",
+    "available_offers": "Elérhető ajánlatok",
+    "inventory_items": "Készletelemek",
+    "open_orders": "Nyitott megrendelések",
+    "notifications": "Értesítések",
+    "recent_activity": "Legutóbbi aktivitás",
+    "no_activity": "Nincs legutóbbi aktivitás"
+  }
+}

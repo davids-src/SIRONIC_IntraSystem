@@ -1,0 +1,28 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "offers": "Offers",
+    "inventory": "Inventory",
+    "company_profile": "Company Profile",
+    "settings": "Settings"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search",
+    "loading": "Loading...",
+    "no_data": "No data to display"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Welcome to SIRONIC Partner Portal",
+    "available_offers": "Available Offers",
+    "inventory_items": "Inventory Items",
+    "open_orders": "Open Orders",
+    "notifications": "Notifications",
+    "recent_activity": "Recent Activity",
+    "no_activity": "No recent activity"
+  }
+}

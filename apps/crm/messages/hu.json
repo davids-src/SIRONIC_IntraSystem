@@ -1,0 +1,30 @@
+{
+  "nav": {
+    "dashboard": "Vezérlőpult",
+    "organizations": "Szervezetek",
+    "partners": "Partnerek",
+    "inventory": "Készlet",
+    "offers": "Ajánlatok",
+    "settings": "Beállítások",
+    "company_profile": "Cégprofil"
+  },
+  "common": {
+    "save": "Mentés",
+    "cancel": "Mégse",
+    "delete": "Törlés",
+    "edit": "Szerkesztés",
+    "search": "Keresés",
+    "loading": "Betöltés...",
+    "no_data": "Nincs megjeleníthető adat"
+  },
+  "dashboard": {
+    "title": "Vezérlőpult",
+    "subtitle": "Üdvözöl a SIRONIC CRM rendszer",
+    "organizations": "Szervezetek",
+    "partners": "Partnerek",
+    "inventory_items": "Készletelemek",
+    "active_offers": "Aktív ajánlatok",
+    "recent_activity": "Legutóbbi aktivitás",
+    "no_activity": "Nincs legutóbbi aktivitás"
+  }
+}

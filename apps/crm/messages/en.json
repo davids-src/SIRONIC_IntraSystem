@@ -1,0 +1,30 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "organizations": "Organizations",
+    "partners": "Partners",
+    "inventory": "Inventory",
+    "offers": "Offers",
+    "settings": "Settings",
+    "company_profile": "Company Profile"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search",
+    "loading": "Loading...",
+    "no_data": "No data to display"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Welcome to SIRONIC CRM",
+    "organizations": "Organizations",
+    "partners": "Partners",
+    "inventory_items": "Inventory Items",
+    "active_offers": "Active Offers",
+    "recent_activity": "Recent Activity",
+    "no_activity": "No recent activity"
+  }
+}

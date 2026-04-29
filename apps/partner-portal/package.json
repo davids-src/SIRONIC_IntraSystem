@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "scripts": {
     "build": "next build",
-    "dev": "next dev",
+    "dev": "next dev --port 3003",
     "lint": "echo \"Lint pending ESLint setup for @crm/partner-portal-app\"",
     "start": "next start",
     "typecheck": "tsc --project tsconfig.json --noEmit",
@@ -13,6 +13,8 @@
   "dependencies": {
     "@crm/rbac": "workspace:*",
     "@crm/types": "workspace:*",
+    "@crm/ui": "workspace:*",
+    "lucide-react": "^0.511.0",
     "next": "^15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
