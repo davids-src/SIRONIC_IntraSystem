@@ -3,6 +3,7 @@
 import { PageHeader, Card, Table, Badge, Button, Input } from "@crm/ui";
 import { Search, Plus, Edit } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 const mockOrgs = [
   { _id: "org1", name: "Acme Kft.", type: "Partner", status: "Active" },
@@ -11,6 +12,9 @@ const mockOrgs = [
 
 export default function OrganizationsPage() {
   const router = useRouter();
+  useEffect(() => {
+    router.replace("/contacts");
+  }, [router]);
 
   const columns = [
     {

@@ -3,8 +3,8 @@ import type { ActorContext, Permission, PermissionCheck, RoleKey } from "@crm/ty
 const rolePermissions: Record<RoleKey, Permission[]> = {
   "crm.admin": [
     { module: "dashboard", action: "view", scope: "global" },
-    { module: "organization", action: "admin", scope: "global" },
-    { module: "inventory", action: "admin", scope: "global" },
+    { module: "contact", action: "admin", scope: "global" },
+    { module: "price_list", action: "admin", scope: "global" },
     { module: "offer", action: "admin", scope: "global" },
     { module: "ticket", action: "admin", scope: "global" },
     { module: "worklog", action: "admin", scope: "global" },
@@ -14,8 +14,8 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
   ],
   "crm.staff": [
     { module: "dashboard", action: "view", scope: "global" },
-    { module: "organization", action: "write", scope: "global" },
-    { module: "inventory", action: "write", scope: "global" },
+    { module: "contact", action: "write", scope: "global" },
+    { module: "price_list", action: "write", scope: "global" },
     { module: "offer", action: "write", scope: "global" },
     { module: "ticket", action: "write", scope: "global" },
     { module: "ticket", action: "internal_comment", scope: "global" },
@@ -32,24 +32,24 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     { module: "project", action: "close", scope: "global" },
   ],
   "partner.admin": [
-    { module: "dashboard", action: "view", scope: "organization" },
-    { module: "inventory", action: "view", scope: "organization" },
-    { module: "offer", action: "admin", scope: "organization" },
-    { module: "ticket", action: "write", scope: "organization" },
-    { module: "worklog", action: "view", scope: "organization" },
-    { module: "completion_certificate", action: "sign", scope: "organization" },
-    { module: "completion_certificate", action: "view", scope: "organization" },
-    { module: "project", action: "view", scope: "organization" },
-    { module: "project", action: "manage_checklist", scope: "organization" },
-    { module: "project", action: "sign", scope: "organization" }, // reusing 'sign' for approval
+    { module: "dashboard", action: "view", scope: "contact" },
+    { module: "price_list", action: "view", scope: "contact" },
+    { module: "offer", action: "admin", scope: "contact" },
+    { module: "ticket", action: "write", scope: "contact" },
+    { module: "worklog", action: "view", scope: "contact" },
+    { module: "completion_certificate", action: "sign", scope: "contact" },
+    { module: "completion_certificate", action: "view", scope: "contact" },
+    { module: "project", action: "view", scope: "contact" },
+    { module: "project", action: "manage_checklist", scope: "contact" },
+    { module: "project", action: "sign", scope: "contact" }, // reusing 'sign' for approval
   ],
   "partner.viewer": [
-    { module: "dashboard", action: "view", scope: "organization" },
-    { module: "offer", action: "view", scope: "organization" },
-    { module: "ticket", action: "view", scope: "organization" },
-    { module: "worklog", action: "view", scope: "organization" },
-    { module: "completion_certificate", action: "view", scope: "organization" },
-    { module: "project", action: "view", scope: "organization" },
+    { module: "dashboard", action: "view", scope: "contact" },
+    { module: "offer", action: "view", scope: "contact" },
+    { module: "ticket", action: "view", scope: "contact" },
+    { module: "worklog", action: "view", scope: "contact" },
+    { module: "completion_certificate", action: "view", scope: "contact" },
+    { module: "project", action: "view", scope: "contact" },
   ],
 };
 
@@ -78,7 +78,7 @@ function matchesScope(
     return true;
   }
 
-  if (grantedScope === "organization") {
+  if (grantedScope === "contact") {
     if (!check.resourceTenantId) {
       return actor.tenantId.length > 0;
     }

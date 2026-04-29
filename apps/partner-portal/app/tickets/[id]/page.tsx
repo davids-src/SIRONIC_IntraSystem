@@ -18,20 +18,21 @@ const mockTicket: Ticket = {
   _id: "t1",
   ticket_number: "TK-000001",
   tenantId: "tenant1",
-  organization_id: "Acme Kft.",
+  contact_id: "org1",
+  one_time_contact_name: null,
+  one_time_contact_phone: null,
   project_id: null,
   created_by: "user1",
   assigned_to: "Kovács János",
   source: "partner_portal",
-  type: "incident",
+  category: "Hibabejelentés",
   priority: "high",
   status: "new",
   title: "Szerver leállás a központi irodában",
   description:
     "A központi fájlszerver nem elérhető tegnap este óta. A belső hálózat megszakadt, senki nem éri el a megosztott meghajtókat.",
   location: "Központi iroda, 1054 Budapest",
-  affected_system: "Szerver",
-  affected_devices: ["SRV-01 (Main File Server)", "SW-04 (Core Switch)"],
+  affected_items: "SRV-01 (Main File Server), SW-04 (Core Switch)",
   attachments: [
     { filename: "error_log.txt", url: "#", size: 12400, uploaded_at: new Date() },
     { filename: "screenshot.png", url: "#", size: 1024000, uploaded_at: new Date() },
@@ -57,7 +58,6 @@ const mockTicket: Ticket = {
   ],
   resolution_notes: null,
   resolved_at: null,
-  sla_deadline: null,
   created_at: new Date(Date.now() - 2 * 60 * 60 * 1000),
   updated_at: new Date(Date.now() - 1 * 60 * 60 * 1000),
 };
@@ -90,13 +90,6 @@ export default function PartnerTicketDetailPage({
 }) {
   const router = useRouter();
   const ticket = mockTicket; // In real app, fetch based on use(params).id
-
-  const typeLabels: Record<string, string> = {
-    incident: "Hibabejelentés",
-    service_request: "Szervizigény",
-    maintenance: "Karbantartás",
-    security: "Biztonságtechnika",
-  };
 
   const priorityLabels: Record<string, string> = {
     low: "Alacsony",
@@ -139,7 +132,7 @@ export default function PartnerTicketDetailPage({
               <Badge variant={priorityColorMap[ticket.priority]}>
                 {priorityLabels[ticket.priority] || ticket.priority}
               </Badge>
-              <Badge variant="default">{typeLabels[ticket.type] || ticket.type}</Badge>
+              <Badge variant="default">{ticket.category}</Badge>
             </div>
 
             <div>
@@ -162,21 +155,17 @@ export default function PartnerTicketDetailPage({
                 <div className="text-xs text-[var(--color-text-muted)] flex items-center gap-1">
                   <Server size={12} /> Érintett rendszer
                 </div>
-                <div className="text-sm font-medium">{ticket.affected_system}</div>
+                <div className="text-sm font-medium">{ticket.affected_items ?? "-"}</div>
               </div>
             </div>
 
-            {ticket.affected_devices.length > 0 && (
+            {ticket.affected_items && (
               <div className="space-y-2">
                 <div className="text-xs text-[var(--color-text-muted)] flex items-center gap-1">
-                  <ShieldAlert size={12} /> Érintett eszközök
+                  <ShieldAlert size={12} /> Érintett elemek
                 </div>
                 <div className="flex gap-2 flex-wrap">
-                  {ticket.affected_devices.map((dev) => (
-                    <span key={dev} className="inline-flex">
-                      <Badge variant="default">{dev}</Badge>
-                    </span>
-                  ))}
+                  <Badge variant="default">{ticket.affected_items}</Badge>
                 </div>
               </div>
             )}

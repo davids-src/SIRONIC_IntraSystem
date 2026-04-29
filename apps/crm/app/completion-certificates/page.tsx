@@ -11,12 +11,10 @@ const mockCertificates: CompletionCertificate[] = [
     _id: "cc1",
     certificate_number: "CC-000001",
     tenantId: "tenant1",
-    organization_id: "Acme Kft.",
+    contact_id: "org1",
     project_id: null,
-    partner_id: "partner1",
     created_by: "staff1",
     title: "Új irodaház hálózatépítés és szerver telepítés",
-    description: "Hálózatépítési projekt",
     status: "accepted",
     work_period_start: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
     work_period_end: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
@@ -37,12 +35,10 @@ const mockCertificates: CompletionCertificate[] = [
     _id: "cc2",
     certificate_number: "CC-000002",
     tenantId: "tenant1",
-    organization_id: "Acme Kft.",
+    contact_id: "org1",
     project_id: null,
-    partner_id: "partner2",
     created_by: "staff2",
     title: "Kamera rendszer karbantartás",
-    description: "Karbantartási munkálatok",
     status: "draft",
     work_period_start: new Date(),
     work_period_end: new Date(),
@@ -91,7 +87,7 @@ export default function CompletionCertificatesPage() {
     {
       key: "org",
       header: "Szervezet",
-      accessor: (row: CompletionCertificate) => row.organization_id, // Would map to actual name in real app
+      accessor: (row: CompletionCertificate) => row.contact_id ?? "-",
     },
     {
       key: "project",
@@ -104,7 +100,9 @@ export default function CompletionCertificatesPage() {
       key: "date",
       header: "Teljesítés időszaka",
       accessor: (row: CompletionCertificate) =>
-        `${new Date(row.work_period_start).toLocaleDateString()} - ${new Date(row.work_period_end).toLocaleDateString()}`,
+        `${row.work_period_start ? new Date(row.work_period_start).toLocaleDateString() : "-"} - ${
+          row.work_period_end ? new Date(row.work_period_end).toLocaleDateString() : "-"
+        }`,
     },
     {
       key: "status",

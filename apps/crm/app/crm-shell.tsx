@@ -6,9 +6,8 @@ import type { NavItem, SidebarUser } from "@crm/ui";
 
 import {
   LayoutDashboard,
-  Building2,
-  Handshake,
-  Package,
+  Users,
+  Tag,
   FileText,
   Settings,
   ShieldCheck,
@@ -39,18 +38,12 @@ const crmNavItems: NavItem[] = [
     icon: <FolderKanban size={16} />,
   },
   {
-    key: "organizations",
-    label: "Szervezetek",
-    href: "/organizations",
-    icon: <Building2 size={16} />,
+    key: "contacts",
+    label: "Kontaktok",
+    href: "/contacts",
+    icon: <Users size={16} />,
   },
-  {
-    key: "partners",
-    label: "Partnerek",
-    href: "/partners",
-    icon: <Handshake size={16} />,
-  },
-  { key: "inventory", label: "Készlet", href: "/inventory", icon: <Package size={16} /> },
+  { key: "price-list", label: "Árlista", href: "/price-list", icon: <Tag size={16} /> },
   { key: "offers", label: "Ajánlatok", href: "/offers", icon: <FileText size={16} /> },
   {
     key: "completion_certificates",

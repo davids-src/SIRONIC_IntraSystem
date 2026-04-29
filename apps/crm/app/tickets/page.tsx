@@ -11,24 +11,24 @@ const mockTickets: Ticket[] = [
     _id: "t1",
     ticket_number: "TK-000001",
     tenantId: "tenant1",
-    organization_id: "Acme Kft.",
+    contact_id: "org1",
+    one_time_contact_name: null,
+    one_time_contact_phone: null,
     project_id: null,
     created_by: "user1",
     assigned_to: "staff1",
     source: "partner_portal",
-    type: "incident",
+    category: "Hibabejelentés",
     priority: "high",
     status: "new",
     title: "Szerver leállás a központi irodában",
     description: "A szerver nem elérhető, a belső hálózat megszakadt.",
     location: "Központi iroda",
-    affected_system: "Szerver",
-    affected_devices: ["SRV-01"],
+    affected_items: "Szerver + belső hálózat (SRV-01)",
     attachments: [],
     comments: [],
     resolution_notes: null,
     resolved_at: null,
-    sla_deadline: new Date(Date.now() + 4 * 60 * 60 * 1000), // 4 hours from now
     created_at: new Date(Date.now() - 1 * 60 * 60 * 1000),
     updated_at: new Date(Date.now() - 1 * 60 * 60 * 1000),
   },
@@ -36,24 +36,24 @@ const mockTickets: Ticket[] = [
     _id: "t2",
     ticket_number: "TK-000002",
     tenantId: "tenant1",
-    organization_id: "Acme Kft.",
+    contact_id: "org1",
+    one_time_contact_name: null,
+    one_time_contact_phone: null,
     project_id: null,
     created_by: "user2",
     assigned_to: "staff1",
     source: "crm",
-    type: "maintenance",
+    category: "Karbantartás",
     priority: "medium",
     status: "in_progress",
     title: "Kamera rendszer karbantartása",
     description: "Havi rendes karbantartás a 2. telephelyen.",
     location: "2. telephely",
-    affected_system: "Kamera rendszer",
-    affected_devices: ["CAM-01", "CAM-02", "CAM-03"],
+    affected_items: "CAM-01, CAM-02, CAM-03",
     attachments: [],
     comments: [],
     resolution_notes: null,
     resolved_at: null,
-    sla_deadline: new Date(Date.now() + 48 * 60 * 60 * 1000),
     created_at: new Date(Date.now() - 24 * 60 * 60 * 1000),
     updated_at: new Date(Date.now() - 12 * 60 * 60 * 1000),
   },
@@ -98,7 +98,7 @@ export default function TicketsPage() {
         <div>
           <div className="font-medium">{row.title}</div>
           <div className="text-xs text-[var(--color-text-secondary)]">
-            {row.affected_system}
+            {row.affected_items ?? "-"}
           </div>
         </div>
       ),
@@ -106,20 +106,12 @@ export default function TicketsPage() {
     {
       key: "org",
       header: "Szervezet",
-      accessor: (row: Ticket) => row.organization_id, // Would map to actual name in real app
+      accessor: (row: Ticket) => row.contact_id ?? "-",
     },
     {
-      key: "type",
-      header: "Típus",
-      accessor: (row: Ticket) => {
-        const typeLabels: Record<string, string> = {
-          incident: "Hibabejelentés",
-          service_request: "Szervizigény",
-          maintenance: "Karbantartás",
-          security: "Biztonságtechnika",
-        };
-        return <Badge variant="default">{typeLabels[row.type] || row.type}</Badge>;
-      },
+      key: "category",
+      header: "Kategória",
+      accessor: (row: Ticket) => <Badge variant="default">{row.category}</Badge>,
     },
     {
       key: "priority",

@@ -156,7 +156,7 @@ export default function PartnerDashboardPage() {
     {
       module: "offer",
       action: "view",
-      scope: "organization",
+      scope: "contact",
       resourceTenantId: "org-001",
     },
   );

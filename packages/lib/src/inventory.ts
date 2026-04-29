@@ -1,63 +1,67 @@
 import { z } from "zod";
-import type { Product, ProductCategoryRef, ProductMetadata } from "@crm/types";
+import type { PriceListItem, PriceListItemType } from "@crm/types";
 
-const productMetadataSchema = z.object({
-  net_price: z.number().nonnegative(),
-  seller: z.string().min(1),
-  part_number: z.string().min(1),
-  updated_at: z.date(),
-});
+export function generateItemNumber(sequence: number): string {
+  const paddedSequence = sequence.toString().padStart(6, "0");
+  return `AR-${paddedSequence}`;
+}
 
-export const productSchema = z.object({
-  sku: z.string().regex(/^[A-Z0-9]+-\d{6}$/),
-  category: z.object({
-    _id: z.string().min(1),
-    name: z.string().min(1),
-    skuPrefix: z.string().regex(/^[A-Z0-9]+$/),
-  }),
-  part_number: z.string().min(1),
+export const priceListItemSchema = z.object({
+  _id: z.string().min(1),
+  tenantId: z.string().min(1),
+  item_number: z.string().regex(/^AR-\d{6}$/),
+  type: z.enum(["service", "product", "labor", "package"]),
+  name: z.string().min(1),
+  description: z.string().nullable(),
+  category: z.string().min(1),
+  unit: z.string().min(1),
   net_price: z.number().nonnegative(),
-  image: z.string().url().optional(),
-  metadata: productMetadataSchema,
-  metadata_history: z.array(productMetadataSchema),
+  currency: z.string().min(1),
+  tax_rate: z.number().nonnegative(),
+  is_active: z.boolean(),
+  notes: z.string().nullable(),
   created_at: z.date(),
   updated_at: z.date(),
 });
 
-export type ProductInput = z.infer<typeof productSchema>;
+export type PriceListItemInput = z.infer<typeof priceListItemSchema>;
 
-export function generateSku(category: ProductCategoryRef, sequence: number): string {
-  const paddedSequence = sequence.toString().padStart(6, "0");
-  return `${category.skuPrefix}-${paddedSequence}`;
-}
-
-export function createProductDraft(input: {
-  category: ProductCategoryRef;
-  part_number: string;
+export function createPriceListItemDraft(input: {
+  _id: string;
+  tenantId: string;
+  type: PriceListItemType;
+  name: string;
+  description: string | null;
+  category: string;
+  unit: string;
   net_price: number;
-  metadata: Omit<ProductMetadata, "updated_at">;
-  image?: string;
-  skuSequence: number;
-}): Product {
+  currency?: string;
+  tax_rate?: number;
+  is_active?: boolean;
+  notes?: string | null;
+  itemNumberSequence: number;
+}): PriceListItem {
   const now = new Date();
-  const metadataEntry: ProductMetadata = {
-    ...input.metadata,
-    updated_at: now,
-  };
 
   return {
-    sku: generateSku(input.category, input.skuSequence),
+    _id: input._id,
+    tenantId: input.tenantId,
+    item_number: generateItemNumber(input.itemNumberSequence),
+    type: input.type,
+    name: input.name,
+    description: input.description,
     category: input.category,
-    part_number: input.part_number,
+    unit: input.unit,
     net_price: input.net_price,
-    image: input.image,
-    metadata: metadataEntry,
-    metadata_history: [metadataEntry],
+    currency: input.currency ?? "HUF",
+    tax_rate: input.tax_rate ?? 27,
+    is_active: input.is_active ?? true,
+    notes: input.notes ?? null,
     created_at: now,
     updated_at: now,
   };
 }
 
-export function validateProduct(product: Product): ProductInput {
-  return productSchema.parse(product);
+export function validatePriceListItem(item: PriceListItem): PriceListItemInput {
+  return priceListItemSchema.parse(item);
 }

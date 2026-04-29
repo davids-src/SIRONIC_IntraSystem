@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { StatCard, PageHeader, Card } from "@crm/ui";
+import { StatCard, PageHeader, Card, Button } from "@crm/ui";
 import { hasPermission } from "@crm/rbac";
 import { CrmShell } from "./crm-shell";
+import { useRouter } from "next/navigation";
 
 // Inline icons
 function IconBuilding2() {
@@ -199,16 +200,22 @@ const recentActivity: ActivityItem[] = [
 ];
 
 export default function CrmDashboardPage() {
+  const router = useRouter();
   const canViewOrganizations = hasPermission(
     { actorId: "seed-admin", roleKeys: ["crm.admin"], tenantId: "global" },
-    { module: "organization", action: "view", scope: "global" },
+    { module: "contact", action: "view", scope: "global" },
   );
 
   return (
     <CrmShell>
       <PageHeader
         title="Vezérlőpult"
-        subtitle={`Rendszergazda nézet · Szervezetek: ${canViewOrganizations ? "✓ elérhető" : "✗ nincs hozzáférés"}`}
+        subtitle={`Rendszergazda nézet · Kontaktok: ${canViewOrganizations ? "✓ elérhető" : "✗ nincs hozzáférés"}`}
+        actions={
+          <Button variant="primary" onClick={() => router.push("/worklogs/new?quick=1")}>
+            ⚡ Gyors munkalap
+          </Button>
+        }
       />
 
       {/* Stat cards */}
@@ -219,20 +226,25 @@ export default function CrmDashboardPage() {
           gap: "16px",
         }}
       >
-        <StatCard label="Nyitott Ticketek" value="12" icon={<IconTicket />} trend="+3" />
+        <StatCard label="Nyitott ticketek" value="12" icon={<IconTicket />} trend="+3" />
         <StatCard
-          label="Aktív Projektek"
+          label="Aktív projektek"
           value="8"
           icon={<IconFolderKanban />}
           trend="+1"
         />
         <StatCard
-          label="Heti Munkalapok"
+          label="Mai munkalapok"
           value="48"
           icon={<IconClipboard />}
           trend="+12"
         />
-        <StatCard label="Partnerek" value="138" icon={<IconHandshake />} trend="+5" />
+        <StatCard
+          label="Aláírásra váró igazolások"
+          value="3"
+          icon={<IconBadgeCheck />}
+          trend="+2"
+        />
       </div>
 
       {/* Recent activity */}

@@ -11,9 +11,10 @@ const mockWorklogs: Worklog[] = [
     _id: "w1",
     worklog_number: "WL-000001",
     tenantId: "tenant1",
-    organization_id: "Acme Kft.",
+    contact_id: "org1",
+    one_time_contact_name: null,
+    one_time_contact_phone: null,
     project_id: null,
-    partner_id: "partner1",
     created_by: "staff1",
     ticket_id: "t1",
     status: "finalized",
@@ -25,20 +26,10 @@ const mockWorklogs: Worklog[] = [
     client_name: "Nagy Péter",
     client_signature: null,
     site_address: "Központi iroda, Budapest",
-    work_type: "it_support",
+    work_category: "IT támogatás",
     work_description:
       "Szerver hiba elhárítása, hálózati switch újraindítása és konfigurálása.",
-    devices_serviced: [
-      {
-        device_name: "SRV-01",
-        device_type: "Szerver",
-        serial_number: "SN-123",
-        action_taken: "Újraindítás, patch kábel csere",
-      },
-    ],
-    materials_used: [
-      { name: "CAT6 Patch kábel 2m", quantity: 1, unit: "db", part_number: "CAB-001" },
-    ],
+    items: [],
     travel_km: 15,
     notes: "A switch egyik portja kontakthibás volt.",
     pdf_url: "#",
@@ -49,9 +40,10 @@ const mockWorklogs: Worklog[] = [
     _id: "w2",
     worklog_number: "WL-000002",
     tenantId: "tenant1",
-    organization_id: "Acme Kft.",
+    contact_id: "org1",
+    one_time_contact_name: null,
+    one_time_contact_phone: null,
     project_id: null,
-    partner_id: "partner2",
     created_by: "staff1",
     ticket_id: null,
     status: "draft",
@@ -63,10 +55,9 @@ const mockWorklogs: Worklog[] = [
     client_name: "",
     client_signature: null,
     site_address: "2. telephely, Győr",
-    work_type: "maintenance",
+    work_category: "Karbantartás",
     work_description: "Kamera rendszer tisztítása és fókusz beállítása.",
-    devices_serviced: [],
-    materials_used: [],
+    items: [],
     travel_km: 120,
     notes: "",
     pdf_url: null,
@@ -81,22 +72,11 @@ const statusColorMap: Record<
 > = {
   draft: "default",
   finalized: "success",
-  signed: "info",
 };
 
 const statusLabels: Record<string, string> = {
   draft: "Piszkozat",
   finalized: "Véglegesített",
-  signed: "Aláírt",
-};
-
-const workTypeLabels: Record<string, string> = {
-  it_support: "IT Támogatás",
-  network: "Hálózatépítés",
-  security: "Biztonságtechnika",
-  web: "Webfejlesztés",
-  maintenance: "Karbantartás",
-  installation: "Telepítés",
 };
 
 export default function WorklogsPage() {
@@ -113,7 +93,7 @@ export default function WorklogsPage() {
     {
       key: "org",
       header: "Szervezet",
-      accessor: (row: Worklog) => row.organization_id, // Would map to actual name in real app
+      accessor: (row: Worklog) => row.contact_id ?? "-",
     },
     {
       key: "date",
@@ -133,11 +113,9 @@ export default function WorklogsPage() {
       accessor: (row: Worklog) => row.technician_name,
     },
     {
-      key: "type",
-      header: "Típus",
-      accessor: (row: Worklog) => (
-        <Badge variant="default">{workTypeLabels[row.work_type] || row.work_type}</Badge>
-      ),
+      key: "category",
+      header: "Munkakategória",
+      accessor: (row: Worklog) => <Badge variant="default">{row.work_category}</Badge>,
     },
     {
       key: "status",

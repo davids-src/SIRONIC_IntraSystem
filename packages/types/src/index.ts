@@ -17,16 +17,17 @@ export type PermissionAction =
 
 export type PermissionModule =
   | "dashboard"
-  | "organization"
-  | "inventory"
+  | "contact"
+  | "price_list"
   | "offer"
   | "ticket"
   | "worklog"
   | "completion_certificate"
   | "portal_permissions"
-  | "project";
+  | "project"
+  | "settings";
 
-export type PermissionScope = "global" | "organization" | "resource";
+export type PermissionScope = "global" | "contact" | "resource";
 
 export interface Permission {
   module: PermissionModule;
@@ -44,27 +45,22 @@ export interface PermissionCheck extends Permission {
   resourceTenantId?: string;
 }
 
-export interface ProductMetadata {
-  net_price: number;
-  seller: string;
-  part_number: string;
-  updated_at: Date;
-}
+export type PriceListItemType = "service" | "product" | "labor" | "package";
 
-export interface ProductCategoryRef {
+export interface PriceListItem {
   _id: string;
+  tenantId: string;
+  item_number: string;
+  type: PriceListItemType;
   name: string;
-  skuPrefix: string;
-}
-
-export interface Product {
-  sku: string;
-  category: ProductCategoryRef;
-  part_number: string;
+  description: string | null;
+  category: string;
+  unit: string;
   net_price: number;
-  image?: string;
-  metadata: ProductMetadata;
-  metadata_history: ProductMetadata[];
+  currency: string;
+  tax_rate: number;
+  is_active: boolean;
+  notes: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -85,8 +81,7 @@ export interface TicketComment {
   created_at: Date;
 }
 
-export type TicketSource = "crm" | "partner_portal";
-export type TicketType = "incident" | "service_request" | "maintenance" | "security";
+export type TicketSource = "crm" | "partner_portal" | "phone" | "email" | "walk_in";
 export type TicketPriority = "low" | "medium" | "high" | "critical";
 export type TicketStatus = "new" | "in_progress" | "waiting" | "resolved" | "closed";
 
@@ -94,73 +89,60 @@ export interface Ticket {
   _id: string;
   ticket_number: string;
   tenantId: string;
-  organization_id: string;
+  contact_id: string | null;
+  one_time_contact_name: string | null;
+  one_time_contact_phone: string | null;
   created_by: string;
   assigned_to: string | null;
   source: TicketSource;
-  type: TicketType;
   priority: TicketPriority;
   status: TicketStatus;
+  category: string;
   title: string;
   description: string;
   project_id: string | null;
-  location: string;
-  affected_system: string;
-  affected_devices: string[];
+  location: string | null;
+  affected_items: string | null;
   attachments: Attachment[];
   comments: TicketComment[];
   resolution_notes: string | null;
   resolved_at: Date | null;
-  sla_deadline: Date | null;
   created_at: Date;
   updated_at: Date;
 }
 
-export interface WorklogDevice {
-  device_name: string;
-  device_type: string;
-  serial_number: string | null;
-  action_taken: string;
-}
-
-export interface WorklogMaterial {
-  name: string;
+export interface WorklogItem {
+  description: string;
   quantity: number;
   unit: string;
-  part_number: string | null;
+  unit_price: number | null;
+  price_list_item_id: string | null;
 }
 
-export type WorklogStatus = "draft" | "finalized" | "signed";
-export type WorklogType =
-  | "it_support"
-  | "network"
-  | "security"
-  | "web"
-  | "maintenance"
-  | "installation";
+export type WorklogStatus = "draft" | "finalized";
 
 export interface Worklog {
   _id: string;
   worklog_number: string;
   tenantId: string;
-  organization_id: string;
-  partner_id: string | null;
-  created_by: string;
-  ticket_id: string | null;
+  contact_id: string | null;
+  one_time_contact_name: string | null;
+  one_time_contact_phone: string | null;
   project_id: string | null;
+  ticket_id: string | null;
+  created_by: string;
   status: WorklogStatus;
   work_date: Date;
-  work_start: string;
-  work_end: string;
+  work_start: string | null;
+  work_end: string | null;
   technician_name: string;
   technician_signature: string | null;
-  client_name: string;
+  client_name: string | null;
   client_signature: string | null;
-  site_address: string;
-  work_type: WorklogType;
+  site_address: string | null;
+  work_category: string;
   work_description: string;
-  devices_serviced: WorklogDevice[];
-  materials_used: WorklogMaterial[];
+  items: WorklogItem[];
   travel_km: number | null;
   notes: string | null;
   pdf_url: string | null;
@@ -174,21 +156,19 @@ export interface CompletionCertificate {
   _id: string;
   certificate_number: string;
   tenantId: string;
-  organization_id: string;
-  partner_id: string;
+  contact_id: string | null;
+  project_id: string | null;
   created_by: string;
+  status: CompletionCertificateStatus;
   worklog_ids: string[];
   ticket_ids: string[];
-  project_id: string | null;
-  status: CompletionCertificateStatus;
   title: string;
-  description: string;
-  work_period_start: Date;
-  work_period_end: Date;
-  total_hours: number;
   work_summary: string;
-  client_name: string;
-  client_title: string;
+  work_period_start: Date | null;
+  work_period_end: Date | null;
+  total_hours: number | null;
+  client_name: string | null;
+  client_title: string | null;
   client_signature: string | null;
   signed_at: Date | null;
   pdf_url: string | null;
@@ -206,21 +186,8 @@ export interface PortalPermissions {
   menu_settings: boolean;
 }
 
-export type ProjectType =
-  | "network"
-  | "web"
-  | "security"
-  | "nis2"
-  | "it_support"
-  | "other";
-export type ProjectContractType = "project" | "ongoing";
-export type ProjectStatus =
-  | "planning"
-  | "in_progress"
-  | "review"
-  | "live"
-  | "closed"
-  | "on_hold";
+export type ProjectContractType = "project" | "ongoing" | "mixed" | "one_time" | null;
+export type ProjectStatus = "open" | "on_hold" | "closed";
 export type ProjectPhaseStatus = "pending" | "in_progress" | "completed";
 export type StagingLinkApprovalStatus = "pending" | "approved" | "changes_requested";
 export type ChecklistItemCategory =
@@ -231,7 +198,6 @@ export type ChecklistItemCategory =
   | "other";
 
 export interface ProjectPhase {
-  _id: string;
   name: string;
   status: ProjectPhaseStatus;
   order: number;
@@ -266,32 +232,78 @@ export interface Project {
   _id: string;
   project_number: string;
   tenantId: string;
-  organization_id: string;
+  contact_id: string | null;
   created_by: string;
   assigned_to: string | null;
-  type: ProjectType;
   contract_type: ProjectContractType;
-  status: ProjectStatus;
   name: string;
   description: string;
-  start_date: Date;
+  category: string | null;
+  status: ProjectStatus;
+  start_date: Date | null;
   deadline: Date | null;
   closed_at: Date | null;
   budget_hours: number | null;
-  total_logged_hours: number;
-  staging_links: StagingLink[];
-  material_checklist: ChecklistItem[];
-  phases: ProjectPhase[];
   portal_visible: boolean;
+  phases: ProjectPhase[];
+  staging_links: StagingLink[];
+  checklist: ChecklistItem[];
+  notes: string | null;
   created_at: Date;
   updated_at: Date;
 }
 
-export interface Organization {
-  _id: string;
-  name: string;
-  tax_id?: string;
-  address?: string;
-  type?: string;
-  portal_permissions: PortalPermissions;
+export interface Address {
+  street: string;
+  city: string;
+  zip: string;
+  country: string;
 }
+
+export interface ContactPerson {
+  name: string;
+  title: string | null;
+  phone: string | null;
+  email: string | null;
+  is_primary: boolean;
+}
+
+export type ContactType = "company" | "individual" | "one_time";
+export type ContactContractType = "project" | "ongoing" | "mixed" | "one_time" | null;
+
+export interface Contact {
+  _id: string;
+  contact_number: string;
+  tenantId: string;
+  type: ContactType;
+  name: string;
+  short_name: string | null;
+  tax_number: string | null;
+  registration_number: string | null;
+  address: Address;
+  billing_address: Address | null;
+  contact_persons: ContactPerson[];
+  phone: string | null;
+  email: string | null;
+  notes: string | null;
+  tags: string[];
+  has_portal_access: boolean;
+  portal_permissions: PortalPermissions;
+  active_services: string[];
+  contract_type: ContactContractType;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface Settings {
+  ticket_categories: string[];
+  worklog_categories: string[];
+  project_categories: string[];
+  price_list_categories: string[];
+  worklog_units: string[];
+  contact_tags: string[];
+}
+
+// Backwards compatibility for older UI code during incremental refactor.
+// Will be removed once all modules are migrated.
+export type Organization = Contact;

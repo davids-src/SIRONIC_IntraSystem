@@ -5,7 +5,7 @@ export const APPS = {
 
 export const MODULE_KEYS = {
   dashboard: "dashboard",
-  organization: "organization",
-  inventory: "inventory",
+  contact: "contact",
+  price_list: "price_list",
   offer: "offer",
 } as const;

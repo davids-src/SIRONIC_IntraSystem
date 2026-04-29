@@ -11,23 +11,23 @@ const mockProjects: Project[] = [
     _id: "p1",
     project_number: "PR-000001",
     tenantId: "tenant1",
-    organization_id: "Acme Kft.", // Mocked as name for now
+    contact_id: "org1",
     created_by: "staff1",
     assigned_to: "Kovács János",
-    type: "network",
     contract_type: "project",
-    status: "in_progress",
+    status: "open",
     name: "Új irodaház hálózatépítés",
     description: "Komplett hálózati infrastruktúra kialakítása az új irodában.",
     start_date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
     deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     closed_at: null,
     budget_hours: 120,
-    total_logged_hours: 45,
     staging_links: [],
-    material_checklist: [],
+    checklist: [],
     phases: [],
     portal_visible: true,
+    category: "Hálózatépítés",
+    notes: null,
     created_at: new Date(),
     updated_at: new Date(),
   },
@@ -35,23 +35,23 @@ const mockProjects: Project[] = [
     _id: "p2",
     project_number: "PR-000002",
     tenantId: "tenant1",
-    organization_id: "GlobalTech Zrt.",
+    contact_id: "org2",
     created_by: "staff1",
     assigned_to: "Nagy Péter",
-    type: "web",
     contract_type: "ongoing",
-    status: "live",
+    status: "on_hold",
     name: "Weboldal karbantartás 2024",
     description: "Éves karbantartási szerződés a weboldalhoz.",
     start_date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
     deadline: new Date(Date.now() + 300 * 24 * 60 * 60 * 1000),
     closed_at: null,
     budget_hours: 50,
-    total_logged_hours: 12,
     staging_links: [],
-    material_checklist: [],
+    checklist: [],
     phases: [],
     portal_visible: true,
+    category: "Webfejlesztés",
+    notes: null,
     created_at: new Date(),
     updated_at: new Date(),
   },
@@ -61,30 +61,15 @@ const statusColorMap: Record<
   string,
   "success" | "warning" | "error" | "info" | "default"
 > = {
-  planning: "default",
-  in_progress: "info",
-  review: "warning",
-  live: "success",
+  open: "info",
+  on_hold: "warning",
   closed: "default",
-  on_hold: "error",
 };
 
 const statusLabels: Record<string, string> = {
-  planning: "Tervezés",
-  in_progress: "Kivitelezés",
-  review: "Ellenőrzés",
-  live: "Éles",
-  closed: "Lezárva",
+  open: "Nyitott",
   on_hold: "Szüneteltetve",
-};
-
-const typeLabels: Record<string, string> = {
-  network: "Hálózatépítés",
-  web: "Webfejlesztés",
-  security: "Biztonságtechnika",
-  nis2: "NIS2 megfelelőség",
-  it_support: "IT üzemeltetés",
-  other: "Egyéb",
+  closed: "Lezárva",
 };
 
 export default function ProjectsPage() {
@@ -105,17 +90,15 @@ export default function ProjectsPage() {
         <div>
           <div className="font-medium">{row.name}</div>
           <div className="text-xs text-[var(--color-text-muted)]">
-            {row.organization_id}
+            {row.contact_id ?? "-"}
           </div>
         </div>
       ),
     },
     {
-      key: "type",
-      header: "Típus",
-      accessor: (row: Project) => (
-        <Badge variant="default">{typeLabels[row.type] || row.type}</Badge>
-      ),
+      key: "category",
+      header: "Kategória",
+      accessor: (row: Project) => <Badge variant="default">{row.category ?? "-"}</Badge>,
     },
     {
       key: "status",
@@ -136,24 +119,7 @@ export default function ProjectsPage() {
       header: "Haladás",
       accessor: (row: Project) => {
         if (!row.budget_hours) return "-";
-        const percent = Math.min(
-          100,
-          Math.round((row.total_logged_hours / row.budget_hours) * 100),
-        );
-        return (
-          <div className="w-full max-w-[120px]">
-            <div className="flex justify-between text-xs mb-1">
-              <span>{row.total_logged_hours}h</span>
-              <span className="text-[var(--color-text-muted)]">{row.budget_hours}h</span>
-            </div>
-            <div className="h-2 w-full bg-[var(--color-bg-secondary)] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-[var(--color-accent-primary)] rounded-full"
-                style={{ width: `${percent}%` }}
-              />
-            </div>
-          </div>
-        );
+        return `${row.budget_hours}h`;
       },
     },
     {

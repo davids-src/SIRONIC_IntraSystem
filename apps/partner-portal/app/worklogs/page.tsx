@@ -11,9 +11,10 @@ const mockWorklogs: Worklog[] = [
     _id: "w1",
     worklog_number: "WL-000001",
     tenantId: "tenant1",
-    organization_id: "org1", // Match partner org
+    contact_id: "org1",
+    one_time_contact_name: null,
+    one_time_contact_phone: null,
     project_id: null,
-    partner_id: "partner1",
     created_by: "staff1",
     ticket_id: "t1",
     status: "finalized",
@@ -25,10 +26,9 @@ const mockWorklogs: Worklog[] = [
     client_name: "Nagy Péter",
     client_signature: null,
     site_address: "Központi iroda, Budapest",
-    work_type: "it_support",
+    work_category: "IT támogatás",
     work_description: "Szerver hiba elhárítása...",
-    devices_serviced: [],
-    materials_used: [],
+    items: [],
     travel_km: 15,
     notes: "",
     pdf_url: "#",
@@ -42,21 +42,10 @@ const statusColorMap: Record<
   "success" | "warning" | "error" | "info" | "default"
 > = {
   finalized: "success",
-  signed: "info",
 };
 
 const statusLabels: Record<string, string> = {
   finalized: "Jóváhagyásra vár",
-  signed: "Aláírva",
-};
-
-const workTypeLabels: Record<string, string> = {
-  it_support: "IT Támogatás",
-  network: "Hálózatépítés",
-  security: "Biztonságtechnika",
-  web: "Webfejlesztés",
-  maintenance: "Karbantartás",
-  installation: "Telepítés",
 };
 
 export default function PartnerWorklogsPage() {
@@ -88,11 +77,9 @@ export default function PartnerWorklogsPage() {
       accessor: (row: Worklog) => row.technician_name,
     },
     {
-      key: "type",
-      header: "Típus",
-      accessor: (row: Worklog) => (
-        <Badge variant="default">{workTypeLabels[row.work_type] || row.work_type}</Badge>
-      ),
+      key: "category",
+      header: "Munkakategória",
+      accessor: (row: Worklog) => <Badge variant="default">{row.work_category}</Badge>,
     },
     {
       key: "status",

@@ -1,9 +1,8 @@
 {
   "nav": {
     "dashboard": "Vezérlőpult",
-    "organizations": "Szervezetek",
-    "partners": "Partnerek",
-    "inventory": "Készlet",
+    "contacts": "Kontaktok",
+    "price-list": "Árlista",
     "offers": "Ajánlatok",
     "tickets": "Ticketek",
     "worklogs": "Munkalapok",
@@ -23,9 +22,8 @@
   "dashboard": {
     "title": "Vezérlőpult",
     "subtitle": "Üdvözöl a SIRONIC CRM rendszer",
-    "organizations": "Szervezetek",
-    "partners": "Partnerek",
-    "inventory_items": "Készletelemek",
+    "contacts": "Kontaktok",
+    "price_list_items": "Árlista tételek",
     "active_offers": "Aktív ajánlatok",
     "recent_activity": "Legutóbbi aktivitás",
     "no_activity": "Nincs legutóbbi aktivitás"

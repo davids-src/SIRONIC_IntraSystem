@@ -1,9 +1,8 @@
 {
   "nav": {
     "dashboard": "Dashboard",
-    "organizations": "Organizations",
-    "partners": "Partners",
-    "inventory": "Inventory",
+    "contacts": "Contacts",
+    "price-list": "Price List",
     "offers": "Offers",
     "tickets": "Tickets",
     "worklogs": "Worklogs",
@@ -23,9 +22,8 @@
   "dashboard": {
     "title": "Dashboard",
     "subtitle": "Welcome to SIRONIC CRM",
-    "organizations": "Organizations",
-    "partners": "Partners",
-    "inventory_items": "Inventory Items",
+    "contacts": "Contacts",
+    "price_list_items": "Price List Items",
     "active_offers": "Active Offers",
     "recent_activity": "Recent Activity",
     "no_activity": "No recent activity"

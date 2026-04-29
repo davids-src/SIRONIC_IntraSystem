@@ -1,27 +1,34 @@
-import { createProductDraft, generateSku, validateProduct } from "../src/inventory";
+import {
+  createPriceListItemDraft,
+  generateItemNumber,
+  validatePriceListItem,
+} from "../src/inventory";
 
-describe("inventory module foundation", () => {
-  it("generates category-prefixed SKUs", () => {
-    const sku = generateSku({ _id: "cat-1", name: "Electrical", skuPrefix: "ELEC" }, 42);
-    expect(sku).toBe("ELEC-000042");
+describe("price list module foundation", () => {
+  it("generates AR- item numbers", () => {
+    const itemNumber = generateItemNumber(42);
+    expect(itemNumber).toBe("AR-000042");
   });
 
-  it("creates product draft with metadata history", () => {
-    const product = createProductDraft({
-      category: { _id: "cat-1", name: "Electrical", skuPrefix: "ELEC" },
-      part_number: "PN-001",
-      net_price: 129.99,
-      metadata: {
-        net_price: 88.4,
-        part_number: "SUP-PN-001",
-        seller: "InternalSupplier",
-      },
-      skuSequence: 1,
+  it("creates price list draft with stable item number", () => {
+    const item = createPriceListItemDraft({
+      _id: "pl1",
+      tenantId: "tenant1",
+      type: "service",
+      name: "IT üzemeltetés (havi díj)",
+      description: "Havi díj sávonként",
+      category: "Munkadíjak",
+      unit: "hónap",
+      net_price: 12999,
+      currency: "HUF",
+      tax_rate: 27,
+      is_active: true,
+      notes: null,
+      itemNumberSequence: 1,
     });
 
-    expect(product.sku).toBe("ELEC-000001");
-    expect(product.metadata_history).toHaveLength(1);
-    expect(product.metadata.part_number).toBe("SUP-PN-001");
-    expect(() => validateProduct(product)).not.toThrow();
+    expect(item.item_number).toBe("AR-000001");
+    expect(item.type).toBe("service");
+    expect(() => validatePriceListItem(item)).not.toThrow();
   });
 });

@@ -11,12 +11,10 @@ const mockCertificates: CompletionCertificate[] = [
     _id: "cc1",
     certificate_number: "CC-000001",
     tenantId: "tenant1",
-    organization_id: "Acme Kft.",
+    contact_id: "org1",
     project_id: null,
-    partner_id: "partner1",
     created_by: "staff1",
     title: "Új irodaház hálózatépítés és szerver telepítés",
-    description: "Hálózatépítési projekt",
     status: "sent",
     work_period_start: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
     work_period_end: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
@@ -70,7 +68,9 @@ export default function PartnerCompletionCertificatesPage() {
       key: "date",
       header: "Teljesítés időszaka",
       accessor: (row: CompletionCertificate) =>
-        `${new Date(row.work_period_start).toLocaleDateString()} - ${new Date(row.work_period_end).toLocaleDateString()}`,
+        `${row.work_period_start ? new Date(row.work_period_start).toLocaleDateString() : "-"} - ${
+          row.work_period_end ? new Date(row.work_period_end).toLocaleDateString() : "-"
+        }`,
     },
     {
       key: "status",
