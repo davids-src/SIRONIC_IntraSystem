@@ -1,17 +1,26 @@
 "use client";
 
 import { PageHeader, Card, Table, Badge, Button, Input } from "@crm/ui";
+import type { Column } from "@crm/ui";
 import type { Worklog } from "@crm/types";
-import { Search, Filter, Plus, Download, Edit } from "lucide-react";
+import {
+  Search,
+  Filter,
+  Plus,
+  Download,
+  ClipboardList,
+  CheckCircle,
+  FileText,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
-// Mock data
 const mockWorklogs: Worklog[] = [
   {
     _id: "w1",
     worklog_number: "WL-000001",
     tenantId: "tenant1",
-    contact_id: "org1",
+    contact_id: "Tech Solutions Kft.",
     one_time_contact_name: null,
     one_time_contact_phone: null,
     project_id: null,
@@ -27,8 +36,7 @@ const mockWorklogs: Worklog[] = [
     client_signature: null,
     site_address: "Központi iroda, Budapest",
     work_category: "IT támogatás",
-    work_description:
-      "Szerver hiba elhárítása, hálózati switch újraindítása és konfigurálása.",
+    work_description: "Szerver hiba elhárítása, hálózati switch újraindítása.",
     items: [],
     travel_km: 15,
     notes: "A switch egyik portja kontakthibás volt.",
@@ -40,7 +48,7 @@ const mockWorklogs: Worklog[] = [
     _id: "w2",
     worklog_number: "WL-000002",
     tenantId: "tenant1",
-    contact_id: "org1",
+    contact_id: "Alpha Épület Zrt.",
     one_time_contact_name: null,
     one_time_contact_phone: null,
     project_id: null,
@@ -64,129 +72,276 @@ const mockWorklogs: Worklog[] = [
     created_at: new Date(),
     updated_at: new Date(),
   },
+  {
+    _id: "w3",
+    worklog_number: "WL-000003",
+    tenantId: "tenant1",
+    contact_id: "Beta Logisztika Kft.",
+    one_time_contact_name: null,
+    one_time_contact_phone: null,
+    project_id: "p1",
+    created_by: "staff2",
+    ticket_id: null,
+    status: "finalized",
+    work_date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+    work_start: "09:00",
+    work_end: "17:00",
+    technician_name: "Nagy Péter",
+    technician_signature: null,
+    client_name: "Szabó Anna",
+    client_signature: null,
+    site_address: "Raktár, Miskolc",
+    work_category: "Hálózatépítés",
+    work_description: "Strukturált hálózat kiépítése a raktár épületben.",
+    items: [],
+    travel_km: 180,
+    notes: "22 patch panel port bekötve.",
+    pdf_url: "#",
+    created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+    updated_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+  },
 ];
 
-const statusColorMap: Record<
-  string,
-  "success" | "warning" | "error" | "info" | "default"
-> = {
-  draft: "default",
-  finalized: "success",
-};
-
-const statusLabels: Record<string, string> = {
-  draft: "Piszkozat",
-  finalized: "Véglegesített",
-};
+const statusVariant = { draft: "default", finalized: "success" } as const;
+const statusLabel = { draft: "Piszkozat", finalized: "Véglegesített" } as const;
 
 export default function WorklogsPage() {
   const router = useRouter();
+  const [search, setSearch] = useState("");
 
-  const columns = [
+  const filtered = mockWorklogs.filter(
+    (w) =>
+      w.worklog_number.toLowerCase().includes(search.toLowerCase()) ||
+      (w.contact_id ?? "").toLowerCase().includes(search.toLowerCase()) ||
+      w.technician_name.toLowerCase().includes(search.toLowerCase()) ||
+      w.work_category.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  const counts = {
+    total: mockWorklogs.length,
+    draft: mockWorklogs.filter((w) => w.status === "draft").length,
+    finalized: mockWorklogs.filter((w) => w.status === "finalized").length,
+  };
+
+  const columns: Column<Worklog>[] = [
     {
-      key: "id",
+      key: "worklog_number",
       header: "Munkalap",
-      accessor: (row: Worklog) => (
-        <span className="font-mono text-xs">{row.worklog_number}</span>
+      width: "120px",
+      render: (row) => (
+        <span
+          style={{
+            fontFamily: "monospace",
+            fontSize: "0.8rem",
+            color: "var(--color-text-muted, #555)",
+          }}
+        >
+          {row.worklog_number}
+        </span>
       ),
     },
     {
-      key: "org",
-      header: "Szervezet",
-      accessor: (row: Worklog) => row.contact_id ?? "-",
-    },
-    {
-      key: "date",
-      header: "Dátum",
-      accessor: (row: Worklog) => (
+      key: "work_description",
+      header: "Feladat",
+      render: (row) => (
         <div>
-          <div>{new Date(row.work_date).toLocaleDateString()}</div>
-          <div className="text-xs text-[var(--color-text-muted)]">
-            {row.work_start} - {row.work_end}
+          <div style={{ fontWeight: 600, marginBottom: "2px" }}>{row.work_category}</div>
+          <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted, #555)" }}>
+            {row.contact_id ?? "—"} · {row.site_address}
           </div>
         </div>
       ),
     },
     {
-      key: "technician",
-      header: "Technikus",
-      accessor: (row: Worklog) => row.technician_name,
+      key: "work_date",
+      header: "Dátum",
+      width: "140px",
+      render: (row) => (
+        <div>
+          <div style={{ fontSize: "0.85rem" }}>
+            {new Date(row.work_date).toLocaleDateString("hu-HU")}
+          </div>
+          <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted, #555)" }}>
+            {row.work_start} – {row.work_end}
+          </div>
+        </div>
+      ),
     },
     {
-      key: "category",
-      header: "Munkakategória",
-      accessor: (row: Worklog) => <Badge variant="default">{row.work_category}</Badge>,
+      key: "technician_name",
+      header: "Technikus",
+      width: "140px",
+      render: (row) => (
+        <span
+          style={{ fontSize: "0.825rem", color: "var(--color-text-secondary, #a0a0a0)" }}
+        >
+          {row.technician_name}
+        </span>
+      ),
+    },
+    {
+      key: "travel_km",
+      header: "Km",
+      width: "70px",
+      render: (row) => (
+        <span style={{ fontSize: "0.8rem", color: "var(--color-text-muted, #555)" }}>
+          {row.travel_km ?? 0} km
+        </span>
+      ),
     },
     {
       key: "status",
       header: "Állapot",
-      accessor: (row: Worklog) => (
-        <Badge variant={statusColorMap[row.status]}>
-          {statusLabels[row.status] || row.status}
+      width: "130px",
+      render: (row) => (
+        <Badge
+          variant={statusVariant[row.status as keyof typeof statusVariant] ?? "default"}
+        >
+          {statusLabel[row.status as keyof typeof statusLabel] ?? row.status}
         </Badge>
       ),
     },
     {
-      key: "actions",
+      key: "pdf_url",
       header: "",
-      accessor: (row: Worklog) => (
-        <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-          <Button
-            variant="ghost"
-            className="p-2 h-8 w-8"
-            onClick={() => router.push(`/worklogs/${row._id}`)}
+      width: "48px",
+      render: (row) =>
+        row.pdf_url ? (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              window.open(String(row.pdf_url), "_blank");
+            }}
+            style={{
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--color-text-muted, #555)",
+              padding: "4px",
+              borderRadius: "6px",
+              display: "flex",
+              alignItems: "center",
+            }}
+            title="PDF letöltése"
           >
-            <Edit size={14} />
-          </Button>
-          {row.status === "finalized" && (
-            <Button variant="secondary" className="p-2 h-8 w-8">
-              <Download size={14} />
-            </Button>
-          )}
-        </div>
-      ),
+            <Download size={14} />
+          </button>
+        ) : null,
     },
   ];
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       <PageHeader
         title="Munkalapok"
         subtitle="Helyszíni és távoli munkavégzések adminisztrációja"
         actions={
           <Button variant="primary" onClick={() => router.push("/worklogs/new")}>
-            <Plus size={16} className="mr-2" />
+            <Plus size={16} style={{ marginRight: "6px" }} />
             Új munkalap
           </Button>
         }
       />
 
-      <Card className="p-4 space-y-4">
-        {/* Filters bar */}
-        <div className="flex flex-col sm:flex-row gap-4 items-end">
-          <div className="flex-1 w-full relative">
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+          gap: "12px",
+        }}
+      >
+        {[
+          {
+            label: "Összes",
+            count: counts.total,
+            icon: <ClipboardList size={16} />,
+            color: "#6b7280",
+          },
+          {
+            label: "Piszkozat",
+            count: counts.draft,
+            icon: <FileText size={16} />,
+            color: "#f59e0b",
+          },
+          {
+            label: "Véglegesített",
+            count: counts.finalized,
+            icon: <CheckCircle size={16} />,
+            color: "#22c55e",
+          },
+        ].map((stat) => (
+          <Card key={stat.label} className="p-4">
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: "8px",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                  color: "var(--color-text-muted, #555)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                {stat.label}
+              </span>
+              <span style={{ color: stat.color }}>{stat.icon}</span>
+            </div>
+            <div
+              style={{
+                fontSize: "1.75rem",
+                fontWeight: 700,
+                color: "var(--color-text-primary, #fff)",
+                lineHeight: 1,
+              }}
+            >
+              {stat.count}
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="p-4">
+        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: "200px", position: "relative" }}>
             <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
-              size={16}
+              size={15}
+              style={{
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--color-text-muted, #555)",
+                pointerEvents: "none",
+              }}
             />
             <Input
-              label="Keresés"
-              placeholder="Munkalap ID, technikus vagy szervezet..."
-              className="pl-9"
+              label=""
+              placeholder="Keresés munkalapban..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ paddingLeft: "36px" }}
             />
           </div>
-          <Button variant="secondary" className="w-full sm:w-auto">
-            <Filter size={16} className="mr-2" />
+          <Button variant="secondary">
+            <Filter size={15} style={{ marginRight: "6px" }} />
             Szűrők
           </Button>
         </div>
+      </Card>
 
-        {/* Worklogs table */}
-        <Table
-          data={mockWorklogs as any[]}
-          columns={columns as any[]}
+      <Card className="p-0 overflow-hidden">
+        <Table<Worklog>
+          data={filtered}
+          columns={columns}
           keyField="_id"
-          emptyMessage="Nincs megjeleníthető adat"
+          onRowClick={(row) => router.push(`/worklogs/${row._id}`)}
+          emptyMessage="Nincs találat a keresési feltételekre"
         />
       </Card>
     </div>

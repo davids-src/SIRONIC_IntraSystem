@@ -72,7 +72,7 @@ export function CrmShell({ children }: { children: React.ReactNode }) {
         appName: "SIRONIC CRM",
         appIcon: <ShieldCheck size={20} />,
         navItems: crmNavItems,
-        currentPath: "/",
+        currentPath: "",
         user: seedUser,
       }}
       topbar={{

@@ -94,7 +94,7 @@ export function PartnerShell({ children }: { children: React.ReactNode }) {
         appName: "Partner Portal",
         appIcon: <ShieldCheck size={20} />,
         navItems: partnerNavItems,
-        currentPath: "/",
+        currentPath: "",
         user: partnerUser,
       }}
       topbar={{

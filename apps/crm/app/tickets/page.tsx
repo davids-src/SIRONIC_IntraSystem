@@ -1,22 +1,31 @@
 "use client";
 
 import { PageHeader, Card, Table, Badge, Button, Input } from "@crm/ui";
+import type { Column } from "@crm/ui";
 import type { Ticket } from "@crm/types";
-import { Search, Filter, Plus } from "lucide-react";
+import {
+  Search,
+  Filter,
+  Plus,
+  Ticket as TicketIcon,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
-// Mock data
 const mockTickets: Ticket[] = [
   {
     _id: "t1",
     ticket_number: "TK-000001",
     tenantId: "tenant1",
-    contact_id: "org1",
+    contact_id: "Tech Solutions Kft.",
     one_time_contact_name: null,
     one_time_contact_phone: null,
     project_id: null,
     created_by: "user1",
-    assigned_to: "staff1",
+    assigned_to: "Kovács János",
     source: "partner_portal",
     category: "Hibabejelentés",
     priority: "high",
@@ -24,7 +33,7 @@ const mockTickets: Ticket[] = [
     title: "Szerver leállás a központi irodában",
     description: "A szerver nem elérhető, a belső hálózat megszakadt.",
     location: "Központi iroda",
-    affected_items: "Szerver + belső hálózat (SRV-01)",
+    affected_items: "SRV-01 szerver",
     attachments: [],
     comments: [],
     resolution_notes: null,
@@ -36,12 +45,12 @@ const mockTickets: Ticket[] = [
     _id: "t2",
     ticket_number: "TK-000002",
     tenantId: "tenant1",
-    contact_id: "org1",
+    contact_id: "Alpha Épület Zrt.",
     one_time_contact_name: null,
     one_time_contact_phone: null,
     project_id: null,
     created_by: "user2",
-    assigned_to: "staff1",
+    assigned_to: "Nagy Péter",
     source: "crm",
     category: "Karbantartás",
     priority: "medium",
@@ -57,143 +66,308 @@ const mockTickets: Ticket[] = [
     created_at: new Date(Date.now() - 24 * 60 * 60 * 1000),
     updated_at: new Date(Date.now() - 12 * 60 * 60 * 1000),
   },
+  {
+    _id: "t3",
+    ticket_number: "TK-000003",
+    tenantId: "tenant1",
+    contact_id: "Beta Logisztika Kft.",
+    one_time_contact_name: null,
+    one_time_contact_phone: null,
+    project_id: "p1",
+    created_by: "user1",
+    assigned_to: "Kovács János",
+    source: "crm",
+    category: "IT támogatás",
+    priority: "low",
+    status: "waiting",
+    title: "VPN hozzáférés konfigurálása",
+    description: "Új munkavállaló VPN hozzáférésének beállítása.",
+    location: "Remote",
+    affected_items: "VPN szerver",
+    attachments: [],
+    comments: [],
+    resolution_notes: null,
+    resolved_at: null,
+    created_at: new Date(Date.now() - 48 * 60 * 60 * 1000),
+    updated_at: new Date(Date.now() - 48 * 60 * 60 * 1000),
+  },
+  {
+    _id: "t4",
+    ticket_number: "TK-000004",
+    tenantId: "tenant1",
+    contact_id: "Tech Solutions Kft.",
+    one_time_contact_name: null,
+    one_time_contact_phone: null,
+    project_id: null,
+    created_by: "user1",
+    assigned_to: "Nagy Péter",
+    source: "partner_portal",
+    category: "Hibabejelentés",
+    priority: "critical",
+    status: "resolved",
+    title: "Tűzfal szabályzat hiba",
+    description: "Nem megfelelő tűzfal konfiguráció blokkolja az üzleti forgalmat.",
+    location: "Adatközpont",
+    affected_items: "FW-01",
+    attachments: [],
+    comments: [],
+    resolution_notes: "Szabályzat frissítve.",
+    resolved_at: new Date(Date.now() - 3 * 60 * 60 * 1000),
+    created_at: new Date(Date.now() - 6 * 60 * 60 * 1000),
+    updated_at: new Date(Date.now() - 3 * 60 * 60 * 1000),
+  },
 ];
 
-const priorityColorMap: Record<
-  string,
-  "success" | "warning" | "error" | "info" | "default"
-> = {
+const priorityVariant = {
   low: "info",
   medium: "warning",
   high: "error",
   critical: "error",
-};
-
-const statusColorMap: Record<
-  string,
-  "success" | "warning" | "error" | "info" | "default"
-> = {
+} as const;
+const priorityLabel = {
+  low: "Alacsony",
+  medium: "Közepes",
+  high: "Magas",
+  critical: "Kritikus",
+} as const;
+const statusVariant = {
   new: "info",
   in_progress: "warning",
   waiting: "default",
   resolved: "success",
   closed: "default",
-};
+} as const;
+const statusLabel = {
+  new: "Új",
+  in_progress: "Folyamatban",
+  waiting: "Várakozás",
+  resolved: "Megoldva",
+  closed: "Lezárva",
+} as const;
 
 export default function TicketsPage() {
   const router = useRouter();
+  const [search, setSearch] = useState("");
 
-  const columns = [
+  const filtered = mockTickets.filter(
+    (t) =>
+      t.title.toLowerCase().includes(search.toLowerCase()) ||
+      t.ticket_number.toLowerCase().includes(search.toLowerCase()) ||
+      (t.contact_id ?? "").toLowerCase().includes(search.toLowerCase()),
+  );
+
+  const counts = {
+    new: mockTickets.filter((t) => t.status === "new").length,
+    in_progress: mockTickets.filter((t) => t.status === "in_progress").length,
+    waiting: mockTickets.filter((t) => t.status === "waiting").length,
+    resolved: mockTickets.filter((t) => t.status === "resolved").length,
+  };
+
+  const columns: Column<Ticket>[] = [
     {
-      key: "id",
-      header: "ID",
-      accessor: (row: Ticket) => (
-        <span className="font-mono text-xs">{row.ticket_number}</span>
+      key: "ticket_number",
+      header: "Ticket",
+      width: "120px",
+      render: (row) => (
+        <span
+          style={{
+            fontFamily: "monospace",
+            fontSize: "0.8rem",
+            color: "var(--color-text-muted, #555)",
+          }}
+        >
+          {row.ticket_number}
+        </span>
       ),
     },
     {
       key: "title",
       header: "Cím",
-      accessor: (row: Ticket) => (
+      render: (row) => (
         <div>
-          <div className="font-medium">{row.title}</div>
-          <div className="text-xs text-[var(--color-text-secondary)]">
-            {row.affected_items ?? "-"}
+          <div style={{ fontWeight: 600, marginBottom: "2px" }}>{row.title}</div>
+          <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted, #555)" }}>
+            {row.contact_id ?? "—"} · {row.location ?? ""}
           </div>
         </div>
       ),
     },
     {
-      key: "org",
-      header: "Szervezet",
-      accessor: (row: Ticket) => row.contact_id ?? "-",
-    },
-    {
       key: "category",
       header: "Kategória",
-      accessor: (row: Ticket) => <Badge variant="default">{row.category}</Badge>,
+      render: (row) => <Badge variant="default">{row.category}</Badge>,
     },
     {
       key: "priority",
       header: "Prioritás",
-      accessor: (row: Ticket) => {
-        const priorityLabels: Record<string, string> = {
-          low: "Alacsony",
-          medium: "Közepes",
-          high: "Magas",
-          critical: "Kritikus",
-        };
-        return (
-          <Badge variant={priorityColorMap[row.priority]}>
-            {priorityLabels[row.priority] || row.priority}
-          </Badge>
-        );
-      },
+      width: "110px",
+      render: (row) => (
+        <Badge
+          variant={
+            priorityVariant[row.priority as keyof typeof priorityVariant] ?? "default"
+          }
+        >
+          {priorityLabel[row.priority as keyof typeof priorityLabel] ?? row.priority}
+        </Badge>
+      ),
     },
     {
       key: "status",
       header: "Állapot",
-      accessor: (row: Ticket) => {
-        const statusLabels: Record<string, string> = {
-          new: "Új",
-          in_progress: "Folyamatban",
-          waiting: "Várakozás",
-          resolved: "Megoldva",
-          closed: "Lezárva",
-        };
-        return (
-          <Badge variant={statusColorMap[row.status]}>
-            {statusLabels[row.status] || row.status}
-          </Badge>
-        );
-      },
+      width: "130px",
+      render: (row) => (
+        <Badge
+          variant={statusVariant[row.status as keyof typeof statusVariant] ?? "default"}
+        >
+          {statusLabel[row.status as keyof typeof statusLabel] ?? row.status}
+        </Badge>
+      ),
     },
     {
-      key: "date",
-      header: "Dátum",
-      accessor: (row: Ticket) => new Date(row.created_at).toLocaleDateString(),
+      key: "assigned_to",
+      header: "Felelős",
+      width: "130px",
+      render: (row) => (
+        <span
+          style={{ fontSize: "0.825rem", color: "var(--color-text-secondary, #a0a0a0)" }}
+        >
+          {row.assigned_to ?? "—"}
+        </span>
+      ),
+    },
+    {
+      key: "created_at",
+      header: "Létrehozva",
+      width: "110px",
+      render: (row) => (
+        <span style={{ fontSize: "0.8rem", color: "var(--color-text-muted, #555)" }}>
+          {new Date(row.created_at).toLocaleDateString("hu-HU")}
+        </span>
+      ),
     },
   ];
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       <PageHeader
         title="Ticketek"
         subtitle="Ügyfél bejelentések és belső feladatok kezelése"
         actions={
           <Button variant="primary" onClick={() => router.push("/tickets/new")}>
-            <Plus size={16} className="mr-2" />
-            Új ticket bejelentése
+            <Plus size={16} style={{ marginRight: "6px" }} />
+            Új ticket
           </Button>
         }
       />
 
-      <Card className="p-4 space-y-4">
-        {/* Filters bar */}
-        <div className="flex flex-col sm:flex-row gap-4 items-end">
-          <div className="flex-1 w-full relative">
+      {/* Status summary */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+          gap: "12px",
+        }}
+      >
+        {[
+          {
+            label: "Új",
+            count: counts.new,
+            icon: <TicketIcon size={16} />,
+            color: "#3b82f6",
+          },
+          {
+            label: "Folyamatban",
+            count: counts.in_progress,
+            icon: <Clock size={16} />,
+            color: "#f59e0b",
+          },
+          {
+            label: "Várakozás",
+            count: counts.waiting,
+            icon: <AlertTriangle size={16} />,
+            color: "#6b7280",
+          },
+          {
+            label: "Megoldva",
+            count: counts.resolved,
+            icon: <CheckCircle size={16} />,
+            color: "#22c55e",
+          },
+        ].map((stat) => (
+          <Card key={stat.label} className="p-4">
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: "8px",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                  color: "var(--color-text-muted, #555)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                {stat.label}
+              </span>
+              <span style={{ color: stat.color }}>{stat.icon}</span>
+            </div>
+            <div
+              style={{
+                fontSize: "1.75rem",
+                fontWeight: 700,
+                color: "var(--color-text-primary, #fff)",
+                lineHeight: 1,
+              }}
+            >
+              {stat.count}
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      {/* Search + filters */}
+      <Card className="p-4">
+        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: "200px", position: "relative" }}>
             <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
-              size={16}
+              size={15}
+              style={{
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--color-text-muted, #555)",
+                pointerEvents: "none",
+              }}
             />
             <Input
-              label="Keresés"
-              placeholder="Ticket ID, cím vagy szervezet..."
-              className="pl-9"
+              label=""
+              placeholder="Keresés ticketben..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ paddingLeft: "36px" }}
             />
           </div>
-          <Button variant="secondary" className="w-full sm:w-auto">
-            <Filter size={16} className="mr-2" />
+          <Button variant="secondary">
+            <Filter size={15} style={{ marginRight: "6px" }} />
             Szűrők
           </Button>
         </div>
+      </Card>
 
-        {/* Tickets table */}
-        <Table
-          data={mockTickets as any[]}
-          columns={columns as any[]}
+      {/* Table */}
+      <Card className="p-0 overflow-hidden">
+        <Table<Ticket>
+          data={filtered}
+          columns={columns}
           keyField="_id"
-          emptyMessage="Nincs megjeleníthető adat"
+          onRowClick={(row) => router.push(`/tickets/${row._id}`)}
+          emptyMessage="Nincs találat a keresési feltételekre"
         />
       </Card>
     </div>

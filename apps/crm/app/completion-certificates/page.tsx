@@ -1,32 +1,41 @@
 "use client";
 
 import { PageHeader, Card, Table, Badge, Button, Input } from "@crm/ui";
+import type { Column } from "@crm/ui";
 import type { CompletionCertificate } from "@crm/types";
-import { Search, Filter, Plus, Download, Edit } from "lucide-react";
+import {
+  Search,
+  Filter,
+  Plus,
+  Download,
+  BadgeCheck,
+  Clock,
+  FileText,
+  CheckCircle,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
-// Mock data
 const mockCertificates: CompletionCertificate[] = [
   {
     _id: "cc1",
     certificate_number: "CC-000001",
     tenantId: "tenant1",
-    contact_id: "org1",
+    contact_id: "Tech Solutions Kft.",
     project_id: null,
     created_by: "staff1",
-    title: "Új irodaház hálózatépítés és szerver telepítés",
+    title: "Irodaház hálózatépítés és szerver telepítés",
     status: "accepted",
     work_period_start: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-    work_period_end: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
+    work_period_end: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
     total_hours: 40,
     worklog_ids: ["w1", "w2"],
     ticket_ids: [],
     client_name: "Nagy Péter",
     client_title: "Ügyvezető",
-    client_signature: "mock_signature_data",
+    client_signature: "sig_data",
     signed_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    work_summary:
-      "A megrendelt hálózatépítési és szerver telepítési munkálatok a szerződésben foglaltak szerint, határidőre és a műszaki előírásoknak megfelelően elkészültek. A hálózat tesztelése sikeresen megtörtént, a szerverek üzemkészek.",
+    work_summary: "A munkálatok a szerződésnek megfelelően elkészültek.",
     pdf_url: "#",
     created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
     updated_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
@@ -35,148 +44,289 @@ const mockCertificates: CompletionCertificate[] = [
     _id: "cc2",
     certificate_number: "CC-000002",
     tenantId: "tenant1",
-    contact_id: "org1",
-    project_id: null,
+    contact_id: "Alpha Épület Zrt.",
+    project_id: "p2",
     created_by: "staff2",
-    title: "Kamera rendszer karbantartás",
+    title: "Kamera rendszer karbantartás – október",
+    status: "sent",
+    work_period_start: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+    work_period_end: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    total_hours: 4,
+    worklog_ids: ["w2"],
+    ticket_ids: [],
+    client_name: "Szabó Anna",
+    client_title: "Létesítménymenedzser",
+    client_signature: null,
+    signed_at: null,
+    work_summary: "Havi rendes karbantartás elvégzése.",
+    pdf_url: "#",
+    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+  },
+  {
+    _id: "cc3",
+    certificate_number: "CC-000003",
+    tenantId: "tenant1",
+    contact_id: "Beta Logisztika Kft.",
+    project_id: null,
+    created_by: "staff1",
+    title: "Raktár hálózatépítés",
     status: "draft",
     work_period_start: new Date(),
     work_period_end: new Date(),
-    total_hours: 4,
+    total_hours: 8,
     worklog_ids: [],
     ticket_ids: [],
     client_name: "",
     client_title: "",
     client_signature: null,
     signed_at: null,
-    work_summary: "Havi rendes karbantartás.",
+    work_summary: "",
     pdf_url: null,
     created_at: new Date(),
     updated_at: new Date(),
   },
 ];
 
-const statusColorMap: Record<
-  string,
-  "success" | "warning" | "error" | "info" | "default"
-> = {
+const statusVariant = {
   draft: "default",
   sent: "warning",
   accepted: "success",
   rejected: "error",
-};
-
-const statusLabels: Record<string, string> = {
+} as const;
+const statusLabel = {
   draft: "Piszkozat",
-  sent: "Ügyfélnek kiküldve (Aláírásra vár)",
-  accepted: "Elfogadva (Aláírva)",
+  sent: "Aláírásra vár",
+  accepted: "Aláírva",
   rejected: "Elutasítva",
-};
+} as const;
 
 export default function CompletionCertificatesPage() {
   const router = useRouter();
+  const [search, setSearch] = useState("");
 
-  const columns = [
+  const filtered = mockCertificates.filter(
+    (c) =>
+      c.title.toLowerCase().includes(search.toLowerCase()) ||
+      c.certificate_number.toLowerCase().includes(search.toLowerCase()) ||
+      (c.contact_id ?? "").toLowerCase().includes(search.toLowerCase()),
+  );
+
+  const counts = {
+    draft: mockCertificates.filter((c) => c.status === "draft").length,
+    sent: mockCertificates.filter((c) => c.status === "sent").length,
+    accepted: mockCertificates.filter((c) => c.status === "accepted").length,
+  };
+
+  const columns: Column<CompletionCertificate>[] = [
     {
-      key: "id",
+      key: "certificate_number",
       header: "Igazolás",
-      accessor: (row: CompletionCertificate) => (
-        <span className="font-mono text-xs">{row.certificate_number}</span>
+      width: "120px",
+      render: (row) => (
+        <span
+          style={{
+            fontFamily: "monospace",
+            fontSize: "0.8rem",
+            color: "var(--color-text-muted, #555)",
+          }}
+        >
+          {row.certificate_number}
+        </span>
       ),
     },
     {
-      key: "org",
-      header: "Szervezet",
-      accessor: (row: CompletionCertificate) => row.contact_id ?? "-",
-    },
-    {
-      key: "project",
+      key: "title",
       header: "Tárgy",
-      accessor: (row: CompletionCertificate) => (
-        <span className="font-medium">{row.title}</span>
+      render: (row) => (
+        <div>
+          <div style={{ fontWeight: 600, marginBottom: "2px" }}>{row.title}</div>
+          <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted, #555)" }}>
+            {row.contact_id ?? "—"} · {row.total_hours}h
+          </div>
+        </div>
       ),
     },
     {
-      key: "date",
-      header: "Teljesítés időszaka",
-      accessor: (row: CompletionCertificate) =>
+      key: "work_period_start",
+      header: "Teljesítési időszak",
+      width: "180px",
+      render: (row: CompletionCertificate) =>
         `${row.work_period_start ? new Date(row.work_period_start).toLocaleDateString() : "-"} - ${
           row.work_period_end ? new Date(row.work_period_end).toLocaleDateString() : "-"
         }`,
     },
     {
-      key: "status",
-      header: "Állapot",
-      accessor: (row: CompletionCertificate) => (
-        <Badge variant={statusColorMap[row.status]}>
-          {statusLabels[row.status] || row.status}
-        </Badge>
-      ),
-    },
-    {
-      key: "actions",
-      header: "",
-      accessor: (row: CompletionCertificate) => (
-        <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-          <Button
-            variant="ghost"
-            className="p-2 h-8 w-8"
-            onClick={() => router.push(`/completion-certificates/${row._id}`)}
-          >
-            <Edit size={14} />
-          </Button>
-          {row.status === "accepted" && (
-            <Button variant="secondary" className="p-2 h-8 w-8">
-              <Download size={14} />
-            </Button>
+      key: "client_name",
+      header: "Ügyfél aláíró",
+      width: "150px",
+      render: (row) => (
+        <div>
+          <div style={{ fontSize: "0.85rem" }}>{row.client_name || "—"}</div>
+          {row.client_title && (
+            <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted, #555)" }}>
+              {row.client_title}
+            </div>
           )}
         </div>
       ),
     },
+    {
+      key: "status",
+      header: "Állapot",
+      width: "140px",
+      render: (row) => (
+        <Badge
+          variant={statusVariant[row.status as keyof typeof statusVariant] ?? "default"}
+        >
+          {statusLabel[row.status as keyof typeof statusLabel] ?? row.status}
+        </Badge>
+      ),
+    },
+    {
+      key: "pdf_url",
+      header: "",
+      width: "48px",
+      render: (row) =>
+        row.pdf_url ? (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              window.open(String(row.pdf_url), "_blank");
+            }}
+            style={{
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--color-text-muted, #555)",
+              padding: "4px",
+              borderRadius: "6px",
+              display: "flex",
+              alignItems: "center",
+            }}
+            title="PDF letöltése"
+          >
+            <Download size={14} />
+          </button>
+        ) : null,
+    },
   ];
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       <PageHeader
         title="Teljesítési igazolások"
-        subtitle="Szerződésekhez és projektekhez kapcsolódó igazolások kezelése"
+        subtitle="Szerződésekhez kapcsolódó teljesítési igazolások kezelése"
         actions={
           <Button
             variant="primary"
             onClick={() => router.push("/completion-certificates/new")}
           >
-            <Plus size={16} className="mr-2" />
+            <Plus size={16} style={{ marginRight: "6px" }} />
             Új igazolás
           </Button>
         }
       />
 
-      <Card className="p-4 space-y-4">
-        {/* Filters bar */}
-        <div className="flex flex-col sm:flex-row gap-4 items-end">
-          <div className="flex-1 w-full relative">
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+          gap: "12px",
+        }}
+      >
+        {[
+          {
+            label: "Piszkozat",
+            count: counts.draft,
+            icon: <FileText size={16} />,
+            color: "#6b7280",
+          },
+          {
+            label: "Aláírásra vár",
+            count: counts.sent,
+            icon: <Clock size={16} />,
+            color: "#f59e0b",
+          },
+          {
+            label: "Aláírva",
+            count: counts.accepted,
+            icon: <CheckCircle size={16} />,
+            color: "#22c55e",
+          },
+        ].map((stat) => (
+          <Card key={stat.label} className="p-4">
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: "8px",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                  color: "var(--color-text-muted, #555)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                {stat.label}
+              </span>
+              <span style={{ color: stat.color }}>{stat.icon}</span>
+            </div>
+            <div
+              style={{
+                fontSize: "1.75rem",
+                fontWeight: 700,
+                color: "var(--color-text-primary, #fff)",
+                lineHeight: 1,
+              }}
+            >
+              {stat.count}
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="p-4">
+        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: "200px", position: "relative" }}>
             <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
-              size={16}
+              size={15}
+              style={{
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "var(--color-text-muted, #555)",
+                pointerEvents: "none",
+              }}
             />
             <Input
-              label="Keresés"
-              placeholder="Igazolás ID, projekt vagy szervezet..."
-              className="pl-9"
+              label=""
+              placeholder="Keresés igazolásban..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ paddingLeft: "36px" }}
             />
           </div>
-          <Button variant="secondary" className="w-full sm:w-auto">
-            <Filter size={16} className="mr-2" />
+          <Button variant="secondary">
+            <Filter size={15} style={{ marginRight: "6px" }} />
             Szűrők
           </Button>
         </div>
+      </Card>
 
-        {/* Table */}
-        <Table
-          data={mockCertificates as any[]}
-          columns={columns as any[]}
+      <Card className="p-0 overflow-hidden">
+        <Table<CompletionCertificate>
+          data={filtered}
+          columns={columns}
           keyField="_id"
-          emptyMessage="Nincs megjeleníthető adat"
+          onRowClick={(row) => router.push(`/completion-certificates/${row._id}`)}
+          emptyMessage="Nincs találat a keresési feltételekre"
         />
       </Card>
     </div>
