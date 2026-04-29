@@ -1,0 +1,27 @@
+{
+  "name": "@sironic/emails",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "email dev",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@react-email/components": "^0.0.32",
+    "@react-email/render": "^1.0.4",
+    "nodemailer": "^6.9.16",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.9",
+    "@types/nodemailer": "^6.4.17",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "react-email": "3.0.4",
+    "typescript": "^5.7.2"
+  }
+}
