@@ -209,7 +209,10 @@ export default function PartnerSettingsPage() {
               <Lock size={16} style={{ marginRight: "8px" }} />
               Jelszó módosítása
             </Button>
-            <Button variant="outline" style={{ justifyContent: "center", width: "100%" }}>
+            <Button
+              variant="secondary"
+              style={{ justifyContent: "center", width: "100%" }}
+            >
               <Smartphone size={16} style={{ marginRight: "8px" }} />
               2FA Beállítása (Hamarosan)
             </Button>
