@@ -7,7 +7,7 @@ import { Topbar, type TopbarProps } from "./Topbar";
 
 export interface AppShellProps {
   sidebar: SidebarProps;
-  topbar?: Omit<TopbarProps, "locale" | "onLocaleChange">;
+  topbar?: Omit<TopbarProps, "locale" | "onLocaleChange" | "onMenuToggle">;
   children: React.ReactNode;
 }
 
@@ -29,38 +29,68 @@ export function AppShell({ sidebar, topbar, children }: AppShellProps) {
     setCurrentPath(window.location.pathname);
   }, []);
 
-  return (
-    <div
-      style={{
-        display: "flex",
-        minHeight: "100vh",
-        background: colors.bg.primary,
-      }}
-    >
-      <Sidebar {...sidebar} currentPath={currentPath} />
+  // Mobile sidebar state
+  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          minWidth: 0,
-          overflowX: "hidden",
-        }}
-      >
-        <Topbar {...topbar} locale={locale} onLocaleChange={handleLocaleChange} />
-        <main
-          style={{
-            flex: 1,
-            padding: spacing.cardPadding,
-            display: "flex",
-            flexDirection: "column",
-            gap: spacing.sectionGap,
-          }}
-        >
-          {children}
-        </main>
+  // Lock body scroll when mobile menu is open
+  React.useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
+
+  return (
+    <>
+      <style>{`
+        .app-shell-layout {
+          display: flex;
+          min-height: 100vh;
+          background: ${colors.bg.primary};
+        }
+        .app-shell-main-area {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          min-width: 0;
+          overflow-x: hidden;
+        }
+        .app-shell-content {
+          flex: 1;
+          padding: ${spacing.cardPadding};
+          display: flex;
+          flex-direction: column;
+          gap: ${spacing.sectionGap};
+        }
+        @media (max-width: 768px) {
+          .app-shell-content {
+            padding: 12px;
+            gap: 12px;
+          }
+        }
+      `}</style>
+      <div className="app-shell-layout">
+        <Sidebar
+          {...sidebar}
+          currentPath={currentPath}
+          mobileOpen={mobileMenuOpen}
+          onMobileClose={() => setMobileMenuOpen(false)}
+        />
+
+        <div className="app-shell-main-area">
+          <Topbar
+            {...topbar}
+            locale={locale}
+            onLocaleChange={handleLocaleChange}
+            onMenuToggle={() => setMobileMenuOpen((o) => !o)}
+          />
+          <main className="app-shell-content">{children}</main>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

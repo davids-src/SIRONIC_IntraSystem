@@ -1,7 +1,8 @@
 "use client";
 
 import { Card, PageHeader, Button } from "@crm/ui";
-import { Plus, ArrowUpDown, Pencil, Trash2 } from "lucide-react";
+import { Plus, ArrowUpDown, Pencil, Trash2, Mail, ChevronRight } from "lucide-react";
+import Link from "next/link";
 
 type Operation = "add" | "rename" | "delete" | "reorder";
 
@@ -68,6 +69,38 @@ export default function SettingsPage() {
         title="Beállítások"
         subtitle="Konfigurálható listák a rugalmas, operátor-vezérelt működéshez"
       />
+
+      {/* Email notifications link */}
+      <Link href="/settings/email-notifications" className="block">
+        <Card className="p-5 hover:shadow-md transition-shadow cursor-pointer">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "8px",
+                  backgroundColor: "var(--color-accent-muted, #fef2f2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Mail size={20} style={{ color: "var(--color-accent, #e53935)" }} />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-[var(--color-text-primary)]">
+                  E-mail értesítések
+                </h2>
+                <p className="text-sm text-[var(--color-text-muted)] mt-0.5">
+                  Automatikus e-mail értesítések kezelése modulonként
+                </p>
+              </div>
+            </div>
+            <ChevronRight size={20} className="text-[var(--color-text-muted)]" />
+          </div>
+        </Card>
+      </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {configurableLists.map((list) => (

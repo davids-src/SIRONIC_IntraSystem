@@ -23,6 +23,10 @@ export interface SidebarProps {
   currentPath: string;
   user: SidebarUser;
   onLogout?: () => void;
+  /** Mobile: controlled open state */
+  mobileOpen?: boolean;
+  /** Mobile: close callback */
+  onMobileClose?: () => void;
 }
 
 export function Sidebar({
@@ -32,22 +36,21 @@ export function Sidebar({
   currentPath,
   user,
   onLogout,
+  mobileOpen = false,
+  onMobileClose,
 }: SidebarProps) {
-  return (
-    <aside
-      style={{
-        width: spacing.sidebarWidth,
-        minWidth: spacing.sidebarWidth,
-        background: colors.bg.sidebar,
-        borderRight: `1px solid ${colors.border.default}`,
-        display: "flex",
-        flexDirection: "column",
-        height: "100vh",
-        position: "sticky",
-        top: 0,
-        flexShrink: 0,
-      }}
-    >
+  // Close on Escape key
+  React.useEffect(() => {
+    if (!mobileOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onMobileClose?.();
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [mobileOpen, onMobileClose]);
+
+  const sidebarContent = (
+    <>
       {/* Logo */}
       <div
         style={{
@@ -73,6 +76,42 @@ export function Sidebar({
         >
           {appName}
         </span>
+
+        {/* Close button – mobile only */}
+        {onMobileClose && (
+          <button
+            onClick={onMobileClose}
+            className="sidebar-close-btn"
+            style={{
+              marginLeft: "auto",
+              width: "32px",
+              height: "32px",
+              display: "none",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              color: colors.text.secondary,
+              borderRadius: radius.md,
+            }}
+            aria-label="Menü bezárása"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Nav */}
@@ -94,6 +133,7 @@ export function Sidebar({
               currentPath === item.href ||
               (item.href !== "/" && currentPath.startsWith(item.href))
             }
+            onNavigate={onMobileClose}
           />
         ))}
       </nav>
@@ -191,16 +231,98 @@ export function Sidebar({
           </button>
         )}
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* CSS for responsive sidebar */}
+      <style>{`
+        .sidebar-desktop {
+          width: ${spacing.sidebarWidth};
+          min-width: ${spacing.sidebarWidth};
+          background: ${colors.bg.sidebar};
+          border-right: 1px solid ${colors.border.default};
+          display: flex;
+          flex-direction: column;
+          height: 100vh;
+          position: sticky;
+          top: 0;
+          flex-shrink: 0;
+        }
+        .sidebar-mobile-overlay {
+          display: none;
+        }
+        .sidebar-close-btn {
+          display: none !important;
+        }
+        @media (max-width: 768px) {
+          .sidebar-desktop {
+            display: none !important;
+          }
+          .sidebar-mobile-overlay {
+            display: ${mobileOpen ? "block" : "none"};
+            position: fixed;
+            inset: 0;
+            z-index: 999;
+          }
+          .sidebar-mobile-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 999;
+          }
+          .sidebar-mobile-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 280px;
+            max-width: 85vw;
+            background: ${colors.bg.sidebar};
+            border-right: 1px solid ${colors.border.default};
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+            animation: slideIn 0.2s ease-out;
+          }
+          @keyframes slideIn {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(0); }
+          }
+          .sidebar-close-btn {
+            display: flex !important;
+          }
+        }
+      `}</style>
+
+      {/* Desktop sidebar */}
+      <aside className="sidebar-desktop">{sidebarContent}</aside>
+
+      {/* Mobile sidebar overlay */}
+      <div className="sidebar-mobile-overlay">
+        <div className="sidebar-mobile-backdrop" onClick={onMobileClose} />
+        <aside className="sidebar-mobile-panel">{sidebarContent}</aside>
+      </div>
+    </>
   );
 }
 
-function SidebarNavItem({ item, isActive }: { item: NavItem; isActive: boolean }) {
+function SidebarNavItem({
+  item,
+  isActive,
+  onNavigate,
+}: {
+  item: NavItem;
+  isActive: boolean;
+  onNavigate?: () => void;
+}) {
   const [hovered, setHovered] = React.useState(false);
 
   return (
     <a
       href={item.href}
+      onClick={onNavigate}
       style={{
         display: "flex",
         alignItems: "center",

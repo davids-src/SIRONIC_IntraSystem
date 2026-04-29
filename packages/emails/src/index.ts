@@ -36,4 +36,4 @@ export const sendEmail = async ({
 
 export * from "./transporter";
 export * from "./i18n";
-// The templates will be exported later
+export * from "./templates";

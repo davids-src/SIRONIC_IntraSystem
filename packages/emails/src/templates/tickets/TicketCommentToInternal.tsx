@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Language, useEmailTranslations } from "../../../i18n";
+import { Language, useEmailTranslations } from "../../i18n";
 import { BaseLayout, DataBlock, TextBlock, CtaGroup, SectionTitle } from "../base";
 
 interface TicketCommentToInternalProps {
