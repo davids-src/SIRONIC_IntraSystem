@@ -87,6 +87,82 @@ function IconFileText() {
     </svg>
   );
 }
+function IconTicket() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
+      <path d="M13 5v2" />
+      <path d="M13 17v2" />
+      <path d="M13 11v2" />
+    </svg>
+  );
+}
+function IconClipboard() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+      <path d="M12 11h4" />
+      <path d="M12 16h4" />
+      <path d="M8 11h.01" />
+      <path d="M8 16h.01" />
+    </svg>
+  );
+}
+function IconBadgeCheck() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
+function IconFolderKanban() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
+      <path d="M8 10v4" />
+      <path d="M12 10v2" />
+      <path d="M16 10v6" />
+    </svg>
+  );
+}
 
 interface ActivityItem {
   id: string;
@@ -98,26 +174,26 @@ interface ActivityItem {
 const recentActivity: ActivityItem[] = [
   {
     id: "1",
-    icon: <IconBuilding2 />,
-    description: "Új szervezet hozzáadva: Acme Kft.",
-    time: "2 perce",
+    icon: <IconTicket />,
+    description: "Új ticket érkezett: Szerver leállás a központi irodában (Acme Kft.)",
+    time: "12 perce",
   },
   {
     id: "2",
-    icon: <IconFileText />,
-    description: "Ajánlat elküldve: #A-2024-042",
-    time: "18 perce",
+    icon: <IconBadgeCheck />,
+    description: "Teljesítési igazolás aláírva (GlobalTech Zrt.)",
+    time: "45 perce",
   },
   {
     id: "3",
-    icon: <IconHandshake />,
-    description: "Partner aktiválva: GlobalTech Zrt.",
+    icon: <IconClipboard />,
+    description: "Munkalap véglegesítve: WL-000001 (Kovács János)",
     time: "1 órája",
   },
   {
     id: "4",
-    icon: <IconPackage />,
-    description: "Készlet frissítve: 12 tétel módosítva",
+    icon: <IconBuilding2 />,
+    description: "Új szervezet hozzáadva: Acme Kft.",
     time: "3 órája",
   },
 ];
@@ -143,10 +219,20 @@ export default function CrmDashboardPage() {
           gap: "16px",
         }}
       >
-        <StatCard label="Szervezetek" value="24" icon={<IconBuilding2 />} trend="+2" />
+        <StatCard label="Nyitott Ticketek" value="12" icon={<IconTicket />} trend="+3" />
+        <StatCard
+          label="Aktív Projektek"
+          value="8"
+          icon={<IconFolderKanban />}
+          trend="+1"
+        />
+        <StatCard
+          label="Heti Munkalapok"
+          value="48"
+          icon={<IconClipboard />}
+          trend="+12"
+        />
         <StatCard label="Partnerek" value="138" icon={<IconHandshake />} trend="+5" />
-        <StatCard label="Készletelemek" value="1 204" icon={<IconPackage />} />
-        <StatCard label="Aktív ajánlatok" value="17" icon={<IconFileText />} trend="+3" />
       </div>
 
       {/* Recent activity */}
@@ -205,6 +291,87 @@ export default function CrmDashboardPage() {
               </div>
             </div>
           ))}
+        </div>
+      </Card>
+
+      {/* Upcoming Deadlines */}
+      <Card>
+        <h2
+          style={{
+            fontSize: "1rem",
+            fontWeight: 600,
+            color: "#ffffff",
+            marginBottom: "16px",
+          }}
+        >
+          Közelgő határidők
+        </h2>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              padding: "12px 0",
+              borderBottom: "1px solid #1a1a1a",
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: "0.875rem", color: "#ffffff", fontWeight: 500 }}>
+                Új irodaház hálózatépítés
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "#555555" }}>
+                Projekt - Acme Kft.
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "0.875rem", color: "#ffffff" }}>2026.05.25.</span>
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  color: "#e53935",
+                  background: "#3b0a0a",
+                  padding: "2px 8px",
+                  borderRadius: "4px",
+                  fontWeight: "bold",
+                }}
+              >
+                12 nap
+              </span>
+            </div>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              padding: "12px 0",
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: "0.875rem", color: "#ffffff", fontWeight: 500 }}>
+                acme.hu lejárat
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "#555555" }}>
+                Domain - Acme Kft.
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "0.875rem", color: "#ffffff" }}>2026.05.11.</span>
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  color: "#e53935",
+                  background: "#3b0a0a",
+                  padding: "2px 8px",
+                  borderRadius: "4px",
+                  fontWeight: "bold",
+                }}
+              >
+                Kritikus
+              </span>
+            </div>
+          </div>
         </div>
       </Card>
     </CrmShell>

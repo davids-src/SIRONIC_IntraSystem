@@ -1,8 +1,10 @@
 {
   "nav": {
     "dashboard": "Dashboard",
+    "tickets": "Tickets",
+    "worklogs": "Worklogs",
     "offers": "Offers",
-    "inventory": "Inventory",
+    "completion_certificates": "Completion Certificates",
     "company_profile": "Company Profile",
     "settings": "Settings"
   },
@@ -24,5 +26,32 @@
     "notifications": "Notifications",
     "recent_activity": "Recent Activity",
     "no_activity": "No recent activity"
+  },
+  "tickets": {
+    "new": "Submit New Ticket",
+    "type_incident": "Incident",
+    "type_service": "Service Request",
+    "type_maintenance": "Maintenance",
+    "type_security": "Security",
+    "priority_low": "Low",
+    "priority_medium": "Medium",
+    "priority_high": "High",
+    "priority_critical": "Critical",
+    "status_new": "New",
+    "status_in_progress": "In Progress",
+    "status_waiting": "Waiting",
+    "status_resolved": "Resolved",
+    "status_closed": "Closed"
+  },
+  "worklogs": {
+    "new": "New Worklog",
+    "finalize": "Finalize",
+    "generate_pdf": "Generate PDF",
+    "download_pdf": "Download PDF"
+  },
+  "completion_certificates": {
+    "new": "New Completion Certificate",
+    "send_to_partner": "Send to Partner",
+    "sign": "Confirm and Sign"
   }
 }

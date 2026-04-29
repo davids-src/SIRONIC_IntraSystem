@@ -5,6 +5,9 @@
     "partners": "Partnerek",
     "inventory": "Készlet",
     "offers": "Ajánlatok",
+    "tickets": "Ticketek",
+    "worklogs": "Munkalapok",
+    "completion_certificates": "Teljesítési igazolások",
     "settings": "Beállítások",
     "company_profile": "Cégprofil"
   },
@@ -26,5 +29,32 @@
     "active_offers": "Aktív ajánlatok",
     "recent_activity": "Legutóbbi aktivitás",
     "no_activity": "Nincs legutóbbi aktivitás"
+  },
+  "tickets": {
+    "new": "Új ticket bejelentése",
+    "type_incident": "Hibabejelentés",
+    "type_service": "Szervizigény",
+    "type_maintenance": "Karbantartás",
+    "type_security": "Biztonságtechnika",
+    "priority_low": "Alacsony",
+    "priority_medium": "Közepes",
+    "priority_high": "Magas",
+    "priority_critical": "Kritikus",
+    "status_new": "Új",
+    "status_in_progress": "Folyamatban",
+    "status_waiting": "Várakozás",
+    "status_resolved": "Megoldva",
+    "status_closed": "Lezárva"
+  },
+  "worklogs": {
+    "new": "Új munkalap",
+    "finalize": "Véglegesítés",
+    "generate_pdf": "PDF generálása",
+    "download_pdf": "PDF letöltése"
+  },
+  "completion_certificates": {
+    "new": "Új teljesítési igazolás",
+    "send_to_partner": "Küldés a partnernek",
+    "sign": "Igazolom és aláírom"
   }
 }
