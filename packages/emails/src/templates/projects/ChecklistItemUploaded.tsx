@@ -37,7 +37,7 @@ export const ChecklistItemUploaded = ({
       <CtaGroup
         primary={{
           label: t.crm_cta,
-          url: `https://crm.sironic.hu/projects/${id}?tab=checklist`,
+          url: `https://crm.sironic.eu/projects/${id}?tab=checklist`,
         }}
       />
     </BaseLayout>

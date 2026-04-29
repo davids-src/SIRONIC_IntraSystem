@@ -33,7 +33,7 @@ export const PasswordReset = ({
       <CtaGroup
         primary={{
           label: lang === "hu" ? "Új jelszó beállítása" : "Set New Password",
-          url: `https://portal.sironic.hu/reset-password?token=${token}`,
+          url: `https://portal.sironic.eu/reset-password?token=${token}`,
         }}
       />
 

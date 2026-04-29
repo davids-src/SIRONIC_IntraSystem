@@ -19,7 +19,7 @@ export const sendEmail = async ({
 
     const fromName = process.env.SMTP_FROM_NAME || "SIRONIC";
     const fromEmail = process.env.SMTP_FROM_EMAIL || "no-reply@sironic.hu";
-    const replyTo = process.env.SMTP_REPLY_TO || "info@sironic.hu";
+    const replyTo = process.env.SMTP_REPLY_TO || "hello@sironic.hu";
 
     await transporter.sendMail({
       from: `"${fromName}" <${fromEmail}>`,

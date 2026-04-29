@@ -61,7 +61,7 @@ export const WorklogFinalized = ({
       <CtaGroup
         primary={{
           label: lang === "hu" ? "Munkalap megtekintése" : "View Worklog",
-          url: `https://portal.sironic.hu/worklogs/${id}`,
+          url: `https://portal.sironic.eu/worklogs/${id}`,
         }}
         secondary={
           pdf_url

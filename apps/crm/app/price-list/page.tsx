@@ -12,6 +12,8 @@ interface PriceItem {
   category: "hardware" | "software" | "service" | "license";
   unit: string;
   unit_price: number;
+  tax_percent: number;
+  description: string;
   status: "active" | "archived";
 }
 
@@ -23,6 +25,8 @@ const mockPrices: PriceItem[] = [
     category: "service",
     unit: "óra",
     unit_price: 25000,
+    tax_percent: 27,
+    description: "Szerver beépítése, kábelezése, alapvető tesztek",
     status: "active",
   },
   {
@@ -32,6 +36,8 @@ const mockPrices: PriceItem[] = [
     category: "service",
     unit: "óra",
     unit_price: 30000,
+    tax_percent: 27,
+    description: "VLAN-ok, útválasztás, port security beállítása",
     status: "active",
   },
   {
@@ -41,6 +47,8 @@ const mockPrices: PriceItem[] = [
     category: "hardware",
     unit: "db",
     unit_price: 850000,
+    tax_percent: 27,
+    description: "1U szerver, 32GB RAM, 2x 1TB SSD, 1x CPU",
     status: "active",
   },
   {
@@ -50,6 +58,8 @@ const mockPrices: PriceItem[] = [
     category: "license",
     unit: "felh/hó",
     unit_price: 4500,
+    tax_percent: 27,
+    description: "Havi előfizetés felhasználónként",
     status: "active",
   },
   {
@@ -59,6 +69,8 @@ const mockPrices: PriceItem[] = [
     category: "service",
     unit: "óra",
     unit_price: 15000,
+    tax_percent: 27,
+    description: "Már nem támogatott szerverek karbantartása",
     status: "archived",
   },
 ];
@@ -113,7 +125,20 @@ export default function PriceListPage() {
     {
       key: "name",
       header: "Megnevezés",
-      render: (row) => <div style={{ fontWeight: 600 }}>{row.name}</div>,
+      render: (row) => (
+        <div>
+          <div style={{ fontWeight: 600 }}>{row.name}</div>
+          <div
+            style={{
+              fontSize: "0.75rem",
+              color: "var(--color-text-muted, #555)",
+              marginTop: "2px",
+            }}
+          >
+            {row.description}
+          </div>
+        </div>
+      ),
     },
     {
       key: "category",
@@ -146,6 +171,16 @@ export default function PriceListPage() {
       render: (row) => (
         <span style={{ fontSize: "0.8rem", color: "var(--color-text-muted, #555)" }}>
           {row.unit}
+        </span>
+      ),
+    },
+    {
+      key: "tax_percent",
+      header: "ÁFA",
+      width: "80px",
+      render: (row) => (
+        <span style={{ fontSize: "0.8rem", color: "var(--color-text-muted, #555)" }}>
+          {row.tax_percent}%
         </span>
       ),
     },

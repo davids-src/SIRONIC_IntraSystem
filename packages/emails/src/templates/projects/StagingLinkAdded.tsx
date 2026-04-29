@@ -46,7 +46,7 @@ export const StagingLinkAdded = ({
       <CtaGroup
         primary={{
           label: lang === "hu" ? "Megtekintés és jóváhagyás" : "Review and Approve",
-          url: `https://portal.sironic.hu/projects/${id}?tab=staging`,
+          url: `https://portal.sironic.eu/projects/${id}?tab=staging`,
         }}
         secondary={{
           label: lang === "hu" ? "Közvetlen megnyitás" : "Open directly",

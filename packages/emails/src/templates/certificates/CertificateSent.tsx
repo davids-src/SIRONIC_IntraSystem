@@ -56,7 +56,7 @@ export const CertificateSent = ({
       <CtaGroup
         primary={{
           label: lang === "hu" ? "Megtekintés és aláírás" : "Review and Sign",
-          url: `https://portal.sironic.hu/completion-certificates/${id}`,
+          url: `https://portal.sironic.eu/completion-certificates/${id}`,
         }}
       />
     </BaseLayout>

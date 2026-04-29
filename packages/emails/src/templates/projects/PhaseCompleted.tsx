@@ -37,7 +37,7 @@ export const PhaseCompleted = ({
       <CtaGroup
         primary={{
           label: lang === "hu" ? "Projekt megtekintése" : "View Project",
-          url: `https://portal.sironic.hu/projects/${id}`,
+          url: `https://portal.sironic.eu/projects/${id}`,
         }}
       />
     </BaseLayout>

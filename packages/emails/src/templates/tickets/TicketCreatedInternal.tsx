@@ -50,7 +50,7 @@ export const TicketCreatedInternal = ({
       <CtaGroup
         primary={{
           label: t.crm_cta,
-          url: `https://crm.sironic.hu/tickets/${id}`,
+          url: `https://crm.sironic.eu/tickets/${id}`,
         }}
       />
     </BaseLayout>

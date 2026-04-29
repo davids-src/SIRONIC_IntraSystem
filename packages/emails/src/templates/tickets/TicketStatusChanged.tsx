@@ -64,7 +64,7 @@ export const TicketStatusChanged = ({
       <CtaGroup
         primary={{
           label: lang === "hu" ? "Ticket megtekintése" : "View Ticket",
-          url: `https://portal.sironic.hu/tickets/${id}`,
+          url: `https://portal.sironic.eu/tickets/${id}`,
         }}
       />
     </BaseLayout>

@@ -37,7 +37,7 @@ export const OfferAccepted = ({
       <CtaGroup
         primary={{
           label: lang === "hu" ? "Megnyitás CRM-ben" : "Open in CRM",
-          url: `https://crm.sironic.hu/offers/${id}`,
+          url: `https://crm.sironic.eu/offers/${id}`,
         }}
       />
     </BaseLayout>

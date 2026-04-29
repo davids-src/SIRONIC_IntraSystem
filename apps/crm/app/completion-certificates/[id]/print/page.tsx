@@ -1,12 +1,10 @@
 "use client";
-
 import React, { useEffect } from "react";
 import { useParams } from "next/navigation";
-import { Shield } from "lucide-react";
 
 export default function CertificatePrintPage() {
   const params = useParams();
-  const id = params.id as string;
+  const id = params.id;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -21,13 +19,12 @@ export default function CertificatePrintPage() {
         maxWidth: "210mm",
         margin: "0 auto",
         padding: "20mm",
-        fontFamily: "'Inter', sans-serif",
+        fontFamily: "Inter, sans-serif",
         color: "#000",
         backgroundColor: "#fff",
         boxSizing: "border-box",
       }}
     >
-      {/* HEADER */}
       <div
         style={{
           display: "flex",
@@ -39,20 +36,11 @@ export default function CertificatePrintPage() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div
-            style={{
-              width: "40px",
-              height: "40px",
-              backgroundColor: "#000",
-              color: "#fff",
-              borderRadius: "8px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Shield size={24} />
-          </div>
+          <img
+            src="/logo.png"
+            alt="Sironic Logo"
+            style={{ height: "40px", objectFit: "contain" }}
+          />
           <div>
             <h1
               style={{
@@ -80,7 +68,7 @@ export default function CertificatePrintPage() {
               letterSpacing: "1px",
             }}
           >
-            Teljesítési Igazolás
+            Teljes�t�si Igazol�s
           </h2>
           <p
             style={{
@@ -90,7 +78,7 @@ export default function CertificatePrintPage() {
               color: "#000",
             }}
           >
-            Azonosító: CERT-2026-0042
+            Azonos�t�: CERT-2026-0042
           </p>
           <p style={{ margin: 0, fontSize: "12px", color: "#666" }}>
             Kelt: {new Date().toLocaleDateString("hu-HU")}
@@ -98,7 +86,6 @@ export default function CertificatePrintPage() {
         </div>
       </div>
 
-      {/* PARTIES */}
       <div
         style={{
           display: "flex",
@@ -107,81 +94,97 @@ export default function CertificatePrintPage() {
           gap: "40px",
         }}
       >
-        <div style={{ flex: 1 }}>
+        <div
+          style={{
+            flex: 1,
+            padding: "16px",
+            backgroundColor: "#f8f9fa",
+            borderRadius: "8px",
+            border: "1px solid #e9ecef",
+          }}
+        >
           <h3
             style={{
-              fontSize: "12px",
-              color: "#666",
+              fontSize: "11px",
+              color: "#6c757d",
               textTransform: "uppercase",
               letterSpacing: "1px",
               marginBottom: "8px",
-              borderBottom: "1px solid #eee",
-              paddingBottom: "4px",
             }}
           >
-            Szolgáltató / Kivitelező
+            Kivitelez�
           </h3>
           <p style={{ margin: "0 0 4px", fontSize: "14px", fontWeight: 600 }}>
-            SIRONIC IT Services Kft.
+            Skoda D�vid Andr�s EV
           </p>
           <p style={{ margin: 0, fontSize: "13px", color: "#333" }}>
-            1111 Budapest, Minta utca 12.
+            Ad�sz�m: 46278854-1-27
           </p>
           <p style={{ margin: 0, fontSize: "13px", color: "#333" }}>
-            Adószám: 12345678-2-41
+            Web: sironic.eu | Tel: +36702735532
+          </p>
+          <p style={{ margin: 0, fontSize: "13px", color: "#333" }}>
+            E-mail: hello@sironic.hu
           </p>
         </div>
-        <div style={{ flex: 1 }}>
+        <div
+          style={{
+            flex: 1,
+            padding: "16px",
+            backgroundColor: "#f8f9fa",
+            borderRadius: "8px",
+            border: "1px solid #e9ecef",
+          }}
+        >
           <h3
             style={{
-              fontSize: "12px",
-              color: "#666",
+              fontSize: "11px",
+              color: "#6c757d",
               textTransform: "uppercase",
               letterSpacing: "1px",
               marginBottom: "8px",
-              borderBottom: "1px solid #eee",
-              paddingBottom: "4px",
             }}
           >
-            Megrendelő
+            Megrendel�
           </h3>
           <p style={{ margin: "0 0 4px", fontSize: "14px", fontWeight: 600 }}>
             Acme Corporation Zrt.
           </p>
           <p style={{ margin: 0, fontSize: "13px", color: "#333" }}>
-            2040 Budaörs, Gyár u. 2.
+            2040 Buda�rs, Gy�r u. 2.
           </p>
           <p style={{ margin: 0, fontSize: "13px", color: "#333" }}>
-            Adószám: 87654321-2-11
+            Ad�sz�m: 87654321-2-11
           </p>
         </div>
       </div>
 
-      {/* DESCRIPTION */}
       <div style={{ marginBottom: "40px" }}>
         <h3
           style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 10px", color: "#000" }}
         >
-          1. A teljesítés tárgya és leírása
+          Teljes�t�s t�rgya
         </h3>
         <div
-          style={{ padding: "16px 0", fontSize: "13px", lineHeight: 1.6, color: "#222" }}
+          style={{
+            padding: "12px",
+            borderLeft: "3px solid #22c55e",
+            backgroundColor: "#f0fdf4",
+            fontSize: "13px",
+            lineHeight: 1.6,
+            color: "#222",
+          }}
         >
-          Alulírott felek igazolják, hogy a Szolgáltató az{" "}
-          <strong>Acme Központi hálózat fejlesztés</strong> projekt keretében foglalt
-          vállalásait – a felek által elfogadott ütemtervnek és minőségi követelményeknek
-          megfelelően – hiánytalanul teljesítette. A teljesítés magában foglalja az
-          eszközök beszerzését, telepítését, valamint a hálózat konfigurálását és
-          tesztelését a 2026. március hónapra vonatkozó fázisban.
+          A Kivitelez� az <strong>Acme K�zponti h�l�zat fejleszt�s</strong> projekt
+          keret�ben v�llalt feladatokat hi�nytalanul teljes�tette.
         </div>
       </div>
 
-      {/* SUMMARY */}
       <div style={{ marginBottom: "40px" }}>
         <h3
           style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 10px", color: "#000" }}
         >
-          2. Teljesítés adatai
+          Adatok
         </h3>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
           <tbody>
@@ -194,24 +197,14 @@ export default function CertificatePrintPage() {
               </td>
             </tr>
             <tr style={{ borderBottom: "1px solid #eee" }}>
-              <td style={{ padding: "12px 8px", color: "#666" }}>
-                Hivatkozott Árajánlat / Szerződés:
-              </td>
+              <td style={{ padding: "12px 8px", color: "#666" }}>Teljes�t�s ideje:</td>
               <td style={{ padding: "12px 8px", color: "#000", fontWeight: 600 }}>
-                #P-2026-018
-              </td>
-            </tr>
-            <tr style={{ borderBottom: "1px solid #eee" }}>
-              <td style={{ padding: "12px 8px", color: "#666" }}>
-                Teljesítés ideje (készre jelentés):
-              </td>
-              <td style={{ padding: "12px 8px", color: "#000", fontWeight: 600 }}>
-                2026. április 25.
+                2026. �prilis 25.
               </td>
             </tr>
             <tr style={{ borderBottom: "1px solid #eee", backgroundColor: "#f9f9f9" }}>
               <td style={{ padding: "12px 8px", color: "#000", fontWeight: 700 }}>
-                Teljesítési nettó érték:
+                Teljes�t�si nett� �rt�k:
               </td>
               <td
                 style={{
@@ -228,17 +221,6 @@ export default function CertificatePrintPage() {
         </table>
       </div>
 
-      {/* CLAUSE */}
-      <div
-        style={{ marginBottom: "50px", fontSize: "12px", color: "#555", lineHeight: 1.5 }}
-      >
-        A Megrendelő jelen igazolás aláírásával elismeri a teljesítés tényét és
-        hibátlanságát, továbbá hozzájárul a Szolgáltató részéről a fent említett összegről
-        szóló számla kiállításához. A jótállási és garanciális feltételeket a felek
-        közötti fővállalkozói szerződés szabályozza.
-      </div>
-
-      {/* SIGNATURES */}
       <div
         style={{ display: "flex", justifyContent: "space-between", marginTop: "80px" }}
       >
@@ -250,13 +232,8 @@ export default function CertificatePrintPage() {
               marginBottom: "10px",
             }}
           ></div>
-          <p style={{ margin: 0, fontSize: "14px", fontWeight: 600 }}>Kovács Péter</p>
-          <p style={{ margin: 0, fontSize: "12px", color: "#666" }}>
-            SIRONIC IT Services Kft.
-          </p>
-          <p style={{ margin: 0, fontSize: "11px", color: "#999", marginTop: "4px" }}>
-            Kelt: Budapest, 2026.04.29.
-          </p>
+          <p style={{ margin: 0, fontSize: "14px", fontWeight: 600 }}>Kov�cs P�ter</p>
+          <p style={{ margin: 0, fontSize: "12px", color: "#666" }}>Kivitelez�</p>
         </div>
         <div style={{ width: "40%", textAlign: "center" }}>
           <div
@@ -269,24 +246,13 @@ export default function CertificatePrintPage() {
           <p style={{ margin: 0, fontSize: "14px", fontWeight: 600 }}>
             Acme Corporation Zrt.
           </p>
-          <p style={{ margin: 0, fontSize: "12px", color: "#666" }}>
-            Megrendelő (Cégszerű aláírás)
-          </p>
-          <p style={{ margin: 0, fontSize: "11px", color: "#999", marginTop: "4px" }}>
-            Kelt: ................................, 2026......
-          </p>
+          <p style={{ margin: 0, fontSize: "12px", color: "#666" }}>Megrendel�</p>
         </div>
       </div>
-
-      {/* Global styles for printing */}
       <style
         dangerouslySetInnerHTML={{
-          __html: `
-        @media print {
-          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: white !important; }
-          @page { size: A4; margin: 0; }
-        }
-      `,
+          __html:
+            "@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: white !important; } @page { size: A4; margin: 0; } }",
         }}
       />
     </div>

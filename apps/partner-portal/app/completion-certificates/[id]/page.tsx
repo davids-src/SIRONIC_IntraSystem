@@ -54,9 +54,9 @@ export default function PartnerCompletionCertificateDetailPage({
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Header Section */}
-        <Card className="p-6 space-y-4">
+        <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2">
             Alapadatok
           </h3>
@@ -86,11 +86,11 @@ export default function PartnerCompletionCertificateDetailPage({
         </Card>
 
         {/* Details Section */}
-        <Card className="p-6 space-y-4">
+        <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2">
             Összegzés
           </h3>
-          <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed bg-[var(--color-bg-secondary)] p-4 rounded-md min-h-[120px]">
+          <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed bg-[var(--color-bg-secondary)]/50 p-6 border border-[var(--color-border-subtle)] backdrop-blur-sm shadow-sm rounded-lg rounded-md min-h-[120px]">
             A megrendelt hálózatépítési és szerver telepítési munkálatok a szerződésben
             foglaltak szerint, határidőre és a műszaki előírásoknak megfelelően
             elkészültek. A hálózat tesztelése sikeresen megtörtént, a szerverek
@@ -100,7 +100,7 @@ export default function PartnerCompletionCertificateDetailPage({
       </div>
 
       {/* Linked Worklogs Section */}
-      <Card className="p-6 space-y-4">
+      <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
         <div className="flex justify-between items-center border-b border-[var(--color-border-subtle)] pb-2">
           <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
             Csatolt Munkalapok
@@ -161,8 +161,8 @@ export default function PartnerCompletionCertificateDetailPage({
       </Card>
 
       {/* Signatures */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="p-6 space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2 flex items-center gap-2">
             <CheckCircle2 size={16} className="text-[var(--color-status-success)]" />{" "}
             Szállító (SIRONIC) Aláírása
@@ -175,7 +175,7 @@ export default function PartnerCompletionCertificateDetailPage({
           </div>
         </Card>
 
-        <Card className="p-6 space-y-4">
+        <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2 flex items-center gap-2">
             {signed ? (
               <>

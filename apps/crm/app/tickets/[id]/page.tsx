@@ -111,16 +111,16 @@ export default function TicketDetailPage({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader
         title={`${ticket.ticket_number} - ${ticket.title}`}
         subtitle={`Beküldve: ${new Date(ticket.created_at).toLocaleString()} | Kontakt: ${ticket.contact_id ?? "-"}`}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column (Main Content) */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="p-6 space-y-6">
+          <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-6">
             <div className="flex gap-2 flex-wrap">
               <Badge variant={statusColorMap[ticket.status]}>
                 {statusLabels[ticket.status] || ticket.status}
@@ -135,12 +135,12 @@ export default function TicketDetailPage({
               <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
                 Leírás
               </h3>
-              <p className="text-[var(--color-text-secondary)] leading-relaxed bg-[var(--color-bg-secondary)] p-4 rounded-md">
+              <p className="text-[var(--color-text-secondary)] leading-relaxed bg-[var(--color-bg-secondary)]/50 p-6 border border-[var(--color-border-subtle)] backdrop-blur-sm shadow-sm rounded-lg rounded-md">
                 {ticket.description}
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-1">
                 <div className="text-xs text-[var(--color-text-muted)] flex items-center gap-1">
                   <MapPin size={12} /> Helyszín
@@ -168,13 +168,13 @@ export default function TicketDetailPage({
           </Card>
 
           {/* Timeline / Comments */}
-          <div className="space-y-4">
+          <div className="space-y-6">
             <h3 className="text-lg font-medium flex items-center gap-2">
               <MessageSquare size={18} />
               Aktivitás és hozzászólások
             </h3>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               {ticket.comments.map((comment) => (
                 <Card
                   key={comment._id}
@@ -231,13 +231,13 @@ export default function TicketDetailPage({
         </div>
 
         {/* Right Column (Controls) */}
-        <div className="space-y-6">
-          <Card className="p-5 space-y-5">
+        <div className="space-y-8">
+          <Card className="p-6 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-5">
             <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
               Tulajdonságok
             </h3>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
                 <label className="block text-xs text-[var(--color-text-muted)] mb-1">
                   Állapot
@@ -278,7 +278,7 @@ export default function TicketDetailPage({
             </div>
           </Card>
 
-          <Card className="p-5 space-y-5">
+          <Card className="p-6 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-5">
             <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
               Kapcsolódó dokumentumok
             </h3>
@@ -295,7 +295,7 @@ export default function TicketDetailPage({
             </div>
           </Card>
 
-          <Card className="p-5 space-y-4">
+          <Card className="p-6 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
             <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] flex items-center justify-between">
               Csatolmányok
               <Badge variant="default">{ticket.attachments.length}</Badge>

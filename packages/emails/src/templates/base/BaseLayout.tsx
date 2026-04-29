@@ -61,8 +61,8 @@ export const BaseLayout = ({
                 ? "Ez egy automatikus értesítő e-mail, kérjük ne válaszoljon rá."
                 : "This is an automated notification, please do not reply."}
               <br />
-              <a href="https://sironic.hu" style={footerLink}>
-                sironic.hu
+              <a href="https://sironic.eu" style={footerLink}>
+                sironic.eu
               </a>
             </Text>
           </Section>

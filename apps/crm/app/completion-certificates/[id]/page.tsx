@@ -43,7 +43,7 @@ export default function CompletionCertificateFormPage({
       />
 
       <form
-        className="space-y-6"
+        className="space-y-8"
         onSubmit={(e) => {
           e.preventDefault();
           router.push("/completion-certificates");
@@ -96,14 +96,14 @@ export default function CompletionCertificateFormPage({
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Header Section */}
-          <Card className="p-6 space-y-4">
+          <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
             <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2">
               Alapadatok
             </h3>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-6">
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
                   Szervezet *
@@ -143,12 +143,12 @@ export default function CompletionCertificateFormPage({
           </Card>
 
           {/* Details Section */}
-          <Card className="p-6 space-y-4">
+          <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
             <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2">
               Összegzés
             </h3>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
                   Elvégzett feladatok és eredmények összefoglalása *
@@ -169,7 +169,7 @@ export default function CompletionCertificateFormPage({
         </div>
 
         {/* Linked Worklogs Section */}
-        <Card className="p-6 space-y-4">
+        <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
           <div className="flex justify-between items-center border-b border-[var(--color-border-subtle)] pb-2">
             <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
               Csatolt Munkalapok
@@ -239,8 +239,8 @@ export default function CompletionCertificateFormPage({
         </Card>
 
         {/* Signatures */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="p-6 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
             <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2 flex items-center gap-2">
               <FileSignature size={16} /> Szállító (SIRONIC) Aláírása
             </h3>
@@ -261,7 +261,7 @@ export default function CompletionCertificateFormPage({
             </div>
           </Card>
 
-          <Card className="p-6 space-y-4">
+          <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
             <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2 flex items-center gap-2">
               <FileSignature size={16} /> Megrendelő Aláírása
             </h3>

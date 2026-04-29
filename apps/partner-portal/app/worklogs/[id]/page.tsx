@@ -54,8 +54,8 @@ export default function PartnerWorklogDetailPage({
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="p-6 space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2">
             Alapadatok
           </h3>
@@ -84,11 +84,11 @@ export default function PartnerWorklogDetailPage({
           </div>
         </Card>
 
-        <Card className="p-6 space-y-4">
+        <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2">
             Elvégzett munka leírása
           </h3>
-          <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed bg-[var(--color-bg-secondary)] p-4 rounded-md min-h-[120px]">
+          <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed bg-[var(--color-bg-secondary)]/50 p-6 border border-[var(--color-border-subtle)] backdrop-blur-sm shadow-sm rounded-lg rounded-md min-h-[120px]">
             Szerver hiba elhárítása, hálózati switch újraindítása és konfigurálása. A
             portok ellenőrzése során kiderült, hogy az 1-es port kontakthibás. A kábelt
             kicseréltük és áthelyeztük a 2-es portra. A rendszer tesztelése sikeres volt.
@@ -102,8 +102,8 @@ export default function PartnerWorklogDetailPage({
         </Card>
       </div>
 
-      <Card className="p-6 space-y-6">
-        <div className="space-y-4">
+      <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-6">
+        <div className="space-y-6">
           <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2">
             Szervizelt Eszközök
           </h3>
@@ -138,8 +138,8 @@ export default function PartnerWorklogDetailPage({
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="p-6 space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2 flex items-center gap-2">
             <CheckCircle2 size={16} className="text-[var(--color-status-success)]" />{" "}
             Technikus Aláírása
@@ -151,7 +151,7 @@ export default function PartnerWorklogDetailPage({
           </div>
         </Card>
 
-        <Card className="p-6 space-y-4">
+        <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2 flex items-center gap-2">
             {signed ? (
               <>

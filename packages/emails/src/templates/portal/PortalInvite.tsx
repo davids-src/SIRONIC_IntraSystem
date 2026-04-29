@@ -51,7 +51,7 @@ export const PortalInvite = ({
 
       <DataBlock
         rows={[
-          { label: "Portál URL", value: "https://portal.sironic.hu" },
+          { label: "Portál URL", value: "https://portal.sironic.eu" },
           { label: "E-mail", value: contact_email },
         ]}
       />
@@ -60,7 +60,7 @@ export const PortalInvite = ({
         primary={{
           label:
             lang === "hu" ? "Jelszó beállítása és belépés" : "Set Password and Login",
-          url: `https://portal.sironic.hu/set-password?token=${token}`,
+          url: `https://portal.sironic.eu/set-password?token=${token}`,
         }}
       />
 

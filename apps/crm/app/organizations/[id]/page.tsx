@@ -14,6 +14,7 @@ import {
   Settings,
   Plus,
   AlertTriangle,
+  Server,
 } from "lucide-react";
 
 export default function OrganizationDetailPage({
@@ -48,6 +49,7 @@ export default function OrganizationDetailPage({
     { id: "worklogs", label: "Munkalapok", icon: <ClipboardList size={16} /> },
     { id: "certificates", label: "Igazolások", icon: <BadgeCheck size={16} /> },
     { id: "domain_hosting", label: "Domain & Tárhely", icon: <Globe size={16} /> },
+    { id: "inventory", label: "Rendszerelemek", icon: <Server size={16} /> },
     {
       id: "portal_permissions",
       label: "Portál jogosultságok",
@@ -276,6 +278,63 @@ export default function OrganizationDetailPage({
                 </div>
               </Card>
             </div>
+          </div>
+        )}
+
+        {activeTab === "inventory" && (
+          <div className="space-y-6">
+            <Card className="p-8 space-y-6 shadow-sm border border-[var(--color-border-subtle)]">
+              <div className="flex justify-between items-center border-b border-[var(--color-border-subtle)] pb-4">
+                <h3 className="text-lg font-bold text-[var(--color-text-primary)] flex items-center gap-2">
+                  <Server className="text-[var(--color-accent-primary)]" />
+                  Rendszerelem Leltár
+                </h3>
+                <Button variant="primary">
+                  <Plus size={16} className="mr-2" /> Új eszköz
+                </Button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="text-xs text-[var(--color-text-muted)] uppercase bg-[var(--color-bg-secondary)] rounded-t-lg">
+                    <tr>
+                      <th className="px-4 py-3 font-semibold rounded-tl-lg">
+                        Eszköz Neve
+                      </th>
+                      <th className="px-4 py-3 font-semibold">Típus</th>
+                      <th className="px-4 py-3 font-semibold">Sorozatszám (SN)</th>
+                      <th className="px-4 py-3 font-semibold">Garancia lejár</th>
+                      <th className="px-4 py-3 font-semibold rounded-tr-lg">Státusz</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-[var(--color-border-subtle)] hover:bg-[var(--color-bg-secondary)] transition-colors">
+                      <td className="px-4 py-4 font-medium">Core Switch (Budaörs)</td>
+                      <td className="px-4 py-4 text-[var(--color-text-muted)]">
+                        Hálózat (Switch)
+                      </td>
+                      <td className="px-4 py-4 font-mono text-xs">J123-ABCD-4567</td>
+                      <td className="px-4 py-4">2028.10.15.</td>
+                      <td className="px-4 py-4">
+                        <Badge variant="success">Aktív</Badge>
+                      </td>
+                    </tr>
+                    <tr className="border-b border-[var(--color-border-subtle)] hover:bg-[var(--color-bg-secondary)] transition-colors">
+                      <td className="px-4 py-4 font-medium">Main File Server</td>
+                      <td className="px-4 py-4 text-[var(--color-text-muted)]">
+                        Szerver
+                      </td>
+                      <td className="px-4 py-4 font-mono text-xs">SV-99283-ZZ</td>
+                      <td className="px-4 py-4 text-[var(--color-status-warning)]">
+                        2026.06.01.
+                      </td>
+                      <td className="px-4 py-4">
+                        <Badge variant="success">Aktív</Badge>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </Card>
           </div>
         )}
 

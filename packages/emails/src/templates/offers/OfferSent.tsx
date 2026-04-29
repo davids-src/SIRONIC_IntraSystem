@@ -46,7 +46,7 @@ export const OfferSent = ({
       <CtaGroup
         primary={{
           label: lang === "hu" ? "Ajánlat megtekintése" : "View Quotation",
-          url: `https://portal.sironic.hu/offers/${id}`,
+          url: `https://portal.sironic.eu/offers/${id}`,
         }}
         secondary={{
           label: t.download_pdf,

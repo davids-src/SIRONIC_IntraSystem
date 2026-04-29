@@ -39,7 +39,7 @@ export const StagingChangesRequested = ({
       <CtaGroup
         primary={{
           label: t.crm_cta,
-          url: `https://crm.sironic.hu/projects/${id}`,
+          url: `https://crm.sironic.eu/projects/${id}`,
         }}
       />
     </BaseLayout>

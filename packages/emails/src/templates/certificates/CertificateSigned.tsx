@@ -37,7 +37,7 @@ export const CertificateSigned = ({
       <CtaGroup
         primary={{
           label: lang === "hu" ? "Igazolás megnyitása" : "Open Certificate",
-          url: `https://crm.sironic.hu/completion-certificates/${id}`,
+          url: `https://crm.sironic.eu/completion-certificates/${id}`,
         }}
       />
     </BaseLayout>

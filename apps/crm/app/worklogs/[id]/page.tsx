@@ -39,7 +39,7 @@ export default function WorklogFormPage({ params }: { params: Promise<{ id: stri
         }
       />
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-8">
         {/* Status bar */}
         {!isNew && (
           <div className="flex items-center gap-3 p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-border-subtle)] rounded-lg">
@@ -72,14 +72,14 @@ export default function WorklogFormPage({ params }: { params: Promise<{ id: stri
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Header Section */}
-          <Card className="p-6 space-y-4">
+          <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
             <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2">
               Alapadatok
             </h3>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-6">
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
                   Szervezet *
@@ -148,12 +148,12 @@ export default function WorklogFormPage({ params }: { params: Promise<{ id: stri
           </Card>
 
           {/* Details Section */}
-          <Card className="p-6 space-y-4">
+          <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
             <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2">
               Részletek
             </h3>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
                   Elvégzett munka részletes leírása *
@@ -187,9 +187,9 @@ export default function WorklogFormPage({ params }: { params: Promise<{ id: stri
         </div>
 
         {/* Dynamic Lists Section */}
-        <Card className="p-6 space-y-8">
+        <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-8">
           {/* Devices Serviced */}
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="flex justify-between items-center border-b border-[var(--color-border-subtle)] pb-2">
               <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
                 Szervizelt Eszközök
@@ -255,7 +255,7 @@ export default function WorklogFormPage({ params }: { params: Promise<{ id: stri
           </div>
 
           {/* Materials Used */}
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="flex justify-between items-center border-b border-[var(--color-border-subtle)] pb-2">
               <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
                 Felhasznált Anyagok
@@ -321,8 +321,8 @@ export default function WorklogFormPage({ params }: { params: Promise<{ id: stri
         </Card>
 
         {/* Signatures */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="p-6 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
             <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2 flex items-center gap-2">
               <FileSignature size={16} /> Technikus Aláírása
             </h3>
@@ -337,7 +337,7 @@ export default function WorklogFormPage({ params }: { params: Promise<{ id: stri
             </div>
           </Card>
 
-          <Card className="p-6 space-y-4">
+          <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
             <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2 flex items-center gap-2">
               <FileSignature size={16} /> Ügyfél Aláírása
             </h3>
