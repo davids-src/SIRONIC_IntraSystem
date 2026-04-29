@@ -4,11 +4,11 @@
   "version": "0.1.0",
   "packageManager": "pnpm@10.10.0",
   "scripts": {
-    "build": "corepack pnpm -r build",
+    "build": "pnpm -r build",
     "dev": "turbo run dev --parallel",
-    "lint": "corepack pnpm -r lint",
-    "test": "corepack pnpm -r test",
-    "typecheck": "corepack pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
     "format": "prettier --check .",
     "format:write": "prettier --write .",
     "prepare": "husky"
