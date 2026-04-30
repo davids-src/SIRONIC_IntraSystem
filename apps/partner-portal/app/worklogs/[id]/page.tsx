@@ -107,17 +107,35 @@ export default function PartnerWorklogDetailPage({
           <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2">
             Szervizelt Eszközök
           </h3>
-          <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase px-2 mb-2">
-            <div className="col-span-3">Eszköz Neve</div>
-            <div className="col-span-2">Típus</div>
-            <div className="col-span-3">Sorozatszám</div>
-            <div className="col-span-4">Elvégzett feladat</div>
-          </div>
-          <div className="grid grid-cols-12 gap-2 items-center px-2 py-2 bg-[var(--color-bg-secondary)] rounded-md text-sm">
-            <div className="col-span-3 font-medium">SRV-01</div>
-            <div className="col-span-2 text-[var(--color-text-muted)]">Szerver</div>
-            <div className="col-span-3 font-mono text-xs">SN-12345678</div>
-            <div className="col-span-4">Újraindítás, patch kábel csere</div>
+          <div className="overflow-x-auto border border-[var(--color-border-subtle)] rounded-lg">
+            <table className="w-full text-left border-collapse min-w-[600px]">
+              <thead>
+                <tr className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-subtle)]">
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                    Eszköz Neve
+                  </th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] w-[120px]">
+                    Típus
+                  </th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] w-[160px]">
+                    Sorozatszám
+                  </th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                    Elvégzett feladat
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--color-border-subtle)] text-sm">
+                <tr className="bg-[var(--color-bg-card)] hover:bg-[var(--color-bg-card-hover)] transition-colors">
+                  <td className="px-4 py-3 font-medium">SRV-01</td>
+                  <td className="px-4 py-3 text-[var(--color-text-muted)]">Szerver</td>
+                  <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-secondary)]">
+                    SN-12345678
+                  </td>
+                  <td className="px-4 py-3">Újraindítás, patch kábel csere</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -125,15 +143,29 @@ export default function PartnerWorklogDetailPage({
           <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2">
             Felhasznált Anyagok
           </h3>
-          <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase px-2 mb-2">
-            <div className="col-span-6">Megnevezés</div>
-            <div className="col-span-3">Cikkszám</div>
-            <div className="col-span-3">Mennyiség</div>
-          </div>
-          <div className="grid grid-cols-12 gap-2 items-center px-2 py-2 bg-[var(--color-bg-secondary)] rounded-md text-sm">
-            <div className="col-span-6 font-medium">CAT6 Patch kábel 2m</div>
-            <div className="col-span-3 text-[var(--color-text-muted)]">CAB-001</div>
-            <div className="col-span-3">1 db</div>
+          <div className="overflow-x-auto border border-[var(--color-border-subtle)] rounded-lg">
+            <table className="w-full text-left border-collapse min-w-[500px]">
+              <thead>
+                <tr className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-subtle)]">
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                    Megnevezés
+                  </th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] w-[160px]">
+                    Cikkszám
+                  </th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] w-[120px]">
+                    Mennyiség
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--color-border-subtle)] text-sm">
+                <tr className="bg-[var(--color-bg-card)] hover:bg-[var(--color-bg-card-hover)] transition-colors">
+                  <td className="px-4 py-3 font-medium">CAT6 Patch kábel 2m</td>
+                  <td className="px-4 py-3 text-[var(--color-text-muted)]">CAB-001</td>
+                  <td className="px-4 py-3">1 db</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </Card>

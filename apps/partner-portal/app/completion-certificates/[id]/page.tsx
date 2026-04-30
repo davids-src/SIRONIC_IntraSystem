@@ -112,51 +112,64 @@ export default function PartnerCompletionCertificateDetailPage({
           felhasznált anyagokat.
         </div>
 
-        <div className="border border-[var(--color-border-subtle)] rounded-lg overflow-hidden">
-          <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase bg-[var(--color-bg-secondary)] p-3 border-b border-[var(--color-border-subtle)]">
-            <div className="col-span-2">Munkalap ID</div>
-            <div className="col-span-3">Dátum</div>
-            <div className="col-span-4">Technikus</div>
-            <div className="col-span-2">Állapot</div>
-            <div className="col-span-1"></div>
-          </div>
-
-          <div className="grid grid-cols-12 gap-2 items-center p-3 border-b border-[var(--color-border-subtle)] hover:bg-[var(--color-bg-secondary)] transition-colors">
-            <div className="col-span-2 font-mono text-xs">WL-000001</div>
-            <div className="col-span-3 text-sm">2026.04.24. 08:00</div>
-            <div className="col-span-4 text-sm">Kovács János</div>
-            <div className="col-span-2">
-              <Badge variant="success">Aláírt</Badge>
-            </div>
-            <div className="col-span-1 flex justify-end">
-              <Button
-                type="button"
-                variant="ghost"
-                className="h-8 w-8 p-0"
-                onClick={() => router.push(`/worklogs/WL-000001`)}
-              >
-                <Eye size={14} />
-              </Button>
-            </div>
-          </div>
-          <div className="grid grid-cols-12 gap-2 items-center p-3 hover:bg-[var(--color-bg-secondary)] transition-colors">
-            <div className="col-span-2 font-mono text-xs">WL-000002</div>
-            <div className="col-span-3 text-sm">2026.04.25. 14:00</div>
-            <div className="col-span-4 text-sm">Kovács János</div>
-            <div className="col-span-2">
-              <Badge variant="success">Aláírt</Badge>
-            </div>
-            <div className="col-span-1 flex justify-end">
-              <Button
-                type="button"
-                variant="ghost"
-                className="h-8 w-8 p-0"
-                onClick={() => router.push(`/worklogs/WL-000002`)}
-              >
-                <Eye size={14} />
-              </Button>
-            </div>
-          </div>
+        <div className="overflow-x-auto border border-[var(--color-border-subtle)] rounded-lg">
+          <table className="w-full text-left border-collapse min-w-[600px]">
+            <thead>
+              <tr className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-subtle)]">
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                  Munkalap ID
+                </th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                  Dátum
+                </th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                  Technikus
+                </th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                  Állapot
+                </th>
+                <th className="px-4 py-3 w-12 text-center"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--color-border-subtle)] text-sm">
+              <tr className="bg-[var(--color-bg-card)] hover:bg-[var(--color-bg-card-hover)] transition-colors">
+                <td className="px-4 py-3 font-mono text-xs">WL-000001</td>
+                <td className="px-4 py-3">2026.04.24. 08:00</td>
+                <td className="px-4 py-3">Kovács János</td>
+                <td className="px-4 py-3">
+                  <Badge variant="success">Aláírt</Badge>
+                </td>
+                <td className="px-4 py-3 text-center align-middle">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-8 w-8 p-0"
+                    onClick={() => router.push(`/worklogs/WL-000001`)}
+                  >
+                    <Eye size={14} />
+                  </Button>
+                </td>
+              </tr>
+              <tr className="bg-[var(--color-bg-card)] hover:bg-[var(--color-bg-card-hover)] transition-colors">
+                <td className="px-4 py-3 font-mono text-xs">WL-000002</td>
+                <td className="px-4 py-3">2026.04.25. 14:00</td>
+                <td className="px-4 py-3">Kovács János</td>
+                <td className="px-4 py-3">
+                  <Badge variant="success">Aláírt</Badge>
+                </td>
+                <td className="px-4 py-3 text-center align-middle">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-8 w-8 p-0"
+                    onClick={() => router.push(`/worklogs/WL-000002`)}
+                  >
+                    <Eye size={14} />
+                  </Button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </Card>
 

@@ -47,6 +47,20 @@ export interface PermissionCheck extends Permission {
 
 export type PriceListItemType = "service" | "product" | "labor" | "package";
 
+/**
+ * Egyszerűsített beszerzési rekord – csak a lényeg:
+ * kitől, mennyiért, mi a szállító cikkszáma.
+ * Kizárólag CRM-es nézetben látható, a partner soha nem látja.
+ */
+export interface PurchaseRecord {
+  _id: string;
+  supplier_name: string; // szállító neve (pl. "Power Biztonságtechnika")
+  supplier_item_number: string | null; // a szállító saját cikkszáma
+  net_purchase_price: number; // nettó beszerzési ár (HUF)
+  purchased_at: Date; // mikor volt a vétel
+  notes: string | null;
+}
+
 export interface PriceListItem {
   _id: string;
   tenantId: string;
@@ -61,6 +75,12 @@ export interface PriceListItem {
   tax_rate: number;
   is_active: boolean;
   notes: string | null;
+  /** Csak CRM – partner nem látja */
+  purchase_records: PurchaseRecord[];
+  /** Legutóbbi ismert nettó beszerzési ár – gyors megjelenítéshez */
+  last_purchase_price: number | null;
+  /** Ajánlott / elsődleges szállító */
+  preferred_supplier: string | null;
   created_at: Date;
   updated_at: Date;
 }

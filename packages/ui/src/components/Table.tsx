@@ -56,7 +56,7 @@ export function Table<T>({
                 <th
                   key={String(col.key)}
                   style={{
-                    padding: "10px 16px",
+                    padding: "12px 20px",
                     background: colors.bg.secondary,
                     color: colors.text.muted,
                     fontSize: "0.7rem",
@@ -76,7 +76,7 @@ export function Table<T>({
                 <th
                   style={{
                     width: "32px",
-                    padding: "10px 8px",
+                    padding: "12px 8px",
                     background: colors.bg.secondary,
                     borderBottom: `1px solid ${colors.border.default}`,
                   }}
@@ -143,7 +143,7 @@ function TableRow<T>({
         <td
           key={String(col.key)}
           style={{
-            padding: "13px 16px",
+            padding: "16px 20px",
             borderBottom: `1px solid ${colors.border.subtle}`,
             color: colors.text.primary,
             fontSize: "0.875rem",

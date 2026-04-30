@@ -201,56 +201,72 @@ export default function WorklogFormPage({ params }: { params: Promise<{ id: stri
               )}
             </div>
 
-            {/* Mock Table Header */}
-            <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase px-2">
-              <div className="col-span-3">Eszköz Neve</div>
-              <div className="col-span-2">Típus</div>
-              <div className="col-span-3">Sorozatszám</div>
-              <div className="col-span-3">Elvégzett feladat</div>
-              <div className="col-span-1"></div>
-            </div>
-
-            {/* Mock Row */}
-            <div className="grid grid-cols-12 gap-2 items-center px-2 py-1 bg-[var(--color-bg-secondary)] rounded-md">
-              <div className="col-span-3">
-                <Input
-                  placeholder="Pl. SRV-01"
-                  disabled={status !== "draft"}
-                  defaultValue={!isNew ? "SRV-01" : ""}
-                />
-              </div>
-              <div className="col-span-2">
-                <Input
-                  placeholder="Szerver"
-                  disabled={status !== "draft"}
-                  defaultValue={!isNew ? "Szerver" : ""}
-                />
-              </div>
-              <div className="col-span-3">
-                <Input
-                  placeholder="SN..."
-                  disabled={status !== "draft"}
-                  defaultValue={!isNew ? "SN-123" : ""}
-                />
-              </div>
-              <div className="col-span-3">
-                <Input
-                  placeholder="Javítás..."
-                  disabled={status !== "draft"}
-                  defaultValue={!isNew ? "Újraindítás" : ""}
-                />
-              </div>
-              <div className="col-span-1 flex justify-center">
-                {status === "draft" && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="h-8 w-8 text-[var(--color-status-error)] p-0"
-                  >
-                    <Trash2 size={14} />
-                  </Button>
-                )}
-              </div>
+            <div className="overflow-x-auto border border-[var(--color-border-subtle)] rounded-lg">
+              <table className="w-full text-left border-collapse min-w-[700px]">
+                <thead>
+                  <tr className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-subtle)]">
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                      Eszköz Neve
+                    </th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] w-[150px]">
+                      Típus
+                    </th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] w-[200px]">
+                      Sorozatszám
+                    </th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                      Elvégzett feladat
+                    </th>
+                    <th className="px-4 py-3 w-12 text-center"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-border-subtle)]">
+                  <tr className="bg-[var(--color-bg-card)] hover:bg-[var(--color-bg-card-hover)] transition-colors">
+                    <td className="p-2 align-top">
+                      <Input
+                        placeholder="Pl. SRV-01"
+                        disabled={status !== "draft"}
+                        defaultValue={!isNew ? "SRV-01" : ""}
+                        style={{ height: "36px", background: "transparent" }}
+                      />
+                    </td>
+                    <td className="p-2 align-top">
+                      <Input
+                        placeholder="Szerver"
+                        disabled={status !== "draft"}
+                        defaultValue={!isNew ? "Szerver" : ""}
+                        style={{ height: "36px", background: "transparent" }}
+                      />
+                    </td>
+                    <td className="p-2 align-top">
+                      <Input
+                        placeholder="SN..."
+                        disabled={status !== "draft"}
+                        defaultValue={!isNew ? "SN-123" : ""}
+                        style={{ height: "36px", background: "transparent" }}
+                      />
+                    </td>
+                    <td className="p-2 align-top">
+                      <Input
+                        placeholder="Javítás..."
+                        disabled={status !== "draft"}
+                        defaultValue={!isNew ? "Újraindítás" : ""}
+                        style={{ height: "36px", background: "transparent" }}
+                      />
+                    </td>
+                    <td className="p-2 text-center align-middle">
+                      {status === "draft" && (
+                        <button
+                          type="button"
+                          className="text-[var(--color-text-muted)] hover:text-[var(--color-status-error)] transition-colors p-2 rounded-md hover:bg-red-500/10"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -267,55 +283,73 @@ export default function WorklogFormPage({ params }: { params: Promise<{ id: stri
               )}
             </div>
 
-            <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase px-2">
-              <div className="col-span-5">Megnevezés</div>
-              <div className="col-span-2">Cikkszám</div>
-              <div className="col-span-2">Mennyiség</div>
-              <div className="col-span-2">Egység</div>
-              <div className="col-span-1"></div>
-            </div>
-
-            <div className="grid grid-cols-12 gap-2 items-center px-2 py-1 bg-[var(--color-bg-secondary)] rounded-md">
-              <div className="col-span-5">
-                <Input
-                  placeholder="Anyag neve"
-                  disabled={status !== "draft"}
-                  defaultValue={!isNew ? "CAT6 Patch kábel 2m" : ""}
-                />
-              </div>
-              <div className="col-span-2">
-                <Input
-                  placeholder="Opcionális"
-                  disabled={status !== "draft"}
-                  defaultValue={!isNew ? "CAB-001" : ""}
-                />
-              </div>
-              <div className="col-span-2">
-                <Input
-                  type="number"
-                  placeholder="0"
-                  disabled={status !== "draft"}
-                  defaultValue={!isNew ? "1" : ""}
-                />
-              </div>
-              <div className="col-span-2">
-                <Input
-                  placeholder="db, m..."
-                  disabled={status !== "draft"}
-                  defaultValue={!isNew ? "db" : ""}
-                />
-              </div>
-              <div className="col-span-1 flex justify-center">
-                {status === "draft" && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="h-8 w-8 text-[var(--color-status-error)] p-0"
-                  >
-                    <Trash2 size={14} />
-                  </Button>
-                )}
-              </div>
+            <div className="overflow-x-auto border border-[var(--color-border-subtle)] rounded-lg">
+              <table className="w-full text-left border-collapse min-w-[700px]">
+                <thead>
+                  <tr className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-subtle)]">
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                      Megnevezés
+                    </th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] w-[180px]">
+                      Cikkszám
+                    </th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] w-[120px]">
+                      Mennyiség
+                    </th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] w-[120px]">
+                      Egység
+                    </th>
+                    <th className="px-4 py-3 w-12 text-center"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-border-subtle)]">
+                  <tr className="bg-[var(--color-bg-card)] hover:bg-[var(--color-bg-card-hover)] transition-colors">
+                    <td className="p-2 align-top">
+                      <Input
+                        placeholder="Anyag neve"
+                        disabled={status !== "draft"}
+                        defaultValue={!isNew ? "CAT6 Patch kábel 2m" : ""}
+                        style={{ height: "36px", background: "transparent" }}
+                      />
+                    </td>
+                    <td className="p-2 align-top">
+                      <Input
+                        placeholder="Opcionális"
+                        disabled={status !== "draft"}
+                        defaultValue={!isNew ? "CAB-001" : ""}
+                        style={{ height: "36px", background: "transparent" }}
+                      />
+                    </td>
+                    <td className="p-2 align-top">
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        disabled={status !== "draft"}
+                        defaultValue={!isNew ? "1" : ""}
+                        style={{ height: "36px", background: "transparent" }}
+                      />
+                    </td>
+                    <td className="p-2 align-top">
+                      <Input
+                        placeholder="db, m..."
+                        disabled={status !== "draft"}
+                        defaultValue={!isNew ? "db" : ""}
+                        style={{ height: "36px", background: "transparent" }}
+                      />
+                    </td>
+                    <td className="p-2 text-center align-middle">
+                      {status === "draft" && (
+                        <button
+                          type="button"
+                          className="text-[var(--color-text-muted)] hover:text-[var(--color-status-error)] transition-colors p-2 rounded-md hover:bg-red-500/10"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </Card>

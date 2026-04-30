@@ -1,9 +1,29 @@
 "use client";
 
-import { PageHeader, Card, Table, Badge, Button, Input } from "@crm/ui";
-import type { Column } from "@crm/ui";
-import { Search, Plus, Filter, Tag, Layers, Server } from "lucide-react";
+import { PageHeader, Card, Badge, Button, Input } from "@crm/ui";
+import {
+  Search,
+  Plus,
+  Filter,
+  Tag,
+  Layers,
+  Server,
+  ChevronDown,
+  ChevronUp,
+  ShoppingCart,
+  Building2,
+  Hash,
+} from "lucide-react";
 import { useState } from "react";
+
+interface PurchaseRecord {
+  _id: string;
+  supplier_name: string;
+  supplier_item_number: string | null;
+  net_purchase_price: number;
+  purchased_at: Date;
+  notes: string | null;
+}
 
 interface PriceItem {
   _id: string;
@@ -15,6 +35,9 @@ interface PriceItem {
   tax_percent: number;
   description: string;
   status: "active" | "archived";
+  purchase_records: PurchaseRecord[];
+  last_purchase_price: number | null;
+  preferred_supplier: string | null;
 }
 
 const mockPrices: PriceItem[] = [
@@ -28,6 +51,9 @@ const mockPrices: PriceItem[] = [
     tax_percent: 27,
     description: "Szerver beépítése, kábelezése, alapvető tesztek",
     status: "active",
+    purchase_records: [],
+    last_purchase_price: null,
+    preferred_supplier: null,
   },
   {
     _id: "p2",
@@ -39,9 +65,43 @@ const mockPrices: PriceItem[] = [
     tax_percent: 27,
     description: "VLAN-ok, útválasztás, port security beállítása",
     status: "active",
+    purchase_records: [],
+    last_purchase_price: null,
+    preferred_supplier: null,
   },
   {
     _id: "p3",
+    code: "CAM-HIK-2MP",
+    name: "Hikvision DS-2CD2123G2-I 2MP kamera",
+    category: "hardware",
+    unit: "db",
+    unit_price: 18000,
+    tax_percent: 27,
+    description: "2MP IP kamera, IR, H.265+, PoE",
+    status: "active",
+    purchase_records: [
+      {
+        _id: "pr1",
+        supplier_name: "Power Biztonságtechnika",
+        supplier_item_number: "DS-2CD2123G2-I",
+        net_purchase_price: 8000,
+        purchased_at: new Date("2026-04-15"),
+        notes: "Akciós készlet, 50 db rendelve",
+      },
+      {
+        _id: "pr2",
+        supplier_name: "Power Biztonságtechnika",
+        supplier_item_number: "DS-2CD2123G2-I",
+        net_purchase_price: 9200,
+        purchased_at: new Date("2026-01-10"),
+        notes: null,
+      },
+    ],
+    last_purchase_price: 8000,
+    preferred_supplier: "Power Biztonságtechnika",
+  },
+  {
+    _id: "p4",
     code: "HW-SRV-STD",
     name: "Standard 1U Rack Szerver (Alapkonfig)",
     category: "hardware",
@@ -50,9 +110,21 @@ const mockPrices: PriceItem[] = [
     tax_percent: 27,
     description: "1U szerver, 32GB RAM, 2x 1TB SSD, 1x CPU",
     status: "active",
+    purchase_records: [
+      {
+        _id: "pr3",
+        supplier_name: "Acer Hungary Kft.",
+        supplier_item_number: "ACR-1U-32-2T",
+        net_purchase_price: 620000,
+        purchased_at: new Date("2026-03-01"),
+        notes: null,
+      },
+    ],
+    last_purchase_price: 620000,
+    preferred_supplier: "Acer Hungary Kft.",
   },
   {
-    _id: "p4",
+    _id: "p5",
     code: "SW-MS-365",
     name: "Microsoft 365 Business Standard",
     category: "license",
@@ -61,17 +133,9 @@ const mockPrices: PriceItem[] = [
     tax_percent: 27,
     description: "Havi előfizetés felhasználónként",
     status: "active",
-  },
-  {
-    _id: "p5",
-    code: "SRV-MNT-OLD",
-    name: "Régi szerver karbantartás (Kivezetve)",
-    category: "service",
-    unit: "óra",
-    unit_price: 15000,
-    tax_percent: 27,
-    description: "Már nem támogatott szerverek karbantartása",
-    status: "archived",
+    purchase_records: [],
+    last_purchase_price: null,
+    preferred_supplier: null,
   },
 ];
 
@@ -89,8 +153,16 @@ const categoryLabel = {
   license: "Licenc",
 };
 
+const fmt = (n: number) =>
+  new Intl.NumberFormat("hu-HU", {
+    style: "currency",
+    currency: "HUF",
+    maximumFractionDigits: 0,
+  }).format(n);
+
 export default function PriceListPage() {
   const [search, setSearch] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const filtered = mockPrices.filter(
     (p) =>
@@ -105,111 +177,18 @@ export default function PriceListPage() {
     services: mockPrices.filter((p) => p.category === "service").length,
   };
 
-  const columns: Column<PriceItem>[] = [
-    {
-      key: "code",
-      header: "Cikkszám",
-      width: "130px",
-      render: (row) => (
-        <span
-          style={{
-            fontFamily: "monospace",
-            fontSize: "0.8rem",
-            color: "var(--color-text-muted, #555)",
-          }}
-        >
-          {row.code}
-        </span>
-      ),
-    },
-    {
-      key: "name",
-      header: "Megnevezés",
-      render: (row) => (
-        <div>
-          <div style={{ fontWeight: 600 }}>{row.name}</div>
-          <div
-            style={{
-              fontSize: "0.75rem",
-              color: "var(--color-text-muted, #555)",
-              marginTop: "2px",
-            }}
-          >
-            {row.description}
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: "category",
-      header: "Kategória",
-      width: "140px",
-      render: (row) => (
-        <Badge variant={categoryVariant[row.category]}>
-          {categoryLabel[row.category]}
-        </Badge>
-      ),
-    },
-    {
-      key: "unit_price",
-      header: "Egységár",
-      width: "130px",
-      render: (row) => (
-        <span style={{ fontWeight: 600 }}>
-          {new Intl.NumberFormat("hu-HU", {
-            style: "currency",
-            currency: "HUF",
-            maximumFractionDigits: 0,
-          }).format(row.unit_price)}
-        </span>
-      ),
-    },
-    {
-      key: "unit",
-      header: "Mértékegység",
-      width: "120px",
-      render: (row) => (
-        <span style={{ fontSize: "0.8rem", color: "var(--color-text-muted, #555)" }}>
-          {row.unit}
-        </span>
-      ),
-    },
-    {
-      key: "tax_percent",
-      header: "ÁFA",
-      width: "80px",
-      render: (row) => (
-        <span style={{ fontSize: "0.8rem", color: "var(--color-text-muted, #555)" }}>
-          {row.tax_percent}%
-        </span>
-      ),
-    },
-    {
-      key: "status",
-      header: "Állapot",
-      width: "100px",
-      render: (row) => (
-        <span
-          style={{
-            fontSize: "0.75rem",
-            fontWeight: 600,
-            color: row.status === "active" ? "#22c55e" : "var(--color-text-muted, #555)",
-            background:
-              row.status === "active"
-                ? "rgba(34, 197, 94, 0.1)"
-                : "rgba(255,255,255,0.05)",
-            padding: "2px 8px",
-            borderRadius: "4px",
-          }}
-        >
-          {row.status === "active" ? "Aktív" : "Archivált"}
-        </span>
-      ),
-    },
-  ];
+  const toggleExpand = (id: string) => setExpandedId((prev) => (prev === id ? null : id));
+
+  const margin = (item: PriceItem) => {
+    if (!item.last_purchase_price) return null;
+    const pct = Math.round(
+      ((item.unit_price - item.last_purchase_price) / item.unit_price) * 100,
+    );
+    return pct;
+  };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
       <PageHeader
         title="Árlista"
         subtitle="Szolgáltatások, hardverek és licencek alapárai ajánlatkészítéshez"
@@ -221,11 +200,12 @@ export default function PriceListPage() {
         }
       />
 
+      {/* Stat kártyák */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-          gap: "12px",
+          gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+          gap: "16px",
         }}
       >
         {[
@@ -248,13 +228,13 @@ export default function PriceListPage() {
             color: "#f59e0b",
           },
         ].map((stat) => (
-          <Card key={stat.label} className="p-4">
+          <Card key={stat.label} className="p-5">
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                marginBottom: "8px",
+                marginBottom: "10px",
               }}
             >
               <span
@@ -284,7 +264,8 @@ export default function PriceListPage() {
         ))}
       </div>
 
-      <Card className="p-4">
+      {/* Kereső */}
+      <Card className="p-5">
         <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: "200px", position: "relative" }}>
             <Search
@@ -313,14 +294,362 @@ export default function PriceListPage() {
         </div>
       </Card>
 
-      <Card className="p-0 overflow-hidden">
-        <Table<PriceItem>
-          data={filtered}
-          columns={columns}
-          keyField="_id"
-          emptyMessage="Nincs találat a keresési feltételekre"
-        />
-      </Card>
+      {/* Árlista sorok – kattintható, expandable */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+        {/* Fejléc */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "120px 1fr 130px 110px 120px 120px 40px",
+            gap: "0 16px",
+            padding: "10px 20px",
+            background: "var(--color-bg-secondary, #111)",
+            borderRadius: "10px 10px 0 0",
+            border: "1px solid var(--color-border-default, #222)",
+            borderBottom: "none",
+          }}
+        >
+          {[
+            "Cikkszám",
+            "Megnevezés",
+            "Kategória",
+            "Mértékegység",
+            "Eladási ár (nettó)",
+            "Bszerz. ár (nettó)",
+            "",
+          ].map((h) => (
+            <span
+              key={h}
+              style={{
+                fontSize: "0.68rem",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.07em",
+                color: "var(--color-text-muted, #555)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {h}
+            </span>
+          ))}
+        </div>
+
+        {filtered.length === 0 && (
+          <Card className="p-8 text-center" style={{ borderRadius: "0 0 10px 10px" }}>
+            <span style={{ color: "var(--color-text-muted, #555)" }}>
+              Nincs találat a keresési feltételekre
+            </span>
+          </Card>
+        )}
+
+        {filtered.map((item, idx) => {
+          const isExpanded = expandedId === item._id;
+          const isLast = idx === filtered.length - 1;
+          const marginPct = margin(item);
+
+          return (
+            <div key={item._id}>
+              {/* Fő sor */}
+              <button
+                onClick={() => toggleExpand(item._id)}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "120px 1fr 130px 110px 120px 120px 40px",
+                  gap: "0 16px",
+                  padding: "18px 20px",
+                  background: isExpanded
+                    ? "var(--color-bg-card, #1a1a1a)"
+                    : "var(--color-bg-card, #1a1a1a)",
+                  border: "1px solid var(--color-border-default, #222)",
+                  borderTop: "none",
+                  borderRadius: isExpanded ? "0" : isLast ? "0 0 10px 10px" : "0",
+                  width: "100%",
+                  textAlign: "left",
+                  cursor: "pointer",
+                  transition: "background 0.12s",
+                  alignItems: "center",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.background =
+                    "var(--color-bg-card-hover, #1f1f1f)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.background =
+                    "var(--color-bg-card, #1a1a1a)";
+                }}
+              >
+                {/* Cikkszám */}
+                <span
+                  style={{
+                    fontFamily: "monospace",
+                    fontSize: "0.78rem",
+                    color: "var(--color-text-muted, #555)",
+                  }}
+                >
+                  {item.code}
+                </span>
+
+                {/* Név + leírás */}
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>{item.name}</div>
+                  <div
+                    style={{
+                      fontSize: "0.72rem",
+                      color: "var(--color-text-muted, #555)",
+                      marginTop: "2px",
+                    }}
+                  >
+                    {item.description}
+                    {item.preferred_supplier && (
+                      <span style={{ color: "var(--color-text-secondary, #a0a0a0)" }}>
+                        {" "}
+                        ·{" "}
+                        <Building2
+                          size={10}
+                          style={{ display: "inline", verticalAlign: "middle" }}
+                        />{" "}
+                        {item.preferred_supplier}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Kategória */}
+                <div>
+                  <Badge variant={categoryVariant[item.category]}>
+                    {categoryLabel[item.category]}
+                  </Badge>
+                </div>
+
+                {/* M.egység */}
+                <span
+                  style={{ fontSize: "0.8rem", color: "var(--color-text-muted, #555)" }}
+                >
+                  {item.unit}
+                </span>
+
+                {/* Eladási ár */}
+                <span style={{ fontWeight: 700, fontSize: "0.9rem" }}>
+                  {fmt(item.unit_price)}
+                </span>
+
+                {/* Bszerz. ár + margin */}
+                <div>
+                  {item.last_purchase_price ? (
+                    <>
+                      <div
+                        style={{
+                          fontWeight: 600,
+                          fontSize: "0.85rem",
+                          color: "var(--color-text-secondary, #a0a0a0)",
+                        }}
+                      >
+                        {fmt(item.last_purchase_price)}
+                      </div>
+                      {marginPct !== null && (
+                        <div
+                          style={{
+                            fontSize: "0.7rem",
+                            color:
+                              marginPct >= 40
+                                ? "#22c55e"
+                                : marginPct >= 20
+                                  ? "#f59e0b"
+                                  : "#e53935",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {marginPct}% marzs
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <span
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "var(--color-text-muted, #555)",
+                      }}
+                    >
+                      —
+                    </span>
+                  )}
+                </div>
+
+                {/* Expand ikon */}
+                <div
+                  style={{
+                    color: "var(--color-text-muted, #555)",
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
+                >
+                  {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </div>
+              </button>
+
+              {/* Expandált panel: Bszerz. előzmény */}
+              {isExpanded && (
+                <div
+                  style={{
+                    border: "1px solid var(--color-border-default, #222)",
+                    borderTop: "none",
+                    borderRadius: isLast ? "0 0 10px 10px" : "0",
+                    background: "var(--color-bg-secondary, #111)",
+                    padding: "20px 24px 24px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "16px",
+                    }}
+                  >
+                    <h4
+                      style={{
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.07em",
+                        color: "var(--color-text-muted, #555)",
+                      }}
+                    >
+                      🔒 Bszerz. előzmény (csak CRM)
+                    </h4>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <Button
+                        variant="ghost"
+                        style={{ fontSize: "0.78rem", padding: "4px 12px" }}
+                      >
+                        <ShoppingCart size={13} style={{ marginRight: "5px" }} />
+                        Ajánlathoz add
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        style={{ fontSize: "0.78rem", padding: "4px 12px" }}
+                      >
+                        <Plus size={13} style={{ marginRight: "5px" }} />
+                        Új bszerz. rögzítése
+                      </Button>
+                    </div>
+                  </div>
+
+                  {item.purchase_records.length === 0 ? (
+                    <p
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "var(--color-text-muted, #555)",
+                        fontStyle: "italic",
+                      }}
+                    >
+                      Még nincs rögzített bszerz. adat ehhez a tételhez.
+                    </p>
+                  ) : (
+                    <div
+                      style={{ display: "flex", flexDirection: "column", gap: "10px" }}
+                    >
+                      {/* Mini fejléc */}
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 160px 120px 120px",
+                          gap: "0 16px",
+                          padding: "6px 14px",
+                          background: "var(--color-bg-card, #1a1a1a)",
+                          borderRadius: "8px",
+                        }}
+                      >
+                        {["Szállító", "Száll. cikkszám", "Nettó bszerz. ár", "Dátum"].map(
+                          (h) => (
+                            <span
+                              key={h}
+                              style={{
+                                fontSize: "0.65rem",
+                                fontWeight: 700,
+                                textTransform: "uppercase",
+                                letterSpacing: "0.06em",
+                                color: "var(--color-text-muted, #555)",
+                              }}
+                            >
+                              {h}
+                            </span>
+                          ),
+                        )}
+                      </div>
+
+                      {item.purchase_records.map((rec) => (
+                        <div
+                          key={rec._id}
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr 160px 120px 120px",
+                            gap: "0 16px",
+                            padding: "12px 14px",
+                            background: "var(--color-bg-card, #1a1a1a)",
+                            borderRadius: "8px",
+                            border: "1px solid var(--color-border-subtle, #1a1a1a)",
+                            alignItems: "center",
+                          }}
+                        >
+                          <div
+                            style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                          >
+                            <Building2
+                              size={14}
+                              style={{
+                                color: "var(--color-text-muted, #555)",
+                                flexShrink: 0,
+                              }}
+                            />
+                            <span style={{ fontWeight: 600, fontSize: "0.85rem" }}>
+                              {rec.supplier_name}
+                            </span>
+                          </div>
+                          <div
+                            style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                          >
+                            <Hash
+                              size={13}
+                              style={{ color: "var(--color-text-muted, #555)" }}
+                            />
+                            <span
+                              style={{
+                                fontFamily: "monospace",
+                                fontSize: "0.8rem",
+                                color: "var(--color-text-secondary, #a0a0a0)",
+                              }}
+                            >
+                              {rec.supplier_item_number ?? "—"}
+                            </span>
+                          </div>
+                          <span
+                            style={{
+                              fontWeight: 700,
+                              fontSize: "0.9rem",
+                              color: "#22c55e",
+                            }}
+                          >
+                            {fmt(rec.net_purchase_price)}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: "0.78rem",
+                              color: "var(--color-text-muted, #555)",
+                            }}
+                          >
+                            {new Date(rec.purchased_at).toLocaleDateString("hu-HU")}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

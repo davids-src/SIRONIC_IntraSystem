@@ -179,57 +179,66 @@ export default function PartnerTicketDetailPage({
             </h3>
 
             <div className="space-y-6">
-              {publicComments.map((comment) => {
-                const isSupport = comment.author_role === "crm_staff";
-                return (
-                  <Card
-                    key={comment._id}
-                    className={`p-4 ${isSupport ? "border-[var(--color-accent-primary)] border-opacity-30" : ""}`}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                            isSupport
-                              ? "bg-[var(--color-accent-primary)] text-white"
-                              : "bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)]"
-                          }`}
-                        >
-                          {isSupport ? "SI" : "TE"}
-                        </div>
-                        <div>
-                          <div
-                            className={`text-sm font-medium ${isSupport ? "text-[var(--color-accent-primary)]" : ""}`}
+              <div className="relative border-l-2 border-[var(--color-border-subtle)] ml-4 space-y-6 pb-4">
+                {publicComments.map((comment) => {
+                  const isSupport = comment.author_role === "crm_staff";
+                  return (
+                    <div key={comment._id} className="relative pl-6">
+                      <div
+                        className={`absolute -left-[17px] top-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shadow-sm border-2 border-[var(--color-bg-primary)] ${
+                          isSupport
+                            ? "bg-[var(--color-accent-primary)] text-white"
+                            : "bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)]"
+                        }`}
+                      >
+                        {isSupport ? "SI" : "TE"}
+                      </div>
+
+                      <div
+                        className={`p-4 rounded-xl shadow-sm ${
+                          isSupport
+                            ? "bg-[var(--color-accent-primary)]/5 border border-[var(--color-accent-primary)]/20"
+                            : "bg-[var(--color-bg-card)] border border-[var(--color-border-subtle)]"
+                        }`}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <span
+                            className={`text-sm font-semibold ${isSupport ? "text-[var(--color-accent-primary)]" : "text-[var(--color-text-primary)]"}`}
                           >
                             {comment.author_id}
-                          </div>
-                          <div className="text-xs text-[var(--color-text-muted)]">
-                            {new Date(comment.created_at).toLocaleString()}
-                          </div>
+                          </span>
+                          <span className="text-xs text-[var(--color-text-muted)]">
+                            {new Date(comment.created_at).toLocaleString("hu-HU", {
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
                         </div>
+                        <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
+                          {comment.message}
+                        </p>
                       </div>
                     </div>
-                    <p className="text-sm text-[var(--color-text-secondary)] mt-3">
-                      {comment.message}
-                    </p>
-                  </Card>
-                );
-              })}
+                  );
+                })}
+              </div>
 
               {/* Add comment box */}
               {ticket.status !== "closed" && (
-                <Card className="p-4 space-y-4">
-                  <Input
-                    label="Új üzenet írása"
-                    placeholder="Írj választ a támogatásnak..."
+                <div className="border border-[var(--color-border-subtle)] rounded-xl overflow-hidden bg-[var(--color-bg-card)] focus-within:border-[var(--color-accent-primary)] focus-within:ring-1 focus-within:ring-[var(--color-accent-primary)] transition-all">
+                  <textarea
+                    placeholder="Kérdezz, vagy írj választ a támogatásnak..."
+                    className="w-full bg-transparent border-none p-4 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] outline-none min-h-[100px] resize-y"
                   />
-                  <div className="flex justify-end items-center">
-                    <Button variant="primary">
-                      <Send size={16} className="mr-2" />
+                  <div className="flex justify-end items-center bg-[var(--color-bg-secondary)] px-4 py-3 border-t border-[var(--color-border-subtle)]">
+                    <Button variant="primary" className="py-1.5 px-4 text-sm">
+                      <Send size={14} className="mr-2" />
                       Küldés
                     </Button>
                   </div>
-                </Card>
+                </div>
               )}
             </div>
           </div>

@@ -231,7 +231,7 @@ export default function WorklogsPage() {
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
       <PageHeader
         title="Munkalapok"
         subtitle="Helyszíni és távoli munkavégzések adminisztrációja"
@@ -246,8 +246,8 @@ export default function WorklogsPage() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-          gap: "12px",
+          gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+          gap: "16px",
         }}
       >
         {[

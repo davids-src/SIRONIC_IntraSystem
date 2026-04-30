@@ -214,7 +214,7 @@ export default function ProjectsPage() {
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
       <PageHeader
         title="Projektek"
         subtitle="Ügyfélprojektek és folyamatos szerződések menedzselése"
@@ -229,8 +229,8 @@ export default function ProjectsPage() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-          gap: "12px",
+          gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+          gap: "16px",
         }}
       >
         {[

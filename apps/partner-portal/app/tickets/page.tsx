@@ -190,7 +190,7 @@ export default function PartnerTicketsPage() {
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
       <PageHeader
         title="Ticketek"
         subtitle="Bejelentett hibák és szervizigények nyomon követése"
@@ -205,8 +205,8 @@ export default function PartnerTicketsPage() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-          gap: "12px",
+          gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+          gap: "16px",
         }}
       >
         {[
@@ -229,7 +229,7 @@ export default function PartnerTicketsPage() {
             color: "#22c55e",
           },
         ].map((stat) => (
-          <Card key={stat.label} className="p-4">
+          <Card key={stat.label} className="p-5">
             <div
               style={{
                 display: "flex",
@@ -265,7 +265,7 @@ export default function PartnerTicketsPage() {
         ))}
       </div>
 
-      <Card className="p-4">
+      <Card className="p-5">
         <div style={{ position: "relative" }}>
           <Search
             size={15}

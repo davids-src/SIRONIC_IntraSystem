@@ -175,57 +175,78 @@ export default function TicketDetailPage({
             </h3>
 
             <div className="space-y-6">
-              {ticket.comments.map((comment) => (
-                <Card
-                  key={comment._id}
-                  className={`p-4 ${comment.is_internal ? "border-[var(--color-status-warning)] border-opacity-50 bg-[var(--color-status-warning)] bg-opacity-5" : ""}`}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-[var(--color-bg-secondary)] flex items-center justify-center text-xs font-bold">
+              <div className="relative border-l-2 border-[var(--color-border-subtle)] ml-4 space-y-6 pb-4">
+                {ticket.comments.map((comment, index) => {
+                  const isStaff = comment.author_role === "crm_staff";
+                  const isInternal = comment.is_internal;
+                  return (
+                    <div key={comment._id} className="relative pl-6">
+                      <div
+                        className={`absolute -left-[17px] top-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shadow-sm border-2 border-[var(--color-bg-primary)] ${
+                          isStaff
+                            ? "bg-[var(--color-accent-primary)] text-white"
+                            : "bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)]"
+                        }`}
+                      >
                         {comment.author_id.substring(0, 2).toUpperCase()}
                       </div>
-                      <div>
-                        <div className="text-sm font-medium">
-                          {comment.author_id}
-                          {comment.is_internal && (
-                            <span className="ml-2 inline-flex">
-                              <Badge variant="warning">Belső megjegyzés</Badge>
+
+                      <div
+                        className={`p-4 rounded-xl shadow-sm ${
+                          isInternal
+                            ? "bg-[var(--color-status-warning)]/10 border border-[var(--color-status-warning)]/20"
+                            : "bg-[var(--color-bg-card)] border border-[var(--color-border-subtle)]"
+                        }`}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`text-sm font-semibold ${isStaff ? "text-[var(--color-accent-primary)]" : "text-[var(--color-text-primary)]"}`}
+                            >
+                              {comment.author_id}
                             </span>
-                          )}
+                            {isInternal && (
+                              <Badge variant="warning">Belső megjegyzés</Badge>
+                            )}
+                          </div>
+                          <span className="text-xs text-[var(--color-text-muted)]">
+                            {new Date(comment.created_at).toLocaleString("hu-HU", {
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
                         </div>
-                        <div className="text-xs text-[var(--color-text-muted)]">
-                          {new Date(comment.created_at).toLocaleString()}
-                        </div>
+                        <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
+                          {comment.message}
+                        </p>
                       </div>
                     </div>
-                  </div>
-                  <p className="text-sm text-[var(--color-text-secondary)] mt-3">
-                    {comment.message}
-                  </p>
-                </Card>
-              ))}
+                  );
+                })}
+              </div>
 
               {/* Add comment box */}
-              <Card className="p-4 space-y-4">
-                <Input
-                  label="Új hozzászólás írása"
-                  placeholder="Írd le a fejleményeket..."
+              <div className="border border-[var(--color-border-subtle)] rounded-xl overflow-hidden bg-[var(--color-bg-card)] focus-within:border-[var(--color-accent-primary)] focus-within:ring-1 focus-within:ring-[var(--color-accent-primary)] transition-all">
+                <textarea
+                  placeholder="Írd le a fejleményeket vagy válaszolj az ügyfélnek..."
+                  className="w-full bg-transparent border-none p-4 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] outline-none min-h-[100px] resize-y"
                 />
-                <div className="flex justify-between items-center">
-                  <label className="flex items-center gap-2 text-sm text-[var(--color-text-muted)] cursor-pointer">
+                <div className="flex justify-between items-center bg-[var(--color-bg-secondary)] px-4 py-3 border-t border-[var(--color-border-subtle)]">
+                  <label className="flex items-center gap-2 text-xs font-medium text-[var(--color-text-muted)] cursor-pointer hover:text-[var(--color-text-primary)] transition-colors">
                     <input
                       type="checkbox"
-                      className="accent-[var(--color-accent-primary)]"
+                      className="rounded border-[var(--color-border-default)] accent-[var(--color-accent-primary)] w-3.5 h-3.5"
                     />
-                    Belső megjegyzés (Ügyfél nem látja)
+                    Belső megjegyzés (Csak munkatársak látják)
                   </label>
-                  <Button variant="primary">
-                    <Send size={16} className="mr-2" />
+                  <Button variant="primary" className="py-1.5 px-4 text-sm">
+                    <Send size={14} className="mr-2" />
                     Küldés
                   </Button>
                 </div>
-              </Card>
+              </div>
             </div>
           </div>
         </div>

@@ -192,7 +192,7 @@ export default function PartnerWorklogsPage() {
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
       <PageHeader
         title="Munkalapok"
         subtitle="Önhöz kapcsolódó szervizes és projekt munkalapok"
@@ -201,8 +201,8 @@ export default function PartnerWorklogsPage() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-          gap: "12px",
+          gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+          gap: "16px",
         }}
       >
         {[
@@ -225,7 +225,7 @@ export default function PartnerWorklogsPage() {
             color: "#22c55e",
           },
         ].map((stat) => (
-          <Card key={stat.label} className="p-4">
+          <Card key={stat.label} className="p-5">
             <div
               style={{
                 display: "flex",
@@ -261,7 +261,7 @@ export default function PartnerWorklogsPage() {
         ))}
       </div>
 
-      <Card className="p-4">
+      <Card className="p-5">
         <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: "200px", position: "relative" }}>
             <Search

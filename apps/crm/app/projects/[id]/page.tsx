@@ -143,12 +143,12 @@ export default function ProjectDetailPage({
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex items-center gap-2 border-b border-[var(--color-border-subtle)] overflow-x-auto pb-[1px]">
+      <div className="flex items-center gap-1 border-b border-[var(--color-border-subtle)] overflow-x-auto pb-[1px]">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+            className={`flex items-center gap-2 px-5 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
               activeTab === tab.id
                 ? "border-[var(--color-accent-primary)] text-[var(--color-accent-primary)]"
                 : "border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-default)]"
@@ -161,41 +161,47 @@ export default function ProjectDetailPage({
       </div>
 
       {/* Tab Content */}
-      <div className="py-4">
+      <div className="py-6">
         {activeTab === "overview" && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
-              <Card className="p-6 space-y-4">
+              <Card className="p-8 space-y-6">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
                   Leírás
                 </h3>
-                <p className="text-sm text-[var(--color-text-secondary)]">
+                <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
                   {project.description}
                 </p>
 
-                <div className="pt-4 mt-4 border-t border-[var(--color-border-subtle)]">
-                  <div className="flex justify-between items-center mb-2">
+                <div className="pt-5 mt-5 border-t border-[var(--color-border-subtle)]">
+                  <div className="flex justify-between items-center mb-3">
                     <span className="text-sm font-medium">Haladás (Időkeret)</span>
                     <span className="text-sm font-bold">
                       {project.total_logged_hours}h / {project.budget_hours}h
                     </span>
                   </div>
-                  <div className="h-3 w-full bg-[var(--color-bg-secondary)] rounded-full overflow-hidden">
+                  <div className="h-2.5 w-full bg-[var(--color-bg-secondary)] rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-[var(--color-accent-primary)] rounded-full"
+                      className="h-full bg-[var(--color-accent-primary)] rounded-full transition-all"
                       style={{
                         width: `${Math.round((project.total_logged_hours / project.budget_hours) * 100)}%`,
                       }}
                     />
                   </div>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-2">
+                    {Math.round(
+                      (project.total_logged_hours / project.budget_hours) * 100,
+                    )}
+                    % teljesítve
+                  </p>
                 </div>
               </Card>
 
-              <Card className="p-6 space-y-4">
+              <Card className="p-8 space-y-6">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-                  Fázisok & Idővonal
+                  Fázisok &amp; Idővonal
                 </h3>
-                <div className="relative border-l-2 border-[var(--color-border-subtle)] ml-3 space-y-6 pb-2">
+                <div className="relative border-l-2 border-[var(--color-border-subtle)] ml-3 space-y-8 pb-2">
                   {project.phases.map((phase, idx) => (
                     <div key={idx} className="relative pl-6">
                       {phase.status === "completed" ? (
