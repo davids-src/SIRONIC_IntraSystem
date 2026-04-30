@@ -6,6 +6,15 @@ export function generateItemNumber(sequence: number): string {
   return `AR-${paddedSequence}`;
 }
 
+export const purchaseRecordSchema = z.object({
+  _id: z.string().min(1),
+  supplier_name: z.string().min(1),
+  supplier_item_number: z.string().nullable(),
+  net_purchase_price: z.number().nonnegative(),
+  purchased_at: z.date(),
+  notes: z.string().nullable(),
+});
+
 export const priceListItemSchema = z.object({
   _id: z.string().min(1),
   tenantId: z.string().min(1),
@@ -20,6 +29,9 @@ export const priceListItemSchema = z.object({
   tax_rate: z.number().nonnegative(),
   is_active: z.boolean(),
   notes: z.string().nullable(),
+  purchase_records: z.array(purchaseRecordSchema),
+  last_purchase_price: z.number().nullable(),
+  preferred_supplier: z.string().nullable(),
   created_at: z.date(),
   updated_at: z.date(),
 });
@@ -57,6 +69,9 @@ export function createPriceListItemDraft(input: {
     tax_rate: input.tax_rate ?? 27,
     is_active: input.is_active ?? true,
     notes: input.notes ?? null,
+    purchase_records: [],
+    last_purchase_price: null,
+    preferred_supplier: null,
     created_at: now,
     updated_at: now,
   };
