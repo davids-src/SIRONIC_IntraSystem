@@ -39,6 +39,7 @@ const mockProjects: Project[] = [
     notes: null,
     created_at: new Date(),
     updated_at: new Date(),
+    contract_warning_dismissed: false,
   },
   {
     _id: "p2",
@@ -63,6 +64,7 @@ const mockProjects: Project[] = [
     notes: null,
     created_at: new Date(),
     updated_at: new Date(),
+    contract_warning_dismissed: false,
   },
   {
     _id: "p3",
@@ -87,6 +89,7 @@ const mockProjects: Project[] = [
     notes: null,
     created_at: new Date(),
     updated_at: new Date(),
+    contract_warning_dismissed: false,
   },
 ];
 

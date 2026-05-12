@@ -43,9 +43,10 @@ function SignaturePad({ onSign }: { onSign: (data: string) => void }) {
   const getPos = (e: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) => {
     const rect = canvas.getBoundingClientRect();
     if ("touches" in e) {
+      const touch = e.touches[0];
       return {
-        x: e.touches[0].clientX - rect.left,
-        y: e.touches[0].clientY - rect.top,
+        x: (touch?.clientX ?? 0) - rect.left,
+        y: (touch?.clientY ?? 0) - rect.top,
       };
     }
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
@@ -180,7 +181,10 @@ export default function PortalContractDetailPage({
     }));
   };
 
-  const s = portalStatusMap[contract.status];
+  const s = portalStatusMap[contract.status] || {
+    label: "Ismeretlen",
+    variant: "default",
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>

@@ -10,7 +10,7 @@ const mockContracts = [
     contract_number: "SZ-000001",
     name: "Éves karbantartási szerződés 2026",
     category: "Karbantartási szerződés",
-    status: "sent" as const,
+    status: "sent",
     valid_until: new Date("2026-12-31"),
   },
   {
@@ -18,7 +18,7 @@ const mockContracts = [
     contract_number: "SZ-000004",
     name: "Biztonsági rendszer üzemeltetési szerz.",
     category: "Vagyonvédelmi szerződés",
-    status: "signed_digital" as const,
+    status: "signed_digital",
     valid_until: null,
   },
 ];
@@ -154,7 +154,10 @@ export default function PortalContractsPage() {
             </thead>
             <tbody>
               {mockContracts.map((c) => {
-                const s = portalStatusMap[c.status];
+                const s = portalStatusMap[c.status] || {
+                  label: "Ismeretlen",
+                  variant: "default",
+                };
                 return (
                   <tr
                     key={c._id}

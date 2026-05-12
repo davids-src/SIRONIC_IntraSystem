@@ -638,7 +638,7 @@ export default function TicketDetailPage({
               {
                 label: "Állapot",
                 value: status,
-                onChange: (v: string) => setStatus(v),
+                onChange: (v: string) => setStatus(v as any),
                 options: Object.entries(statusLabel).map(([k, v]) => ({
                   value: k,
                   label: v,
@@ -657,7 +657,7 @@ export default function TicketDetailPage({
               {
                 label: "Prioritás",
                 value: priority,
-                onChange: (v: string) => setPriority(v),
+                onChange: (v: string) => setPriority(v as any),
                 options: Object.entries(priorityLabel).map(([k, v]) => ({
                   value: k,
                   label: v,

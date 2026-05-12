@@ -51,8 +51,8 @@ export default function PartnerWorklogDetailPage({
   const wl = { ...mockWorklog, _id: id };
 
   const duration = (() => {
-    const [sh, sm] = wl.work_start.split(":").map(Number);
-    const [eh, em] = wl.work_end.split(":").map(Number);
+    const [sh = 0, sm = 0] = wl.work_start.split(":").map(Number);
+    const [eh = 0, em = 0] = wl.work_end.split(":").map(Number);
     const mins = eh * 60 + em - (sh * 60 + sm);
     return `${Math.floor(mins / 60)}h ${mins % 60 > 0 ? (mins % 60) + "p" : ""}`.trim();
   })();
