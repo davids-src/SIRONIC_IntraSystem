@@ -214,119 +214,114 @@ export default function ProjectsPage() {
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
-      <PageHeader
-        title="Projektek"
-        subtitle="Ügyfélprojektek és folyamatos szerződések menedzselése"
-        actions={
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col gap-1 min-w-0">
+          <h1 className="text-2xl font-bold text-white truncate">Projektek</h1>
+          <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+            Ügyfélprojektek és folyamatos szerződések menedzselése
+          </p>
+        </div>
+        <div className="flex items-center gap-3 flex-shrink-0">
           <Button variant="primary" onClick={() => router.push("/projects/new")}>
             <Plus size={16} style={{ marginRight: "6px" }} />
             Új projekt
           </Button>
-        }
-      />
+        </div>
+      </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-          gap: "16px",
-        }}
-      >
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         {[
           {
             label: "Nyitott",
             count: counts.open,
-            icon: <FolderKanban size={16} />,
+            icon: <FolderKanban size={20} />,
             color: "#3b82f6",
+            bg: "rgba(59,130,246,0.08)",
           },
           {
             label: "Szüneteltetve",
             count: counts.on_hold,
-            icon: <PauseCircle size={16} />,
+            icon: <PauseCircle size={20} />,
             color: "#f59e0b",
+            bg: "rgba(245,158,11,0.08)",
           },
           {
             label: "Lezárva",
             count: counts.closed,
-            icon: <CheckCircle size={16} />,
+            icon: <CheckCircle size={20} />,
             color: "#6b7280",
+            bg: "rgba(107,114,128,0.1)",
           },
         ].map((stat) => (
-          <Card key={stat.label} className="p-4">
+          <div
+            key={stat.label}
+            className="rounded-xl border p-5 flex items-center gap-4"
+            style={{
+              background: "var(--color-bg-card)",
+              borderColor: "var(--color-border-subtle)",
+            }}
+          >
             <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: "8px",
-              }}
+              className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
+              style={{ background: stat.bg, color: stat.color }}
             >
+              {stat.icon}
+            </div>
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <span className="text-2xl font-bold text-white">{stat.count}</span>
               <span
-                style={{
-                  fontSize: "0.75rem",
-                  fontWeight: 600,
-                  color: "var(--color-text-muted, #555)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
+                className="text-sm truncate"
+                style={{ color: "var(--color-text-muted)" }}
               >
                 {stat.label}
               </span>
-              <span style={{ color: stat.color }}>{stat.icon}</span>
             </div>
-            <div
-              style={{
-                fontSize: "1.75rem",
-                fontWeight: 700,
-                color: "var(--color-text-primary, #fff)",
-                lineHeight: 1,
-              }}
-            >
-              {stat.count}
-            </div>
-          </Card>
+          </div>
         ))}
       </div>
 
-      <Card className="p-4">
-        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: "200px", position: "relative" }}>
-            <Search
-              size={15}
-              style={{
-                position: "absolute",
-                left: "12px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: "var(--color-text-muted, #555)",
-                pointerEvents: "none",
-              }}
-            />
-            <Input
-              label=""
-              placeholder="Keresés projektben..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{ paddingLeft: "36px" }}
-            />
-          </div>
-          <Button variant="secondary">
-            <Filter size={15} style={{ marginRight: "6px" }} />
-            Szűrők
-          </Button>
+      <div
+        className="rounded-xl border p-4 flex flex-wrap gap-3"
+        style={{
+          background: "var(--color-bg-card)",
+          borderColor: "var(--color-border-subtle)",
+        }}
+      >
+        <div className="flex-1 min-w-[180px] relative">
+          <Search
+            size={15}
+            className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+            style={{ color: "var(--color-text-muted)" }}
+          />
+          <input
+            type="text"
+            placeholder="Keresés projektben..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full h-10 pl-9 pr-3 rounded-md text-sm border text-white placeholder:text-gray-500 outline-none"
+            style={{
+              borderColor: "var(--color-border-default)",
+              background: "var(--color-bg-secondary)",
+            }}
+          />
         </div>
-      </Card>
+      </div>
 
-      <Card className="p-0 overflow-hidden">
-        <Table<Project>
-          data={filtered}
-          columns={columns}
-          keyField="_id"
-          onRowClick={(row) => router.push(`/projects/${row._id}`)}
-          emptyMessage="Nincs találat a keresési feltételekre"
-        />
-      </Card>
+      <div
+        className="rounded-xl border overflow-hidden"
+        style={{ borderColor: "var(--color-border-subtle)" }}
+      >
+        <div className="overflow-x-auto">
+          <Table<Project>
+            data={filtered}
+            columns={columns}
+            keyField="_id"
+            onRowClick={(row) => router.push(`/projects/${row._id}`)}
+            emptyMessage="Nincs találat a keresési feltételekre"
+          />
+        </div>
+      </div>
     </div>
   );
 }

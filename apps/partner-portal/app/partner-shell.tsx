@@ -7,13 +7,15 @@ import type { NavItem, SidebarUser } from "@crm/ui";
 import {
   LayoutDashboard,
   Building2,
-  Tag,
+  FileText,
   Settings,
   ShieldCheck,
   Ticket,
   ClipboardList,
   BadgeCheck,
   FolderKanban,
+  FileSignature,
+  Receipt,
 } from "lucide-react";
 
 const allPartnerNavItems: NavItem[] = [
@@ -23,6 +25,12 @@ const allPartnerNavItems: NavItem[] = [
     href: "/",
     icon: <LayoutDashboard size={16} />,
   },
+  {
+    key: "projects",
+    label: "Projektjeim",
+    href: "/projects",
+    icon: <FolderKanban size={16} />,
+  },
   { key: "tickets", label: "Ticketek", href: "/tickets", icon: <Ticket size={16} /> },
   {
     key: "worklogs",
@@ -30,18 +38,24 @@ const allPartnerNavItems: NavItem[] = [
     href: "/worklogs",
     icon: <ClipboardList size={16} />,
   },
-  { key: "offers", label: "Ajánlatok", href: "/offers", icon: <Tag size={16} /> },
+  {
+    key: "contracts",
+    label: "Szerződések",
+    href: "/contracts",
+    icon: <FileSignature size={16} />,
+  },
+  { key: "offers", label: "Ajánlatok", href: "/offers", icon: <FileText size={16} /> },
+  {
+    key: "invoices",
+    label: "Számlák",
+    href: "/invoices",
+    icon: <Receipt size={16} />,
+  },
   {
     key: "completion_certificates",
     label: "Teljesítési igazolások",
     href: "/completion-certificates",
     icon: <BadgeCheck size={16} />,
-  },
-  {
-    key: "projects",
-    label: "Projektjeim",
-    href: "/projects",
-    icon: <FolderKanban size={16} />,
   },
   {
     key: "company-profile",
@@ -61,7 +75,9 @@ const allPartnerNavItems: NavItem[] = [
 const mockPortalPermissions = {
   menu_tickets: true,
   menu_worklogs: true,
-  menu_offers: false, // Hidden for this org
+  menu_contracts: true,
+  menu_offers: false,
+  menu_invoices: true,
   menu_completion_certificates: true,
   menu_projects: true,
   menu_company_profile: true,
@@ -70,12 +86,14 @@ const mockPortalPermissions = {
 
 const partnerNavItems = allPartnerNavItems.filter((item) => {
   if (item.key === "dashboard") return true;
+  if (item.key === "projects") return mockPortalPermissions.menu_projects;
   if (item.key === "tickets") return mockPortalPermissions.menu_tickets;
   if (item.key === "worklogs") return mockPortalPermissions.menu_worklogs;
+  if (item.key === "contracts") return mockPortalPermissions.menu_contracts;
   if (item.key === "offers") return mockPortalPermissions.menu_offers;
+  if (item.key === "invoices") return mockPortalPermissions.menu_invoices;
   if (item.key === "completion_certificates")
     return mockPortalPermissions.menu_completion_certificates;
-  if (item.key === "projects") return mockPortalPermissions.menu_projects;
   if (item.key === "company-profile") return mockPortalPermissions.menu_company_profile;
   if (item.key === "settings") return mockPortalPermissions.menu_settings;
   return true;

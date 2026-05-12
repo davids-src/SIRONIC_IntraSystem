@@ -15,7 +15,9 @@ import {
   Plus,
   AlertTriangle,
   Server,
+  FileSignature,
 } from "lucide-react";
+import { ContactContractsTab } from "../../contacts/[id]/ContactContractsTab";
 
 export default function OrganizationDetailPage({
   params,
@@ -36,6 +38,8 @@ export default function OrganizationDetailPage({
       menu_offers: false,
       menu_completion_certificates: true,
       menu_projects: true,
+      menu_contracts: true,
+      menu_invoices: false,
       menu_company_profile: true,
       menu_settings: true,
     },
@@ -48,6 +52,7 @@ export default function OrganizationDetailPage({
     { id: "tickets", label: "Ticketek", icon: <Ticket size={16} /> },
     { id: "worklogs", label: "Munkalapok", icon: <ClipboardList size={16} /> },
     { id: "certificates", label: "Igazolások", icon: <BadgeCheck size={16} /> },
+    { id: "contracts", label: "Szerződések", icon: <FileSignature size={16} /> },
     { id: "domain_hosting", label: "Domain & Tárhely", icon: <Globe size={16} /> },
     { id: "inventory", label: "Rendszerelemek", icon: <Server size={16} /> },
     {
@@ -58,7 +63,7 @@ export default function OrganizationDetailPage({
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
@@ -370,6 +375,12 @@ export default function OrganizationDetailPage({
               <Button variant="primary">Jogosultságok mentése</Button>
             </div>
           </Card>
+        )}
+
+        {activeTab === "contracts" && (
+          <div className="py-2">
+            <ContactContractsTab contactId={org._id} />
+          </div>
         )}
 
         {(activeTab === "projects" ||

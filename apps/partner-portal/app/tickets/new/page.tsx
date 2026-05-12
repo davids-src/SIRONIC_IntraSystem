@@ -29,7 +29,7 @@ export default function NewTicketPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="Új ticket bejelentése"
         subtitle="Kérjük, írd le részletesen a problémát vagy igényt."

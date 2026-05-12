@@ -1,24 +1,26 @@
 "use client";
 
-import { use } from "react";
-import { PageHeader, Card, Badge, Button, Input } from "@crm/ui";
+import { use, useState } from "react";
+import { Badge, Button } from "@crm/ui";
 import { useRouter } from "next/navigation";
-import type { Ticket, TicketComment } from "@crm/types";
+import type { Ticket } from "@crm/types";
 import {
   MessageSquare,
   Paperclip,
-  Clock,
-  User,
   MapPin,
   Server,
-  CheckCircle2,
   ShieldAlert,
   FileText,
   BadgeCheck,
   Send,
+  ArrowLeft,
+  Clock,
+  User,
+  ChevronRight,
+  Download,
 } from "lucide-react";
+import Link from "next/link";
 
-// Hardcoded single ticket for UI demo
 const mockTicket: Ticket = {
   _id: "t1",
   ticket_number: "TK-000001",
@@ -28,7 +30,7 @@ const mockTicket: Ticket = {
   one_time_contact_phone: null,
   project_id: null,
   created_by: "user1",
-  assigned_to: "Kovács János (Admin)",
+  assigned_to: "Kovács János",
   source: "partner_portal",
   category: "Hibabejelentés",
   priority: "high",
@@ -57,7 +59,7 @@ const mockTicket: Ticket = {
       author_role: "crm_staff",
       message:
         "Látom a hibát a monitorozó rendszerben. Valószínűleg a switch dobta el a kapcsolatot. Egy kolléga hamarosan indul a helyszínre.",
-      is_internal: true, // This is an internal note
+      is_internal: true,
       created_at: new Date(Date.now() - 1.5 * 60 * 60 * 1000),
     },
   ],
@@ -67,25 +69,37 @@ const mockTicket: Ticket = {
   updated_at: new Date(Date.now() - 1 * 60 * 60 * 1000),
 };
 
-const priorityColorMap: Record<
-  string,
-  "success" | "warning" | "error" | "info" | "default"
-> = {
+const priorityVariant = {
   low: "info",
   medium: "warning",
   high: "error",
   critical: "error",
-};
-
-const statusColorMap: Record<
-  string,
-  "success" | "warning" | "error" | "info" | "default"
-> = {
+} as const;
+const priorityLabel = {
+  low: "Alacsony",
+  medium: "Közepes",
+  high: "Magas",
+  critical: "Kritikus",
+} as const;
+const statusVariant = {
   new: "info",
   in_progress: "warning",
   waiting: "default",
   resolved: "success",
   closed: "default",
+} as const;
+const statusLabel = {
+  new: "Új",
+  in_progress: "Folyamatban",
+  waiting: "Várakozás",
+  resolved: "Megoldva",
+  closed: "Lezárva",
+} as const;
+
+const card = {
+  background: "var(--color-bg-card)",
+  border: "1px solid var(--color-border-subtle)",
+  borderRadius: "12px",
 };
 
 export default function TicketDetailPage({
@@ -93,268 +107,741 @@ export default function TicketDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const ticket = mockTicket; // In real app, fetch based on use(params).id
+  const { id } = use(params);
+  const router = useRouter();
+  const ticket = { ...mockTicket, _id: id };
 
-  const priorityLabels: Record<string, string> = {
-    low: "Alacsony",
-    medium: "Közepes",
-    high: "Magas",
-    critical: "Kritikus",
-  };
+  const [commentText, setCommentText] = useState("");
+  const [isInternal, setIsInternal] = useState(false);
+  const [status, setStatus] = useState(ticket.status);
+  const [assignedTo, setAssignedTo] = useState(ticket.assigned_to ?? "");
+  const [priority, setPriority] = useState(ticket.priority);
 
-  const statusLabels: Record<string, string> = {
-    new: "Új",
-    in_progress: "Folyamatban",
-    waiting: "Várakozás",
-    resolved: "Megoldva",
-    closed: "Lezárva",
-  };
+  const fmtDate = (d: Date) =>
+    new Date(d).toLocaleString("hu-HU", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title={`${ticket.ticket_number} - ${ticket.title}`}
-        subtitle={`Beküldve: ${new Date(ticket.created_at).toLocaleString()} | Kontakt: ${ticket.contact_id ?? "-"}`}
-      />
+    <div className="flex flex-col gap-6">
+      {/* Page header */}
+      <div className="flex flex-col gap-3">
+        <button
+          onClick={() => router.push("/tickets")}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            color: "var(--color-text-muted)",
+            padding: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            fontSize: "0.875rem",
+            width: "fit-content",
+          }}
+        >
+          <ArrowLeft size={14} /> Vissza a ticketekhez
+        </button>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column (Main Content) */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-6">
-            <div className="flex gap-2 flex-wrap">
-              <Badge variant={statusColorMap[ticket.status]}>
-                {statusLabels[ticket.status] || ticket.status}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: "16px",
+            flexWrap: "wrap",
+          }}
+        >
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "8px", minWidth: 0 }}
+          >
+            <div
+              style={{
+                display: "flex",
+                gap: "8px",
+                flexWrap: "wrap",
+                alignItems: "center",
+              }}
+            >
+              <Badge
+                variant={
+                  statusVariant[ticket.status as keyof typeof statusVariant] ?? "default"
+                }
+              >
+                {statusLabel[ticket.status as keyof typeof statusLabel] ?? ticket.status}
               </Badge>
-              <Badge variant={priorityColorMap[ticket.priority]}>
-                {priorityLabels[ticket.priority] || ticket.priority}
+              <Badge
+                variant={
+                  priorityVariant[ticket.priority as keyof typeof priorityVariant] ??
+                  "default"
+                }
+              >
+                {priorityLabel[ticket.priority as keyof typeof priorityLabel] ??
+                  ticket.priority}
               </Badge>
               <Badge variant="default">{ticket.category}</Badge>
             </div>
-
-            <div>
-              <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
-                Leírás
-              </h3>
-              <p className="text-[var(--color-text-secondary)] leading-relaxed bg-[var(--color-bg-secondary)]/50 p-6 border border-[var(--color-border-subtle)] backdrop-blur-sm shadow-sm rounded-lg rounded-md">
-                {ticket.description}
-              </p>
+            <h1
+              style={{
+                fontSize: "1.5rem",
+                fontWeight: 700,
+                color: "var(--color-text-primary)",
+                margin: 0,
+              }}
+            >
+              {ticket.ticket_number} – {ticket.title}
+            </h1>
+            <div
+              style={{
+                display: "flex",
+                gap: "12px",
+                alignItems: "center",
+                flexWrap: "wrap",
+                fontSize: "0.875rem",
+                color: "var(--color-text-muted)",
+              }}
+            >
+              <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                <Clock size={13} /> Beküldve: {fmtDate(ticket.created_at)}
+              </span>
+              <span>·</span>
+              <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                <User size={13} /> Kontakt: {ticket.contact_id ?? "—"}
+              </span>
             </div>
+          </div>
+        </div>
+      </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div className="space-y-1">
-                <div className="text-xs text-[var(--color-text-muted)] flex items-center gap-1">
-                  <MapPin size={12} /> Helyszín
-                </div>
-                <div className="text-sm font-medium">{ticket.location}</div>
-              </div>
-              <div className="space-y-1">
-                <div className="text-xs text-[var(--color-text-muted)] flex items-center gap-1">
-                  <Server size={12} /> Érintett rendszer
-                </div>
-                <div className="text-sm font-medium">{ticket.affected_items ?? "-"}</div>
-              </div>
-            </div>
+      {/* Two-column layout */}
+      <div
+        style={{ display: "grid", gridTemplateColumns: "1fr", gap: "24px" }}
+        className="lg:two-col-grid"
+      >
+        <style>{`
+          @media (min-width: 1024px) {
+            .lg\\:two-col-grid {
+              grid-template-columns: 1fr 320px !important;
+            }
+          }
+        `}</style>
 
-            {ticket.affected_items && (
-              <div className="space-y-2">
-                <div className="text-xs text-[var(--color-text-muted)] flex items-center gap-1">
-                  <ShieldAlert size={12} /> Érintett elemek
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                  <Badge variant="default">{ticket.affected_items}</Badge>
-                </div>
+        {/* LEFT — main content */}
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "24px", minWidth: 0 }}
+        >
+          {/* Description card */}
+          <div
+            style={{
+              ...card,
+              padding: "24px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px",
+            }}
+          >
+            <h3
+              style={{
+                fontSize: "0.75rem",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                color: "var(--color-text-muted)",
+                margin: 0,
+              }}
+            >
+              Leírás
+            </h3>
+            <p
+              style={{
+                fontSize: "0.875rem",
+                color: "var(--color-text-primary)",
+                lineHeight: 1.7,
+                margin: 0,
+              }}
+            >
+              {ticket.description}
+            </p>
+
+            {(ticket.location || ticket.affected_items) && (
+              <div
+                style={{
+                  paddingTop: "16px",
+                  borderTop: "1px solid var(--color-border-subtle)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                }}
+              >
+                {ticket.location && (
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                    <MapPin
+                      size={15}
+                      style={{
+                        color: "var(--color-text-muted)",
+                        flexShrink: 0,
+                        marginTop: "2px",
+                      }}
+                    />
+                    <span
+                      style={{ fontSize: "0.875rem", color: "var(--color-text-primary)" }}
+                    >
+                      {ticket.location}
+                    </span>
+                  </div>
+                )}
+                {ticket.affected_items && (
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                    <Server
+                      size={15}
+                      style={{
+                        color: "var(--color-text-muted)",
+                        flexShrink: 0,
+                        marginTop: "2px",
+                      }}
+                    />
+                    <span
+                      style={{ fontSize: "0.875rem", color: "var(--color-text-primary)" }}
+                    >
+                      {ticket.affected_items}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
-          </Card>
+          </div>
 
-          {/* Timeline / Comments */}
-          <div className="space-y-6">
-            <h3 className="text-lg font-medium flex items-center gap-2">
-              <MessageSquare size={18} />
-              Aktivitás és hozzászólások
-            </h3>
+          {/* Activity / Comments card */}
+          <div style={{ ...card, display: "flex", flexDirection: "column" }}>
+            <div
+              style={{
+                padding: "16px 24px",
+                borderBottom: "1px solid var(--color-border-subtle)",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <MessageSquare size={16} style={{ color: "var(--color-text-muted)" }} />
+              <h3
+                style={{
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  color: "var(--color-text-muted)",
+                  margin: 0,
+                }}
+              >
+                Aktivitás és hozzászólások
+              </h3>
+            </div>
 
-            <div className="space-y-6">
-              <div className="relative border-l-2 border-[var(--color-border-subtle)] ml-4 space-y-6 pb-4">
-                {ticket.comments.map((comment, index) => {
-                  const isStaff = comment.author_role === "crm_staff";
-                  const isInternal = comment.is_internal;
-                  return (
-                    <div key={comment._id} className="relative pl-6">
-                      <div
-                        className={`absolute -left-[17px] top-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shadow-sm border-2 border-[var(--color-bg-primary)] ${
-                          isStaff
-                            ? "bg-[var(--color-accent-primary)] text-white"
-                            : "bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)]"
-                        }`}
-                      >
-                        {comment.author_id.substring(0, 2).toUpperCase()}
-                      </div>
-
-                      <div
-                        className={`p-4 rounded-xl shadow-sm ${
-                          isInternal
-                            ? "bg-[var(--color-status-warning)]/10 border border-[var(--color-status-warning)]/20"
-                            : "bg-[var(--color-bg-card)] border border-[var(--color-border-subtle)]"
-                        }`}
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`text-sm font-semibold ${isStaff ? "text-[var(--color-accent-primary)]" : "text-[var(--color-text-primary)]"}`}
-                            >
-                              {comment.author_id}
-                            </span>
-                            {isInternal && (
-                              <Badge variant="warning">Belső megjegyzés</Badge>
-                            )}
-                          </div>
-                          <span className="text-xs text-[var(--color-text-muted)]">
-                            {new Date(comment.created_at).toLocaleString("hu-HU", {
-                              month: "short",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </span>
-                        </div>
-                        <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
-                          {comment.message}
-                        </p>
-                      </div>
+            {/* Comment list — timeline */}
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {ticket.comments.map((comment) => {
+                const isStaff = comment.author_role === "crm_staff";
+                return (
+                  <div
+                    key={comment._id}
+                    style={{
+                      display: "flex",
+                      gap: "16px",
+                      padding: "16px 24px",
+                      borderBottom: "1px solid var(--color-border-subtle)",
+                      background: comment.is_internal
+                        ? "rgba(245,158,11,0.05)"
+                        : "transparent",
+                    }}
+                  >
+                    {/* Avatar */}
+                    <div
+                      style={{
+                        width: "32px",
+                        height: "32px",
+                        borderRadius: "50%",
+                        flexShrink: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        background: isStaff
+                          ? "var(--color-accent-primary)"
+                          : "var(--color-bg-secondary)",
+                        color: isStaff ? "#fff" : "var(--color-text-primary)",
+                        marginTop: "2px",
+                      }}
+                    >
+                      {comment.author_id.slice(0, 2).toUpperCase()}
                     </div>
-                  );
-                })}
-              </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "4px",
+                        flex: 1,
+                        minWidth: 0,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "0.875rem",
+                            fontWeight: 600,
+                            color: isStaff
+                              ? "var(--color-accent-primary)"
+                              : "var(--color-text-primary)",
+                          }}
+                        >
+                          {comment.author_id}
+                        </span>
+                        {comment.is_internal && (
+                          <Badge variant="warning">Belső megjegyzés</Badge>
+                        )}
+                        <span
+                          style={{
+                            fontSize: "0.75rem",
+                            color: "var(--color-text-muted)",
+                            marginLeft: "auto",
+                          }}
+                        >
+                          {fmtDate(comment.created_at)}
+                        </span>
+                      </div>
+                      <p
+                        style={{
+                          fontSize: "0.875rem",
+                          color: "var(--color-text-secondary)",
+                          lineHeight: 1.6,
+                          margin: 0,
+                        }}
+                      >
+                        {comment.message}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
-              {/* Add comment box */}
-              <div className="border border-[var(--color-border-subtle)] rounded-xl overflow-hidden bg-[var(--color-bg-card)] focus-within:border-[var(--color-accent-primary)] focus-within:ring-1 focus-within:ring-[var(--color-accent-primary)] transition-all">
-                <textarea
-                  placeholder="Írd le a fejleményeket vagy válaszolj az ügyfélnek..."
-                  className="w-full bg-transparent border-none p-4 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] outline-none min-h-[100px] resize-y"
-                />
-                <div className="flex justify-between items-center bg-[var(--color-bg-secondary)] px-4 py-3 border-t border-[var(--color-border-subtle)]">
-                  <label className="flex items-center gap-2 text-xs font-medium text-[var(--color-text-muted)] cursor-pointer hover:text-[var(--color-text-primary)] transition-colors">
-                    <input
-                      type="checkbox"
-                      className="rounded border-[var(--color-border-default)] accent-[var(--color-accent-primary)] w-3.5 h-3.5"
-                    />
-                    Belső megjegyzés (Csak munkatársak látják)
-                  </label>
-                  <Button variant="primary" className="py-1.5 px-4 text-sm">
-                    <Send size={14} className="mr-2" />
-                    Küldés
-                  </Button>
-                </div>
+            {/* Comment input */}
+            <div
+              style={{
+                padding: "16px 24px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "12px",
+              }}
+            >
+              <textarea
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder="Írj megjegyzést vagy frissítsd az ügyfelet..."
+                style={{
+                  width: "100%",
+                  minHeight: "80px",
+                  background: "var(--color-bg-secondary)",
+                  border: "1px solid var(--color-border-default)",
+                  borderRadius: "8px",
+                  padding: "12px",
+                  fontSize: "0.875rem",
+                  color: "var(--color-text-primary)",
+                  resize: "vertical",
+                  outline: "none",
+                  fontFamily: "inherit",
+                  boxSizing: "border-box",
+                }}
+              />
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "16px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    cursor: "pointer",
+                    fontSize: "0.875rem",
+                    color: "var(--color-text-muted)",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isInternal}
+                    onChange={(e) => setIsInternal(e.target.checked)}
+                    style={{
+                      width: "14px",
+                      height: "14px",
+                      accentColor: "var(--color-accent-primary)",
+                    }}
+                  />
+                  Belső megjegyzés (csak munkatársak látják)
+                </label>
+                <Button variant="primary">
+                  <Send size={14} style={{ marginRight: "6px" }} />
+                  Küldés
+                </Button>
               </div>
+            </div>
+          </div>
+
+          {/* Attachments card */}
+          <div
+            style={{
+              ...card,
+              padding: "24px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  color: "var(--color-text-muted)",
+                  margin: 0,
+                }}
+              >
+                Csatolmányok
+                {ticket.attachments.length > 0 && (
+                  <span
+                    style={{ marginLeft: "8px", color: "var(--color-accent-primary)" }}
+                  >
+                    {ticket.attachments.length}
+                  </span>
+                )}
+              </h3>
+              <button
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "0.875rem",
+                  color: "var(--color-accent-primary)",
+                  padding: 0,
+                }}
+              >
+                + Csatolás
+              </button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {ticket.attachments.map((att, idx) => (
+                <a
+                  key={idx}
+                  href={att.url}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    background: "var(--color-bg-secondary)",
+                    textDecoration: "none",
+                    transition: "background 0.15s",
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = "var(--color-bg-card-hover)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "var(--color-bg-secondary)")
+                  }
+                >
+                  <Paperclip
+                    size={15}
+                    style={{ color: "var(--color-text-muted)", flexShrink: 0 }}
+                  />
+                  <span
+                    style={{
+                      fontSize: "0.875rem",
+                      color: "var(--color-text-primary)",
+                      flex: 1,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {att.filename}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "var(--color-text-muted)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {(att.size / 1024).toFixed(1)} KB
+                  </span>
+                  <Download
+                    size={14}
+                    style={{ color: "var(--color-text-muted)", flexShrink: 0 }}
+                  />
+                </a>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Right Column (Controls) */}
-        <div className="space-y-8">
-          <Card className="p-6 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-5">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
+        {/* RIGHT — properties sidebar */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {/* Properties card */}
+          <div
+            style={{
+              ...card,
+              padding: "20px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px",
+            }}
+          >
+            <h3
+              style={{
+                fontSize: "0.75rem",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                color: "var(--color-text-muted)",
+                margin: 0,
+              }}
+            >
               Tulajdonságok
             </h3>
 
-            <div className="space-y-6">
-              <div>
-                <label className="block text-xs text-[var(--color-text-muted)] mb-1">
-                  Állapot
+            {[
+              {
+                label: "Állapot",
+                value: status,
+                onChange: (v: string) => setStatus(v),
+                options: Object.entries(statusLabel).map(([k, v]) => ({
+                  value: k,
+                  label: v,
+                })),
+              },
+              {
+                label: "Felelős",
+                value: assignedTo,
+                onChange: (v: string) => setAssignedTo(v),
+                options: [
+                  { value: "", label: "Nincs kiosztva" },
+                  { value: "staff1", label: "Kovács János" },
+                  { value: "staff2", label: "Nagy Péter" },
+                ],
+              },
+              {
+                label: "Prioritás",
+                value: priority,
+                onChange: (v: string) => setPriority(v),
+                options: Object.entries(priorityLabel).map(([k, v]) => ({
+                  value: k,
+                  label: v,
+                })),
+              },
+            ].map(({ label, value, onChange, options }) => (
+              <div
+                key={label}
+                style={{ display: "flex", flexDirection: "column", gap: "6px" }}
+              >
+                <label style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
+                  {label}
                 </label>
-                <select className="w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent-primary)]">
-                  <option value="new">Új</option>
-                  <option value="in_progress">Folyamatban</option>
-                  <option value="waiting">Várakozás</option>
-                  <option value="resolved">Megoldva</option>
-                  <option value="closed">Lezárva</option>
+                <select
+                  value={value}
+                  onChange={(e) => onChange(e.target.value)}
+                  style={{
+                    width: "100%",
+                    background: "var(--color-bg-secondary)",
+                    border: "1px solid var(--color-border-default)",
+                    borderRadius: "8px",
+                    padding: "8px 12px",
+                    fontSize: "0.875rem",
+                    color: "var(--color-text-primary)",
+                    outline: "none",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  {options.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
                 </select>
               </div>
+            ))}
 
-              <div>
-                <label className="block text-xs text-[var(--color-text-muted)] mb-1">
-                  Felelős
-                </label>
-                <select className="w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent-primary)]">
-                  <option value="">Nincs kiosztva</option>
-                  <option value="staff1">Kovács János</option>
-                  <option value="staff2">Nagy Péter</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs text-[var(--color-text-muted)] mb-1">
-                  Prioritás
-                </label>
-                <select className="w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent-primary)]">
-                  <option value="low">Alacsony</option>
-                  <option value="medium">Közepes</option>
-                  <option value="high">Magas</option>
-                  <option value="critical">Kritikus</option>
-                </select>
-              </div>
-
-              {/* SLA / further metadata is operator-driven and optional */}
-            </div>
-          </Card>
-
-          <Card className="p-6 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-5">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-              Kapcsolódó dokumentumok
-            </h3>
-
-            <div className="space-y-2">
-              <Button variant="secondary" className="w-full justify-start">
-                <FileText size={16} className="mr-2 text-[var(--color-text-muted)]" />
-                Munkalap létrehozása
-              </Button>
-              <Button variant="secondary" className="w-full justify-start">
-                <BadgeCheck size={16} className="mr-2 text-[var(--color-text-muted)]" />
-                Teljesítési igazoláshoz adás
-              </Button>
-            </div>
-          </Card>
-
-          <Card className="p-6 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] flex items-center justify-between">
-              Csatolmányok
-              <Badge variant="default">{ticket.attachments.length}</Badge>
-            </h3>
-
-            {ticket.attachments.length > 0 ? (
-              <div className="space-y-2">
-                {ticket.attachments.map((att, idx) => (
-                  <a
-                    key={idx}
-                    href={att.url}
-                    className="flex items-center gap-3 p-2 rounded-md hover:bg-[var(--color-bg-secondary)] transition-colors border border-transparent hover:border-[var(--color-border-subtle)]"
-                  >
-                    <div className="bg-[var(--color-bg-primary)] p-2 rounded text-[var(--color-text-muted)]">
-                      <Paperclip size={16} />
-                    </div>
-                    <div className="flex-1 overflow-hidden">
-                      <div className="text-sm font-medium truncate">{att.filename}</div>
-                      <div className="text-xs text-[var(--color-text-muted)]">
-                        {(att.size / 1024).toFixed(1)} KB
-                      </div>
-                    </div>
-                  </a>
-                ))}
-              </div>
-            ) : (
-              <div className="text-sm text-[var(--color-text-muted)] text-center py-4">
-                Nincs csatolmány
+            {ticket.project_id && (
+              <div
+                style={{
+                  paddingTop: "12px",
+                  borderTop: "1px solid var(--color-border-subtle)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                }}
+              >
+                <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
+                  Projekt
+                </span>
+                <Link
+                  href={`/projects/${ticket.project_id}`}
+                  style={{
+                    fontSize: "0.875rem",
+                    color: "var(--color-accent-primary)",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {ticket.project_id}
+                </Link>
               </div>
             )}
+          </div>
 
-            <Button
-              variant="ghost"
-              className="w-full border border-dashed border-[var(--color-border-default)]"
+          {/* Related documents */}
+          <div
+            style={{
+              ...card,
+              padding: "20px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "12px",
+            }}
+          >
+            <h3
+              style={{
+                fontSize: "0.75rem",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                color: "var(--color-text-muted)",
+                margin: 0,
+              }}
             >
-              + Új fájl feltöltése
-            </Button>
-          </Card>
+              Kapcsolódó dokumentumok
+            </h3>
+            {[
+              {
+                href: `/worklogs/new?ticket_id=${ticket._id}`,
+                icon: <FileText size={15} />,
+                label: "Munkalap létrehozása",
+              },
+              {
+                href: `/completion-certificates/new?ticket_id=${ticket._id}`,
+                icon: <BadgeCheck size={15} />,
+                label: "Teljesítési igazoláshoz adás",
+              },
+            ].map(({ href, icon, label }) => (
+              <Link
+                key={href}
+                href={href}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  background: "var(--color-bg-secondary)",
+                  textDecoration: "none",
+                  transition: "background 0.15s",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "var(--color-bg-card-hover)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "var(--color-bg-secondary)")
+                }
+              >
+                <span style={{ color: "var(--color-accent-primary)", flexShrink: 0 }}>
+                  {icon}
+                </span>
+                <span
+                  style={{
+                    fontSize: "0.875rem",
+                    color: "var(--color-text-primary)",
+                    flex: 1,
+                  }}
+                >
+                  {label}
+                </span>
+                <ChevronRight
+                  size={14}
+                  style={{ color: "var(--color-text-muted)", flexShrink: 0 }}
+                />
+              </Link>
+            ))}
+          </div>
+
+          {/* Meta info */}
+          <div
+            style={{
+              ...card,
+              padding: "20px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "12px",
+            }}
+          >
+            <h3
+              style={{
+                fontSize: "0.75rem",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                color: "var(--color-text-muted)",
+                margin: 0,
+              }}
+            >
+              Információk
+            </h3>
+            {[
+              { label: "Létrehozva", value: fmtDate(ticket.created_at) },
+              { label: "Utolsó frissítés", value: fmtDate(ticket.updated_at) },
+              ...(ticket.resolved_at
+                ? [{ label: "Megoldva", value: fmtDate(ticket.resolved_at) }]
+                : []),
+            ].map(({ label, value }) => (
+              <div
+                key={label}
+                style={{ display: "flex", flexDirection: "column", gap: "3px" }}
+              >
+                <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
+                  {label}
+                </span>
+                <span
+                  style={{ fontSize: "0.875rem", color: "var(--color-text-primary)" }}
+                >
+                  {value}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

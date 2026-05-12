@@ -4,3 +4,4 @@ export * from "./certificates";
 export * from "./offers";
 export * from "./projects";
 export * from "./portal";
+export * from "./contracts";

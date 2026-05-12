@@ -15,6 +15,8 @@ import {
   ClipboardList,
   BadgeCheck,
   FolderKanban,
+  FileSignature,
+  Receipt,
 } from "lucide-react";
 
 const crmNavItems: NavItem[] = [
@@ -24,6 +26,18 @@ const crmNavItems: NavItem[] = [
     href: "/",
     icon: <LayoutDashboard size={16} />,
   },
+  {
+    key: "contacts",
+    label: "Kontaktok",
+    href: "/contacts",
+    icon: <Users size={16} />,
+  },
+  {
+    key: "projects",
+    label: "Projektek",
+    href: "/projects",
+    icon: <FolderKanban size={16} />,
+  },
   { key: "tickets", label: "Ticketek", href: "/tickets", icon: <Ticket size={16} /> },
   {
     key: "worklogs",
@@ -32,25 +46,25 @@ const crmNavItems: NavItem[] = [
     icon: <ClipboardList size={16} />,
   },
   {
-    key: "projects",
-    label: "Projektek",
-    href: "/projects",
-    icon: <FolderKanban size={16} />,
+    key: "contracts",
+    label: "Szerződések",
+    href: "/contracts",
+    icon: <FileSignature size={16} />,
   },
-  {
-    key: "contacts",
-    label: "Kontaktok",
-    href: "/contacts",
-    icon: <Users size={16} />,
-  },
-  { key: "price-list", label: "Árlista", href: "/price-list", icon: <Tag size={16} /> },
   { key: "offers", label: "Ajánlatok", href: "/offers", icon: <FileText size={16} /> },
+  {
+    key: "invoices",
+    label: "Számlák",
+    href: "/invoices",
+    icon: <Receipt size={16} />,
+  },
   {
     key: "completion_certificates",
     label: "Teljesítési igazolások",
     href: "/completion-certificates",
     icon: <BadgeCheck size={16} />,
   },
+  { key: "price-list", label: "Árlista", href: "/price-list", icon: <Tag size={16} /> },
   {
     key: "settings",
     label: "Beállítások",

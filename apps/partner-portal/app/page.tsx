@@ -1,321 +1,324 @@
 "use client";
 
-import * as React from "react";
-import { StatCard, PageHeader, Card } from "@crm/ui";
-import { hasPermission } from "@crm/rbac";
-import { PartnerShell } from "./partner-shell";
+import { Card, Button, Badge } from "@crm/ui";
+import { useRouter } from "next/navigation";
+import {
+  FolderKanban,
+  Ticket,
+  FileText,
+  FileSignature,
+  ClipboardList,
+  BadgeCheck,
+  Clock,
+  ExternalLink,
+  ArrowRight,
+} from "lucide-react";
 
-function IconTag() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" />
-      <circle cx="7.5" cy="7.5" r=".5" fill="currentColor" />
-    </svg>
-  );
-}
-function IconFolderKanban() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
-      <path d="M8 10v4" />
-      <path d="M12 10v2" />
-      <path d="M16 10v6" />
-    </svg>
-  );
-}
-function IconTicket() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
-      <path d="M13 5v2" />
-      <path d="M13 17v2" />
-      <path d="M13 11v2" />
-    </svg>
-  );
-}
-function IconClipboard() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
-      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-      <path d="M12 11h4" />
-      <path d="M12 16h4" />
-      <path d="M8 11h.01" />
-      <path d="M8 16h.01" />
-    </svg>
-  );
-}
-function IconBadgeCheck() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  );
-}
-function IconBell() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-    </svg>
-  );
-}
-
-interface ActivityItem {
-  id: string;
-  icon: React.ReactNode;
-  description: string;
-  time: string;
-}
-
-const recentActivity: ActivityItem[] = [
+const recentActivity = [
   {
     id: "1",
-    icon: <IconTicket />,
-    description: "Új ticket beküldve: Kamera rendszer hiba",
-    time: "32 perce",
+    icon: <ClipboardList size={15} />,
+    text: "WL-000042 elkészült — aláírásra vár",
+    time: "2 órája",
+    link: "/worklogs/w1",
   },
   {
     id: "2",
-    icon: <IconBadgeCheck />,
-    description: "Teljesítési igazolás vár aláírásra (Központi iroda)",
-    time: "2 órája",
+    icon: <FileSignature size={15} />,
+    text: "Karbantartási szerződés érkezett",
+    time: "tegnap",
+    link: "/contracts/c1",
   },
   {
     id: "3",
-    icon: <IconClipboard />,
-    description: "Munkalap kiállítva (Kovács János technikus)",
-    time: "1 napja",
+    icon: <BadgeCheck size={15} />,
+    text: "TI-000018 teljesítési igazolás jóváhagyásra vár",
+    time: "tegnap",
+    link: "/completion-certificates/cc1",
   },
   {
     id: "4",
-    icon: <IconTag />,
-    description: "Új árajánlat érkezett: #P-2024-018",
+    icon: <Ticket size={15} />,
+    text: "TICK-0094 megoldva",
     time: "2 napja",
+    link: "/tickets/t2",
   },
 ];
 
-export default function PartnerDashboardPage() {
-  const canViewOffers = hasPermission(
-    { actorId: "partner-user", roleKeys: ["partner.viewer"], tenantId: "org-001" },
+const pendingItems = [
+  {
+    id: "w1",
+    type: "Munkalap",
+    number: "WL-000042",
+    label: "IT karbantartás",
+    urgent: false,
+    link: "/worklogs/w1",
+  },
+  {
+    id: "c1",
+    type: "Szerződés",
+    number: "SZ-000001",
+    label: "Éves karbantartási szerz.",
+    urgent: true,
+    link: "/contracts/c1",
+  },
+];
+
+export default function PortalDashboardPage() {
+  const router = useRouter();
+
+  const stats = [
     {
-      module: "offer",
-      action: "view",
-      scope: "contact",
-      resourceTenantId: "org-001",
+      label: "Aktív projektek",
+      value: "2",
+      icon: <FolderKanban size={20} />,
+      color: "#8b5cf6",
+      bg: "rgba(139,92,246,0.08)",
+      link: "/projects",
     },
-  );
+    {
+      label: "Nyitott ticketek",
+      value: "2",
+      icon: <Ticket size={20} />,
+      color: "#3b82f6",
+      bg: "rgba(59,130,246,0.08)",
+      link: "/tickets",
+    },
+    {
+      label: "Fizetésre váró számlák",
+      value: "1",
+      icon: <FileText size={20} />,
+      color: "#f59e0b",
+      bg: "rgba(245,158,11,0.08)",
+      link: "/invoices",
+    },
+    {
+      label: "Aláírásra vár",
+      value: "1",
+      icon: <FileSignature size={20} />,
+      color: "#e53935",
+      bg: "rgba(229,57,53,0.08)",
+      link: "/contracts",
+    },
+  ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-      <PageHeader
-        title="Vezérlőpult"
-        subtitle={`Partner nézet · Ajánlatok: ${canViewOffers ? "✓ elérhető" : "✗ nincs hozzáférés"}`}
-      />
-
-      {/* Stat cards */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: "16px",
-        }}
-      >
-        <StatCard
-          label="Folyamatban lévő Ticketek"
-          value="2"
-          icon={<IconTicket />}
-          trend="-1"
-        />
-        <StatCard label="Aktív Projektek" value="2" icon={<IconFolderKanban />} />
-        <StatCard label="Elérhető Ajánlatok" value="8" icon={<IconTag />} trend="+2" />
-        <StatCard label="Olvasatlan Értesítések" value="3" icon={<IconBell />} />
+    <div className="flex flex-col gap-6">
+      {/* Header */}
+      <div className="flex flex-col gap-1 min-w-0">
+        <h1 className="text-2xl font-bold text-white truncate">Vezérlőpult</h1>
+        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+          Üdvözöljük! Tekintse meg a legfrissebb tevékenységeket.
+        </p>
       </div>
 
-      {/* Recent activity */}
-      <Card>
-        <h2
-          style={{
-            fontSize: "1rem",
-            fontWeight: 600,
-            color: "#ffffff",
-            marginBottom: "16px",
-          }}
-        >
-          Legutóbbi aktivitás
-        </h2>
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          {recentActivity.map((item, idx) => (
+      {/* Stat cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat) => (
+          <button
+            key={stat.label}
+            onClick={() => router.push(stat.link)}
+            className="rounded-xl border p-5 flex items-center gap-4 text-left w-full transition-colors"
+            style={{
+              background: "var(--color-bg-card)",
+              borderColor: "var(--color-border-subtle)",
+              cursor: "pointer",
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.borderColor = "var(--color-border-default)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.borderColor = "var(--color-border-subtle)")
+            }
+          >
             <div
-              key={item.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                padding: "12px 0",
-                borderBottom:
-                  idx < recentActivity.length - 1 ? "1px solid #1a1a1a" : "none",
-              }}
+              className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
+              style={{ background: stat.bg, color: stat.color }}
             >
-              <div
-                style={{
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "10px",
-                  background: "#3b0a0a",
-                  color: "#e53935",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                {item.icon}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: "0.875rem", color: "#ffffff" }}>
-                  {item.description}
-                </div>
-              </div>
-              <div
-                style={{
-                  fontSize: "0.75rem",
-                  color: "#555555",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {item.time}
-              </div>
+              {stat.icon}
             </div>
-          ))}
-        </div>
-      </Card>
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <span className="text-2xl font-bold text-white">{stat.value}</span>
+              <span
+                className="text-sm truncate"
+                style={{ color: "var(--color-text-muted)" }}
+              >
+                {stat.label}
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
 
-      {/* Project Status */}
-      <Card>
-        <h2
-          style={{
-            fontSize: "1rem",
-            fontWeight: 600,
-            color: "#ffffff",
-            marginBottom: "16px",
-          }}
-        >
-          Projektek státusza
-        </h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
+      {/* Two column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Recent activity */}
+        <div className="lg:col-span-2">
           <div
+            className="rounded-xl border p-6 flex flex-col gap-4"
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              padding: "12px 0",
-              borderBottom: "1px solid #1a1a1a",
+              background: "var(--color-bg-card)",
+              borderColor: "var(--color-border-subtle)",
             }}
           >
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: "0.875rem", color: "#ffffff", fontWeight: 500 }}>
-                Új irodaház hálózatépítés
-              </div>
-              <div style={{ fontSize: "0.75rem", color: "#555555" }}>
-                Aktuális fázis: Telepítés
-              </div>
+            <div
+              className="flex items-center gap-2 pb-2 border-b"
+              style={{ borderColor: "var(--color-border-subtle)" }}
+            >
+              <h2 className="text-sm font-semibold text-white uppercase tracking-wider flex-1">
+                Legutóbbi aktivitás
+              </h2>
             </div>
             <div
-              style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}
+              className="flex flex-col divide-y"
+              style={{ borderColor: "var(--color-border-subtle)" }}
             >
-              <span style={{ fontSize: "0.875rem", color: "#ffffff" }}>
-                1/3 anyag feltöltve
-              </span>
-              <span style={{ fontSize: "0.75rem", color: "#555555" }}>
-                Határidő: 2026.05.25.
-              </span>
-            </div>
-          </div>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              padding: "12px 0",
-            }}
-          >
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: "0.875rem", color: "#ffffff", fontWeight: 500 }}>
-                Céges weboldal megújítása
-              </div>
-              <div style={{ fontSize: "0.75rem", color: "#555555" }}>
-                Aktuális fázis: Tervezés
-              </div>
-            </div>
-            <div
-              style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}
-            >
-              <span style={{ fontSize: "0.875rem", color: "#ffffff" }}>
-                0/5 anyag feltöltve
-              </span>
-              <span style={{ fontSize: "0.75rem", color: "#555555" }}>
-                Határidő: 2026.06.20.
-              </span>
+              {recentActivity.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-3 py-3 cursor-pointer"
+                  onClick={() => router.push(item.link)}
+                  onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
+                  onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+                >
+                  <div
+                    className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
+                    style={{
+                      background: "var(--color-bg-secondary)",
+                      color: "var(--color-text-secondary)",
+                    }}
+                  >
+                    {item.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white truncate">{item.text}</p>
+                  </div>
+                  <div
+                    className="flex-shrink-0 flex items-center gap-1 text-xs whitespace-nowrap"
+                    style={{ color: "var(--color-text-muted)" }}
+                  >
+                    <Clock size={11} />
+                    {item.time}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
-      </Card>
+
+        {/* Pending actions */}
+        <div className="flex flex-col gap-6">
+          <div
+            className="rounded-xl border p-6 flex flex-col gap-4"
+            style={{
+              background: "var(--color-bg-card)",
+              borderColor: "var(--color-border-subtle)",
+            }}
+          >
+            <div
+              className="flex items-center gap-2 pb-2 border-b"
+              style={{ borderColor: "var(--color-border-subtle)" }}
+            >
+              <h2 className="text-sm font-semibold text-white uppercase tracking-wider flex-1">
+                Teendők
+              </h2>
+            </div>
+            <div className="flex flex-col gap-3">
+              {pendingItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between gap-3 p-3 rounded-lg cursor-pointer transition-colors"
+                  style={{ background: "var(--color-bg-secondary)" }}
+                  onClick={() => router.push(item.link)}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = "var(--color-bg-card-hover)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "var(--color-bg-secondary)")
+                  }
+                >
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span
+                        className="text-xs font-semibold uppercase"
+                        style={{ color: "var(--color-text-muted)" }}
+                      >
+                        {item.type}
+                      </span>
+                      {item.urgent && <Badge variant="warning">Sürgős</Badge>}
+                    </div>
+                    <span className="text-sm font-medium text-white truncate">
+                      {item.label}
+                    </span>
+                    <span
+                      className="text-xs font-mono"
+                      style={{ color: "var(--color-text-muted)" }}
+                    >
+                      {item.number}
+                    </span>
+                  </div>
+                  <ArrowRight
+                    size={16}
+                    style={{ color: "var(--color-text-muted)", flexShrink: 0 }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick links */}
+          <div
+            className="rounded-xl border p-6 flex flex-col gap-3"
+            style={{
+              background: "var(--color-bg-card)",
+              borderColor: "var(--color-border-subtle)",
+            }}
+          >
+            <h2 className="text-sm font-semibold text-white uppercase tracking-wider">
+              Gyors elérés
+            </h2>
+            {[
+              {
+                label: "Projektjeim",
+                href: "/projects",
+                icon: <FolderKanban size={15} />,
+              },
+              {
+                label: "Munkalapok",
+                href: "/worklogs",
+                icon: <ClipboardList size={15} />,
+              },
+              {
+                label: "Szerződések",
+                href: "/contracts",
+                icon: <FileSignature size={15} />,
+              },
+            ].map((link) => (
+              <button
+                key={link.href}
+                onClick={() => router.push(link.href)}
+                className="flex items-center gap-3 text-sm py-2 text-left w-full"
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--color-text-secondary)",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.color = "var(--color-text-primary)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.color = "var(--color-text-secondary)")
+                }
+              >
+                <span style={{ color: "var(--color-accent-primary)" }}>{link.icon}</span>
+                {link.label}
+                <ExternalLink size={12} style={{ marginLeft: "auto", opacity: 0.4 }} />
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

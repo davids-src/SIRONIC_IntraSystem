@@ -25,6 +25,7 @@ export type PermissionModule =
   | "completion_certificate"
   | "portal_permissions"
   | "project"
+  | "contract"
   | "settings";
 
 export type PermissionScope = "global" | "contact" | "resource";
@@ -202,6 +203,8 @@ export interface PortalPermissions {
   menu_offers: boolean;
   menu_completion_certificates: boolean;
   menu_projects: boolean;
+  menu_contracts: boolean;
+  menu_invoices: boolean;
   menu_company_profile: boolean;
   menu_settings: boolean;
 }
@@ -269,6 +272,7 @@ export interface Project {
   staging_links: StagingLink[];
   checklist: ChecklistItem[];
   notes: string | null;
+  contract_warning_dismissed: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -319,6 +323,7 @@ export interface Settings {
   ticket_categories: string[];
   worklog_categories: string[];
   project_categories: string[];
+  contract_categories: string[];
   price_list_categories: string[];
   worklog_units: string[];
   contact_tags: string[];
@@ -327,3 +332,68 @@ export interface Settings {
 // Backwards compatibility for older UI code during incremental refactor.
 // Will be removed once all modules are migrated.
 export type Organization = Contact;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONTRACT MODULE
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ContractTemplate {
+  _id: string;
+  tenantId: string;
+  name: string;
+  category: string;
+  description: string | null;
+  /** Rich text body with {{variable}} placeholders */
+  body: string;
+  /** Variable names detected in body, e.g. ["contact_name", "site_address"] */
+  variables: string[];
+  requires_digital_signature: boolean;
+  is_active: boolean;
+  created_by: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type ContractType = "generated" | "uploaded";
+
+export type ContractStatus =
+  | "draft"
+  | "sent"
+  | "signed_digital"
+  | "signed_paper"
+  | "cancelled";
+
+export type ContractSigningType = "digital" | "paper" | "none";
+
+export interface Contract {
+  _id: string;
+  /** Auto-generated: SZ-000001 */
+  contract_number: string;
+  tenantId: string;
+  contact_id: string;
+  project_id: string | null;
+  ticket_id: string | null;
+  template_id: string | null;
+  created_by: string;
+  type: ContractType;
+  category: string;
+  name: string;
+  status: ContractStatus;
+  /** Rendered body (generated type) */
+  body: string | null;
+  /** Key-value map of filled template variables */
+  variables_filled: Record<string, string> | null;
+  /** URL of generated PDF or uploaded file */
+  pdf_url: string | null;
+  portal_visible: boolean;
+  signing_type: ContractSigningType;
+  client_name: string | null;
+  client_signature: string | null;
+  signed_at: Date | null;
+  valid_from: Date | null;
+  /** null means indefinite */
+  valid_until: Date | null;
+  notes: string | null;
+  created_at: Date;
+  updated_at: Date;
+}

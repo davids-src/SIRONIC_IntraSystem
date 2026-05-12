@@ -1,7 +1,15 @@
 "use client";
 
 import { Card, PageHeader, Button } from "@crm/ui";
-import { Plus, ArrowUpDown, Pencil, Trash2, Mail, ChevronRight } from "lucide-react";
+import {
+  Plus,
+  ArrowUpDown,
+  Pencil,
+  Trash2,
+  Mail,
+  ChevronRight,
+  FileSignature,
+} from "lucide-react";
 import Link from "next/link";
 
 type Operation = "add" | "rename" | "delete" | "reorder";
@@ -36,6 +44,19 @@ const configurableLists: Array<{
       "Webfejlesztés",
       "NIS2 megfelelőség",
       "Biztonságtechnika",
+    ],
+    operations: ["add", "rename", "delete", "reorder"],
+  },
+  {
+    key: "contract_categories",
+    label_hu: "Szerződés kategóriák",
+    description: "Szerződéstípusok a Contract modulhoz.",
+    examples: [
+      "Megbízási szerződés",
+      "Vagyonvédelmi szerződés",
+      "Karbantartási szerződés",
+      "Titoktartási nyilatkozat (NDA)",
+      "Keretszerződés",
     ],
     operations: ["add", "rename", "delete", "reorder"],
   },
@@ -123,6 +144,70 @@ export default function SettingsPage() {
                   }}
                 >
                   Automatikus e-mail értesítések kezelése modulonként
+                </p>
+              </div>
+            </div>
+            <ChevronRight size={20} style={{ color: "var(--text-muted)" }} />
+          </div>
+        </Card>
+      </Link>
+
+      {/* Contract Templates link */}
+      <Link
+        href="/contracts/templates"
+        style={{ display: "block", textDecoration: "none" }}
+      >
+        <Card
+          className="p-5"
+          style={{ cursor: "pointer", transition: "box-shadow 0.2s" }}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(0, 0, 0, 0.1)")
+          }
+          onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "none")}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <div
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "8px",
+                  backgroundColor: "var(--accent-badge-bg, #3b0a0a)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <FileSignature
+                  size={20}
+                  style={{ color: "var(--accent-primary, #e53935)" }}
+                />
+              </div>
+              <div>
+                <h2
+                  style={{
+                    fontSize: "1rem",
+                    fontWeight: 700,
+                    color: "var(--text-primary)",
+                    margin: 0,
+                  }}
+                >
+                  Szerződés sablonok
+                </h2>
+                <p
+                  style={{
+                    fontSize: "0.875rem",
+                    color: "var(--text-muted)",
+                    margin: "2px 0 0 0",
+                  }}
+                >
+                  Szerződéssablonok kezelése változókkal
                 </p>
               </div>
             </div>

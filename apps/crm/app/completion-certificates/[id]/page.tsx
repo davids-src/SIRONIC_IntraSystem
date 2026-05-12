@@ -28,7 +28,7 @@ export default function CompletionCertificateFormPage({
   const [status, setStatus] = useState(isNew ? "draft" : "signed");
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="flex flex-col gap-6">
       <PageHeader
         title={isNew ? "Új teljesítési igazolás" : `Teljesítési igazolás: CC-000001`}
         subtitle="Szerződések és projektek lezárása, elvégzett munkák igazolása"

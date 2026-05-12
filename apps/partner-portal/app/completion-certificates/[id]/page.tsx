@@ -18,7 +18,7 @@ export default function PartnerCompletionCertificateDetailPage({
   const [signed, setSigned] = useState(false);
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="flex flex-col gap-6">
       <PageHeader
         title={`Teljesítési igazolás: CC-000001`}
         subtitle="Szerződések és projektek lezárása, elvégzett munkák igazolása"

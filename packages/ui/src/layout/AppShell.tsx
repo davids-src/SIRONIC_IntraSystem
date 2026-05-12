@@ -46,28 +46,26 @@ export function AppShell({ sidebar, topbar, children }: AppShellProps) {
       <style>{`
         .app-shell-layout {
           display: flex;
-          min-height: 100vh;
+          height: 100vh;
+          overflow: hidden;
           background: ${colors.bg.primary};
+        }
+        .app-shell-sidebar {
+          flex-shrink: 0;
+          overflow-y: auto;
+          overflow-x: hidden;
         }
         .app-shell-main-area {
           flex: 1;
           display: flex;
           flex-direction: column;
           min-width: 0;
-          overflow-x: hidden;
+          overflow: hidden;
         }
         .app-shell-content {
           flex: 1;
-          padding: ${spacing.cardPadding};
-          display: flex;
-          flex-direction: column;
-          gap: ${spacing.sectionGap};
-        }
-        @media (max-width: 768px) {
-          .app-shell-content {
-            padding: 12px;
-            gap: 12px;
-          }
+          overflow-y: auto;
+          overflow-x: hidden;
         }
       `}</style>
       <div className="app-shell-layout">
@@ -85,7 +83,18 @@ export function AppShell({ sidebar, topbar, children }: AppShellProps) {
             onLocaleChange={handleLocaleChange}
             onMenuToggle={() => setMobileMenuOpen((o) => !o)}
           />
-          <main className="app-shell-content">{children}</main>
+          <main className="app-shell-content">
+            <div
+              style={{
+                padding: "24px",
+                maxWidth: "1400px",
+                margin: "0 auto",
+                width: "100%",
+              }}
+            >
+              {children}
+            </div>
+          </main>
         </div>
       </div>
     </>

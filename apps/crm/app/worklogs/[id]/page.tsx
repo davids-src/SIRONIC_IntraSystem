@@ -1,404 +1,614 @@
 "use client";
 
-import { PageHeader, Card, Button, Input, Badge } from "@crm/ui";
-import { useRouter } from "next/navigation";
-import { useState, use } from "react";
+import { Card, Button, Badge, Input } from "@crm/ui";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, use, Suspense } from "react";
 import {
   Save,
   FileSignature,
-  FileText,
   CheckCircle2,
   Plus,
   Trash2,
   Download,
+  ArrowLeft,
 } from "lucide-react";
 
-export default function WorklogFormPage({ params }: { params: Promise<{ id: string }> }) {
-  const router = useRouter();
-  const resolvedParams = use(params);
-  const id = resolvedParams.id;
-  const isNew = id === "new";
+const WORK_CATEGORIES = [
+  "IT Támogatás",
+  "Hálózatépítés",
+  "Biztonságtechnika",
+  "Karbantartás",
+  "Egyéb",
+];
+const mockContacts = [
+  { _id: "org1", name: "Acme Kft." },
+  { _id: "org2", name: "Alpha Épület Zrt." },
+  { _id: "org3", name: "Beta Logisztika Kft." },
+];
+const mockTechnicians = ["Kovács János", "Nagy Péter", "Szabó Anna"];
 
-  // Form state mock
+const fieldCls =
+  "w-full h-10 px-3 rounded-md text-sm border outline-none transition-colors";
+const fieldStyle = {
+  borderColor: "var(--color-border-default)",
+  background: "var(--color-bg-secondary)",
+  color: "var(--color-text-primary)",
+};
+const labelCls = "text-sm font-medium";
+const sectionHeaderCls = "text-xs font-semibold uppercase tracking-wider pb-2 border-b";
+
+function WorklogFormContent({ id }: { id: string }) {
+  const router = useRouter();
+  const isNew = id === "new";
   const [status, setStatus] = useState("draft");
+
+  // Form fields
+  const [contactId, setContactId] = useState(isNew ? "" : "org1");
+  const [category, setCategory] = useState(isNew ? "" : "IT Támogatás");
+  const [technician, setTechnician] = useState(isNew ? "" : "Kovács János");
+  const [workDate, setWorkDate] = useState(new Date().toISOString().split("T")[0]);
+  const [workStart, setWorkStart] = useState("08:00");
+  const [workEnd, setWorkEnd] = useState("16:00");
+  const [siteAddress, setSiteAddress] = useState(isNew ? "" : "Központi iroda, Budapest");
+  const [description, setDescription] = useState(
+    isNew ? "" : "Szerver hiba elhárítása, hálózati switch újraindítása.",
+  );
+  const [travelKm, setTravelKm] = useState(isNew ? "" : "15");
+  const [notes, setNotes] = useState(
+    isNew ? "" : "A switch egyik portja kontakthibás volt.",
+  );
+  const [technicianName, setTechnicianName] = useState(isNew ? "" : "Kovács János");
+  const [clientName, setClientName] = useState(isNew ? "" : "Nagy Péter");
+
+  const disabled = status !== "draft";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     router.push("/worklogs");
   };
 
-  return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      <PageHeader
-        title={isNew ? "Új munkalap rögzítése" : `Munkalap szerkesztése: WL-000001`}
-        subtitle="Részletes adminisztráció és anyagfelhasználás"
-        actions={
-          <Button variant="secondary" onClick={() => router.push("/worklogs")}>
-            Vissza
-          </Button>
-        }
-      />
+  const SectionHeader = ({ title }: { title: string }) => (
+    <div
+      className={sectionHeaderCls}
+      style={{
+        color: "var(--color-text-muted)",
+        borderColor: "var(--color-border-subtle)",
+      }}
+    >
+      {title}
+    </div>
+  );
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Status bar */}
-        {!isNew && (
-          <div className="flex items-center gap-3 p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-border-subtle)] rounded-lg">
-            <span className="text-sm font-medium text-[var(--color-text-muted)]">
-              Állapot:
-            </span>
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col gap-1 min-w-0">
+          <button
+            onClick={() => router.push("/worklogs")}
+            className="flex items-center gap-1.5 text-sm mb-1 w-fit"
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--color-text-muted)",
+              padding: 0,
+            }}
+          >
+            <ArrowLeft size={14} />
+            Vissza a munkalapokhoz
+          </button>
+          <h1 className="text-2xl font-bold text-white truncate">
+            {isNew
+              ? "Új munkalap rögzítése"
+              : `Munkalap: WL-${id.slice(-6).padStart(6, "0")}`}
+          </h1>
+          <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+            Részletes adminisztráció és anyagfelhasználás
+          </p>
+        </div>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {!isNew && (
             <Badge variant={status === "draft" ? "default" : "success"}>
               {status === "draft" ? "Piszkozat" : "Véglegesített"}
             </Badge>
-            <div className="flex-1"></div>
-            {status === "draft" && (
-              <Button
-                type="button"
-                variant="primary"
-                onClick={() => setStatus("finalized")}
+          )}
+          {status === "finalized" && (
+            <Button
+              variant="secondary"
+              onClick={() => window.open(`/worklogs/${id}/print`, "_blank")}
+            >
+              <Download size={15} style={{ marginRight: "6px" }} />
+              PDF
+            </Button>
+          )}
+          {status === "draft" && !isNew && (
+            <Button variant="primary" onClick={() => setStatus("finalized")}>
+              <CheckCircle2 size={15} style={{ marginRight: "6px" }} />
+              Véglegesítés
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        {/* Section 1: Alapadatok */}
+        <div
+          className="rounded-xl border p-6 flex flex-col gap-4"
+          style={{
+            background: "var(--color-bg-card)",
+            borderColor: "var(--color-border-subtle)",
+          }}
+        >
+          <SectionHeader title="Alapadatok" />
+
+          {/* Row 1: Szervezet | Munkavégzés típusa | Technikus */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="flex flex-col gap-2">
+              <label className={labelCls} style={{ color: "var(--color-text-primary)" }}>
+                Szervezet *
+              </label>
+              <select
+                value={contactId}
+                onChange={(e) => setContactId(e.target.value)}
+                required
+                disabled={disabled}
+                className={fieldCls}
+                style={fieldStyle}
               >
-                <CheckCircle2 size={16} className="mr-2" />
-                Véglegesítés (Lezárás)
-              </Button>
-            )}
-            {status === "finalized" && (
-              <Button
-                variant="secondary"
-                onClick={() => window.open(`/worklogs/${id}/print`, "_blank")}
-              >
-                <Download size={16} style={{ marginRight: "8px" }} />
-                Megtekintés / PDF
-              </Button>
-            )}
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Header Section */}
-          <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2">
-              Alapadatok
-            </h3>
-
-            <div className="grid grid-cols-2 gap-6">
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
-                  Szervezet *
-                </label>
-                <select
-                  className="w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent-primary)] transition-colors"
-                  required
-                  disabled={status !== "draft"}
-                >
-                  <option value="org1">Acme Kft.</option>
-                  <option value="org2">GlobalTech Zrt.</option>
-                </select>
-              </div>
-
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
-                  Munkavégzés típusa *
-                </label>
-                <select
-                  className="w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent-primary)] transition-colors"
-                  required
-                  disabled={status !== "draft"}
-                >
-                  <option value="it_support">IT Támogatás</option>
-                  <option value="network">Hálózatépítés</option>
-                  <option value="security">Biztonságtechnika</option>
-                  <option value="maintenance">Karbantartás</option>
-                </select>
-              </div>
-
-              <div className="col-span-2 sm:col-span-1">
-                <Input
-                  type="date"
-                  label="Dátum *"
-                  required
-                  disabled={status !== "draft"}
-                  defaultValue={new Date().toISOString().split("T")[0]}
-                />
-              </div>
-
-              <div className="col-span-2 sm:col-span-1 grid grid-cols-2 gap-2">
-                <Input
-                  type="time"
-                  label="Kezdés *"
-                  required
-                  disabled={status !== "draft"}
-                  defaultValue="08:00"
-                />
-                <Input
-                  type="time"
-                  label="Befejezés *"
-                  required
-                  disabled={status !== "draft"}
-                  defaultValue="16:00"
-                />
-              </div>
-
-              <div className="col-span-2">
-                <Input
-                  label="Helyszín / Cím"
-                  placeholder="Opcionális cím"
-                  disabled={status !== "draft"}
-                />
-              </div>
+                <option value="">-- Szervezet --</option>
+                {mockContacts.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
             </div>
-          </Card>
+            <div className="flex flex-col gap-2">
+              <label className={labelCls} style={{ color: "var(--color-text-primary)" }}>
+                Munkavégzés típusa *
+              </label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                required
+                disabled={disabled}
+                className={fieldCls}
+                style={fieldStyle}
+              >
+                <option value="">-- Típus --</option>
+                {WORK_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className={labelCls} style={{ color: "var(--color-text-primary)" }}>
+                Technikus
+              </label>
+              <select
+                value={technician}
+                onChange={(e) => setTechnician(e.target.value)}
+                disabled={disabled}
+                className={fieldCls}
+                style={fieldStyle}
+              >
+                <option value="">-- Technikus --</option>
+                {mockTechnicians.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-          {/* Details Section */}
-          <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2">
-              Részletek
-            </h3>
-
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
-                  Elvégzett munka részletes leírása *
-                </label>
-                <textarea
-                  className="w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent-primary)] transition-colors min-h-[120px] resize-y"
-                  required
-                  disabled={status !== "draft"}
-                  defaultValue={!isNew ? "Szerver hiba elhárítása..." : ""}
-                />
-              </div>
-
-              <Input
-                type="number"
-                label="Kiszállás / Útiköltség (km)"
-                placeholder="Pl. 15"
-                disabled={status !== "draft"}
+          {/* Row 2: Dátum | Kezdés | Befejezés */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="flex flex-col gap-2">
+              <label className={labelCls} style={{ color: "var(--color-text-primary)" }}>
+                Dátum *
+              </label>
+              <input
+                type="date"
+                value={workDate}
+                onChange={(e) => setWorkDate(e.target.value)}
+                required
+                disabled={disabled}
+                className={fieldCls}
+                style={fieldStyle}
               />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className={labelCls} style={{ color: "var(--color-text-primary)" }}>
+                Kezdés *
+              </label>
+              <input
+                type="time"
+                value={workStart}
+                onChange={(e) => setWorkStart(e.target.value)}
+                required
+                disabled={disabled}
+                className={fieldCls}
+                style={fieldStyle}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className={labelCls} style={{ color: "var(--color-text-primary)" }}>
+                Befejezés *
+              </label>
+              <input
+                type="time"
+                value={workEnd}
+                onChange={(e) => setWorkEnd(e.target.value)}
+                required
+                disabled={disabled}
+                className={fieldCls}
+                style={fieldStyle}
+              />
+            </div>
+          </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
-                  Belső megjegyzés (Ügyfél nem látja)
+          {/* Row 3: Helyszín (full width) */}
+          <div className="flex flex-col gap-2">
+            <label className={labelCls} style={{ color: "var(--color-text-primary)" }}>
+              Helyszín / Cím
+            </label>
+            <input
+              type="text"
+              value={siteAddress}
+              onChange={(e) => setSiteAddress(e.target.value)}
+              placeholder="Pl. Központi iroda, Budapest"
+              disabled={disabled}
+              className={fieldCls}
+              style={fieldStyle}
+            />
+          </div>
+        </div>
+
+        {/* Section 2: Részletek */}
+        <div
+          className="rounded-xl border p-6 flex flex-col gap-4"
+          style={{
+            background: "var(--color-bg-card)",
+            borderColor: "var(--color-border-subtle)",
+          }}
+        >
+          <SectionHeader title="Részletek" />
+
+          <div className="flex flex-col gap-2">
+            <label className={labelCls} style={{ color: "var(--color-text-primary)" }}>
+              Elvégzett munka részletes leírása *
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              required
+              disabled={disabled}
+              placeholder="Részletes leírás..."
+              rows={4}
+              className="w-full px-3 py-2.5 rounded-md text-sm border outline-none resize-y min-h-[120px]"
+              style={fieldStyle}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="flex flex-col gap-2">
+              <label className={labelCls} style={{ color: "var(--color-text-primary)" }}>
+                Kiszállás / Útiköltség (km)
+              </label>
+              <input
+                type="number"
+                value={travelKm}
+                onChange={(e) => setTravelKm(e.target.value)}
+                placeholder="Pl. 15"
+                disabled={disabled}
+                min={0}
+                className={fieldCls}
+                style={fieldStyle}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className={labelCls} style={{ color: "var(--color-text-muted)" }}>
+                Belső megjegyzés (ügyfél nem látja)
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                disabled={disabled}
+                placeholder="Belső feljegyzések..."
+                rows={2}
+                className="w-full px-3 py-2 rounded-md text-sm border outline-none resize-none"
+                style={fieldStyle}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Section 3: Szervizelt eszközök */}
+        <div
+          className="rounded-xl border p-6 flex flex-col gap-4"
+          style={{
+            background: "var(--color-bg-card)",
+            borderColor: "var(--color-border-subtle)",
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div
+              className={sectionHeaderCls + " flex-1"}
+              style={{
+                color: "var(--color-text-muted)",
+                borderColor: "var(--color-border-subtle)",
+              }}
+            >
+              Szervizelt Eszközök
+            </div>
+            {!disabled && (
+              <button
+                type="button"
+                className="text-xs flex items-center gap-1 px-2 py-1 rounded-md ml-3"
+                style={{
+                  background: "var(--color-bg-secondary)",
+                  color: "var(--color-accent-primary)",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                <Plus size={13} /> Új eszköz
+              </button>
+            )}
+          </div>
+          <div
+            className="overflow-x-auto rounded-lg border"
+            style={{ borderColor: "var(--color-border-subtle)" }}
+          >
+            <table className="w-full min-w-[640px]">
+              <thead>
+                <tr
+                  style={{
+                    background: "var(--color-bg-secondary)",
+                    borderBottom: "1px solid var(--color-border-subtle)",
+                  }}
+                >
+                  {["Eszköz neve", "Típus", "Sorozatszám", "Elvégzett feladat", ""].map(
+                    (h) => (
+                      <th
+                        key={h}
+                        className="text-left text-xs font-semibold uppercase tracking-wider px-4 py-3 whitespace-nowrap"
+                        style={{ color: "var(--color-text-muted)" }}
+                      >
+                        {h}
+                      </th>
+                    ),
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ borderBottom: "1px solid var(--color-border-subtle)" }}>
+                  {["SRV-01", "Szerver", "SN-123", "Újraindítás"].map((val, i) => (
+                    <td key={i} className="p-2">
+                      <input
+                        defaultValue={!isNew ? val : ""}
+                        placeholder={
+                          ["Eszköz neve", "Típus", "SN...", "Elvégzett feladat"][i]
+                        }
+                        disabled={disabled}
+                        className="w-full h-9 px-3 rounded-md text-sm border outline-none"
+                        style={{
+                          ...fieldStyle,
+                          minWidth: i === 3 ? "200px" : i === 2 ? "140px" : "120px",
+                        }}
+                      />
+                    </td>
+                  ))}
+                  <td className="p-2 text-center">
+                    {!disabled && (
+                      <button
+                        type="button"
+                        className="p-1.5 rounded-md hover:bg-red-500/10 transition-colors"
+                        style={{
+                          border: "none",
+                          cursor: "pointer",
+                          background: "transparent",
+                          color: "var(--color-text-muted)",
+                        }}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Section 4: Felhasznált anyagok */}
+        <div
+          className="rounded-xl border p-6 flex flex-col gap-4"
+          style={{
+            background: "var(--color-bg-card)",
+            borderColor: "var(--color-border-subtle)",
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div
+              className={sectionHeaderCls + " flex-1"}
+              style={{
+                color: "var(--color-text-muted)",
+                borderColor: "var(--color-border-subtle)",
+              }}
+            >
+              Felhasznált Anyagok
+            </div>
+            {!disabled && (
+              <button
+                type="button"
+                className="text-xs flex items-center gap-1 px-2 py-1 rounded-md ml-3"
+                style={{
+                  background: "var(--color-bg-secondary)",
+                  color: "var(--color-accent-primary)",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                <Plus size={13} /> Új anyag
+              </button>
+            )}
+          </div>
+          <div
+            className="overflow-x-auto rounded-lg border"
+            style={{ borderColor: "var(--color-border-subtle)" }}
+          >
+            <table className="w-full min-w-[580px]">
+              <thead>
+                <tr
+                  style={{
+                    background: "var(--color-bg-secondary)",
+                    borderBottom: "1px solid var(--color-border-subtle)",
+                  }}
+                >
+                  {["Megnevezés", "Cikkszám", "Mennyiség", "Egység", ""].map((h) => (
+                    <th
+                      key={h}
+                      className="text-left text-xs font-semibold uppercase tracking-wider px-4 py-3 whitespace-nowrap"
+                      style={{ color: "var(--color-text-muted)" }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ borderBottom: "1px solid var(--color-border-subtle)" }}>
+                  {["CAT6 Patch kábel 2m", "CAB-001", "1", "db"].map((val, i) => (
+                    <td key={i} className="p-2">
+                      <input
+                        defaultValue={!isNew ? val : ""}
+                        placeholder={["Anyag neve", "Opcionális", "0", "db, m..."][i]}
+                        type={i === 2 ? "number" : "text"}
+                        disabled={disabled}
+                        className="w-full h-9 px-3 rounded-md text-sm border outline-none"
+                        style={{ ...fieldStyle, minWidth: i === 0 ? "200px" : "100px" }}
+                      />
+                    </td>
+                  ))}
+                  <td className="p-2 text-center">
+                    {!disabled && (
+                      <button
+                        type="button"
+                        className="p-1.5 rounded-md hover:bg-red-500/10 transition-colors"
+                        style={{
+                          border: "none",
+                          cursor: "pointer",
+                          background: "transparent",
+                          color: "var(--color-text-muted)",
+                        }}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Section 5: Aláírások */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {[
+            {
+              title: "Technikus aláírása",
+              nameLabel: "Technikus neve *",
+              nameValue: technicianName,
+              setName: setTechnicianName,
+            },
+            {
+              title: "Ügyfél aláírása",
+              nameLabel: "Ügyfél neve (opcionális)",
+              nameValue: clientName,
+              setName: setClientName,
+            },
+          ].map((sig) => (
+            <div
+              key={sig.title}
+              className="rounded-xl border p-6 flex flex-col gap-4"
+              style={{
+                background: "var(--color-bg-card)",
+                borderColor: "var(--color-border-subtle)",
+              }}
+            >
+              <div
+                className={sectionHeaderCls + " flex items-center gap-2"}
+                style={{
+                  color: "var(--color-text-muted)",
+                  borderColor: "var(--color-border-subtle)",
+                }}
+              >
+                <FileSignature size={14} /> {sig.title}
+              </div>
+              <div className="flex flex-col gap-2">
+                <label
+                  className={labelCls}
+                  style={{ color: "var(--color-text-primary)" }}
+                >
+                  {sig.nameLabel}
                 </label>
-                <textarea
-                  className="w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent-primary)] transition-colors min-h-[60px]"
-                  disabled={status !== "draft"}
+                <input
+                  type="text"
+                  value={sig.nameValue}
+                  onChange={(e) => sig.setName(e.target.value)}
+                  disabled={disabled}
+                  className={fieldCls}
+                  style={fieldStyle}
                 />
               </div>
+              <div
+                className="h-32 rounded-lg flex items-center justify-center border-dashed border-2 text-sm"
+                style={{
+                  borderColor: "var(--color-border-default)",
+                  color: "var(--color-text-muted)",
+                }}
+              >
+                Aláírás pad helye
+              </div>
             </div>
-          </Card>
+          ))}
         </div>
 
-        {/* Dynamic Lists Section */}
-        <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-8">
-          {/* Devices Serviced */}
-          <div className="space-y-6">
-            <div className="flex justify-between items-center border-b border-[var(--color-border-subtle)] pb-2">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-                Szervizelt Eszközök
-              </h3>
-              {status === "draft" && (
-                <Button type="button" variant="ghost" className="text-sm h-8 px-2">
-                  <Plus size={14} className="mr-1" /> Új eszköz
-                </Button>
-              )}
+        {/* Footer actions */}
+        {!disabled && (
+          <div
+            className="flex items-center justify-between gap-4 pt-6 border-t"
+            style={{ borderColor: "var(--color-border-subtle)" }}
+          >
+            <div>
+              <Badge variant="default">Piszkozat</Badge>
             </div>
-
-            <div className="overflow-x-auto border border-[var(--color-border-subtle)] rounded-lg">
-              <table className="w-full text-left border-collapse min-w-[700px]">
-                <thead>
-                  <tr className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-subtle)]">
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-                      Eszköz Neve
-                    </th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] w-[150px]">
-                      Típus
-                    </th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] w-[200px]">
-                      Sorozatszám
-                    </th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-                      Elvégzett feladat
-                    </th>
-                    <th className="px-4 py-3 w-12 text-center"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--color-border-subtle)]">
-                  <tr className="bg-[var(--color-bg-card)] hover:bg-[var(--color-bg-card-hover)] transition-colors">
-                    <td className="p-2 align-top">
-                      <Input
-                        placeholder="Pl. SRV-01"
-                        disabled={status !== "draft"}
-                        defaultValue={!isNew ? "SRV-01" : ""}
-                        style={{ height: "36px", background: "transparent" }}
-                      />
-                    </td>
-                    <td className="p-2 align-top">
-                      <Input
-                        placeholder="Szerver"
-                        disabled={status !== "draft"}
-                        defaultValue={!isNew ? "Szerver" : ""}
-                        style={{ height: "36px", background: "transparent" }}
-                      />
-                    </td>
-                    <td className="p-2 align-top">
-                      <Input
-                        placeholder="SN..."
-                        disabled={status !== "draft"}
-                        defaultValue={!isNew ? "SN-123" : ""}
-                        style={{ height: "36px", background: "transparent" }}
-                      />
-                    </td>
-                    <td className="p-2 align-top">
-                      <Input
-                        placeholder="Javítás..."
-                        disabled={status !== "draft"}
-                        defaultValue={!isNew ? "Újraindítás" : ""}
-                        style={{ height: "36px", background: "transparent" }}
-                      />
-                    </td>
-                    <td className="p-2 text-center align-middle">
-                      {status === "draft" && (
-                        <button
-                          type="button"
-                          className="text-[var(--color-text-muted)] hover:text-[var(--color-status-error)] transition-colors p-2 rounded-md hover:bg-red-500/10"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+            <div className="flex gap-3">
+              <Button type="button" variant="ghost" onClick={() => router.back()}>
+                Mégse
+              </Button>
+              <Button type="submit" variant="primary">
+                <Save size={15} style={{ marginRight: "6px" }} />
+                Mentés piszkozatként
+              </Button>
             </div>
-          </div>
-
-          {/* Materials Used */}
-          <div className="space-y-6">
-            <div className="flex justify-between items-center border-b border-[var(--color-border-subtle)] pb-2">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-                Felhasznált Anyagok
-              </h3>
-              {status === "draft" && (
-                <Button type="button" variant="ghost" className="text-sm h-8 px-2">
-                  <Plus size={14} className="mr-1" /> Új anyag
-                </Button>
-              )}
-            </div>
-
-            <div className="overflow-x-auto border border-[var(--color-border-subtle)] rounded-lg">
-              <table className="w-full text-left border-collapse min-w-[700px]">
-                <thead>
-                  <tr className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-subtle)]">
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-                      Megnevezés
-                    </th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] w-[180px]">
-                      Cikkszám
-                    </th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] w-[120px]">
-                      Mennyiség
-                    </th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] w-[120px]">
-                      Egység
-                    </th>
-                    <th className="px-4 py-3 w-12 text-center"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--color-border-subtle)]">
-                  <tr className="bg-[var(--color-bg-card)] hover:bg-[var(--color-bg-card-hover)] transition-colors">
-                    <td className="p-2 align-top">
-                      <Input
-                        placeholder="Anyag neve"
-                        disabled={status !== "draft"}
-                        defaultValue={!isNew ? "CAT6 Patch kábel 2m" : ""}
-                        style={{ height: "36px", background: "transparent" }}
-                      />
-                    </td>
-                    <td className="p-2 align-top">
-                      <Input
-                        placeholder="Opcionális"
-                        disabled={status !== "draft"}
-                        defaultValue={!isNew ? "CAB-001" : ""}
-                        style={{ height: "36px", background: "transparent" }}
-                      />
-                    </td>
-                    <td className="p-2 align-top">
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        disabled={status !== "draft"}
-                        defaultValue={!isNew ? "1" : ""}
-                        style={{ height: "36px", background: "transparent" }}
-                      />
-                    </td>
-                    <td className="p-2 align-top">
-                      <Input
-                        placeholder="db, m..."
-                        disabled={status !== "draft"}
-                        defaultValue={!isNew ? "db" : ""}
-                        style={{ height: "36px", background: "transparent" }}
-                      />
-                    </td>
-                    <td className="p-2 text-center align-middle">
-                      {status === "draft" && (
-                        <button
-                          type="button"
-                          className="text-[var(--color-text-muted)] hover:text-[var(--color-status-error)] transition-colors p-2 rounded-md hover:bg-red-500/10"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </Card>
-
-        {/* Signatures */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2 flex items-center gap-2">
-              <FileSignature size={16} /> Technikus Aláírása
-            </h3>
-            <Input
-              label="Technikus neve *"
-              required
-              disabled={status !== "draft"}
-              defaultValue="Kovács János"
-            />
-            <div className="h-32 bg-[var(--color-bg-primary)] border border-dashed border-[var(--color-border-default)] rounded-md flex items-center justify-center text-[var(--color-text-muted)]">
-              Aláírás pad helye
-            </div>
-          </Card>
-
-          <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2 flex items-center gap-2">
-              <FileSignature size={16} /> Ügyfél Aláírása
-            </h3>
-            <Input
-              label="Ügyfél neve (opcionális)"
-              disabled={status !== "draft"}
-              defaultValue={!isNew ? "Nagy Péter" : ""}
-            />
-            <div className="h-32 bg-[var(--color-bg-primary)] border border-dashed border-[var(--color-border-default)] rounded-md flex items-center justify-center text-[var(--color-text-muted)]">
-              Aláírás pad helye
-            </div>
-          </Card>
-        </div>
-
-        {/* Footer Actions */}
-        {status === "draft" && (
-          <div className="flex justify-end gap-3 sticky bottom-4 bg-[var(--color-bg-card)] p-4 rounded-xl border border-[var(--color-border-subtle)] shadow-xl">
-            <Button type="button" variant="ghost" onClick={() => router.back()}>
-              Mégse
-            </Button>
-            <Button type="submit" variant="primary">
-              <Save size={16} className="mr-2" />
-              Mentés Piszkozatként
-            </Button>
           </div>
         )}
       </form>
     </div>
+  );
+}
+
+export default function WorklogFormPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
+  return (
+    <Suspense fallback={<div className="p-6 text-white">Betöltés...</div>}>
+      <WorklogFormContent id={resolvedParams.id} />
+    </Suspense>
   );
 }

@@ -9,8 +9,10 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     { module: "ticket", action: "admin", scope: "global" },
     { module: "worklog", action: "admin", scope: "global" },
     { module: "completion_certificate", action: "admin", scope: "global" },
+    { module: "contract", action: "admin", scope: "global" },
     { module: "portal_permissions", action: "manage", scope: "global" },
     { module: "project", action: "admin", scope: "global" },
+    { module: "settings", action: "admin", scope: "global" },
   ],
   "crm.staff": [
     { module: "dashboard", action: "view", scope: "global" },
@@ -25,6 +27,9 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     { module: "completion_certificate", action: "write", scope: "global" },
     { module: "completion_certificate", action: "send", scope: "global" },
     { module: "completion_certificate", action: "generate_pdf", scope: "global" },
+    { module: "contract", action: "write", scope: "global" },
+    { module: "contract", action: "send", scope: "global" },
+    { module: "contract", action: "generate_pdf", scope: "global" },
     { module: "project", action: "write", scope: "global" },
     { module: "project", action: "manage_phases", scope: "global" },
     { module: "project", action: "manage_checklist", scope: "global" },
@@ -39,6 +44,8 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     { module: "worklog", action: "view", scope: "contact" },
     { module: "completion_certificate", action: "sign", scope: "contact" },
     { module: "completion_certificate", action: "view", scope: "contact" },
+    { module: "contract", action: "view", scope: "contact" },
+    { module: "contract", action: "sign", scope: "contact" },
     { module: "project", action: "view", scope: "contact" },
     { module: "project", action: "manage_checklist", scope: "contact" },
     { module: "project", action: "sign", scope: "contact" }, // reusing 'sign' for approval
@@ -49,6 +56,7 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     { module: "ticket", action: "view", scope: "contact" },
     { module: "worklog", action: "view", scope: "contact" },
     { module: "completion_certificate", action: "view", scope: "contact" },
+    { module: "contract", action: "view", scope: "contact" },
     { module: "project", action: "view", scope: "contact" },
   ],
 };

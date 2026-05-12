@@ -241,6 +241,7 @@ export function Sidebar({
         .sidebar-desktop {
           width: ${spacing.sidebarWidth};
           min-width: ${spacing.sidebarWidth};
+          max-width: ${spacing.sidebarWidth};
           background: ${colors.bg.sidebar};
           border-right: 1px solid ${colors.border.default};
           display: flex;
