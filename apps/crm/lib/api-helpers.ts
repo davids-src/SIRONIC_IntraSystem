@@ -15,10 +15,7 @@ export class HttpError extends Error {
   }
 }
 
-export async function requireCrmAuth(): Promise<{
-  session: NonNullable<Awaited<ReturnType<typeof auth>>>;
-  actor: ActorContext;
-}> {
+export async function requireCrmAuth() {
   const session = await auth();
   if (!session?.user?.id || !session.user.tenantId) {
     throw new HttpError(401, "Unauthorized");

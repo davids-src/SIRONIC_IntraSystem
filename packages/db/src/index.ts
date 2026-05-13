@@ -15,4 +15,7 @@ export {
   ContractModel,
   OfferModel,
   InvoiceModel,
+  InventoryItemModel,
+  DomainHostingRecordModel,
+  PortalUserModel,
 } from "./models";

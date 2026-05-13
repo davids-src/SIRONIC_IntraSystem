@@ -18,7 +18,7 @@ import { useEffect, useState } from "react";
 function parseProject(raw: unknown): Project {
   const p = raw as Record<string, unknown>;
   return {
-    ...(p as Project),
+    ...(p as unknown as Project),
     start_date: p["start_date"] ? new Date(String(p["start_date"])) : null,
     deadline: p["deadline"] ? new Date(String(p["deadline"])) : null,
     closed_at: p["closed_at"] ? new Date(String(p["closed_at"])) : null,

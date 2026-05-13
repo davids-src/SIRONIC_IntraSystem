@@ -24,7 +24,7 @@ type ContractRow = Contract & { contact_name: string };
 function parseContract(raw: unknown, contactName: string): ContractRow {
   const c = raw as Record<string, unknown>;
   return {
-    ...(c as Contract),
+    ...(c as unknown as Contract),
     contact_name: contactName,
     valid_from: c["valid_from"] ? new Date(String(c["valid_from"])) : null,
     valid_until: c["valid_until"] ? new Date(String(c["valid_until"])) : null,

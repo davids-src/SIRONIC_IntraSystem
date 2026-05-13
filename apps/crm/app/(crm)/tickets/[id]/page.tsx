@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect, useCallback } from "react";
 import {
   Badge,
   Button,
@@ -14,13 +14,12 @@ import {
   CheckboxField,
 } from "@crm/ui";
 import { useRouter } from "next/navigation";
-import type { Ticket } from "@crm/types";
+import type { Ticket, TicketStatus, TicketPriority } from "@crm/types";
 import {
   MessageSquare,
   Paperclip,
   MapPin,
   Server,
-  ShieldAlert,
   FileText,
   BadgeCheck,
   Send,
@@ -31,54 +30,25 @@ import {
   Download,
 } from "lucide-react";
 import Link from "next/link";
+import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 
-const mockTicket: Ticket = {
-  _id: "t1",
-  ticket_number: "TK-000001",
-  tenantId: "tenant1",
-  contact_id: "org1",
-  one_time_contact_name: null,
-  one_time_contact_phone: null,
-  project_id: null,
-  created_by: "user1",
-  assigned_to: "Kovács János",
-  source: "partner_portal",
-  category: "Hibabejelentés",
-  priority: "high",
-  status: "new",
-  title: "Szerver leállás a központi irodában",
-  description:
-    "A központi fájlszerver nem elérhető tegnap este óta. A belső hálózat megszakadt, senki nem éri el a megosztott meghajtókat.",
-  location: "Központi iroda, 1054 Budapest",
-  affected_items: "SRV-01 (Main File Server), SW-04 (Core Switch)",
-  attachments: [
-    { filename: "error_log.txt", url: "#", size: 12400, uploaded_at: new Date() },
-    { filename: "screenshot.png", url: "#", size: 1024000, uploaded_at: new Date() },
-  ],
-  comments: [
-    {
-      _id: "c1",
-      author_id: "user1",
-      author_role: "partner",
-      message: "Kérlek, sürgősen nézzetek rá, leállt a munka!",
-      is_internal: false,
-      created_at: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    },
-    {
-      _id: "c2",
-      author_id: "staff1",
-      author_role: "crm_staff",
-      message:
-        "Látom a hibát a monitorozó rendszerben. Valószínűleg a switch dobta el a kapcsolatot. Egy kolléga hamarosan indul a helyszínre.",
-      is_internal: true,
-      created_at: new Date(Date.now() - 1.5 * 60 * 60 * 1000),
-    },
-  ],
-  resolution_notes: null,
-  resolved_at: null,
-  created_at: new Date(Date.now() - 2 * 60 * 60 * 1000),
-  updated_at: new Date(Date.now() - 1 * 60 * 60 * 1000),
-};
+function parseTicket(raw: unknown): Ticket {
+  const t = raw as Record<string, unknown>;
+  return {
+    ...(t as unknown as Ticket),
+    created_at: new Date(String(t["created_at"])),
+    updated_at: new Date(String(t["updated_at"])),
+    resolved_at: t["resolved_at"] ? new Date(String(t["resolved_at"])) : null,
+    comments: ((t["comments"] as Ticket["comments"]) ?? []).map((c) => ({
+      ...c,
+      created_at: new Date(String(c.created_at)),
+    })),
+    attachments: ((t["attachments"] as Ticket["attachments"]) ?? []).map((a) => ({
+      ...a,
+      uploaded_at: new Date(String(a.uploaded_at)),
+    })),
+  };
+}
 
 const priorityVariant = {
   low: "info",
@@ -120,13 +90,94 @@ export default function TicketDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const ticket = { ...mockTicket, _id: id };
+  const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [contactName, setContactName] = useState("—");
+  const [crmUsers, setCrmUsers] = useState<
+    { _id: string; display_name: string | null; email: string }[]
+  >([]);
 
   const [commentText, setCommentText] = useState("");
   const [isInternal, setIsInternal] = useState(false);
-  const [status, setStatus] = useState(ticket.status);
-  const [assignedTo, setAssignedTo] = useState(ticket.assigned_to ?? "");
-  const [priority, setPriority] = useState(ticket.priority);
+  const [status, setStatus] = useState<TicketStatus>("new");
+  const [assignedTo, setAssignedTo] = useState("");
+  const [priority, setPriority] = useState<TicketPriority>("medium");
+  const [savingProps, setSavingProps] = useState(false);
+  const [sendingComment, setSendingComment] = useState(false);
+
+  const reload = useCallback(async () => {
+    const t = parseTicket(await apiJson<unknown>(`/api/tickets/${id}`));
+    setTicket(t);
+    setStatus(t.status);
+    setAssignedTo(t.assigned_to ?? "");
+    setPriority(t.priority);
+    if (t.contact_id) {
+      try {
+        const c = await apiJson<{ name: string }>(`/api/contacts/${t.contact_id}`);
+        setContactName(c.name);
+      } catch {
+        setContactName(t.contact_id);
+      }
+    } else {
+      setContactName(t.one_time_contact_name ?? "—");
+    }
+  }, [id]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const users =
+          await apiJson<{ _id: string; display_name: string | null; email: string }[]>(
+            "/api/crm-users",
+          );
+        setCrmUsers(users);
+      } catch {
+        setCrmUsers([]);
+      }
+      try {
+        await reload();
+        setLoadErr(null);
+      } catch {
+        setLoadErr("A ticket nem tölthető be.");
+        setTicket(null);
+      }
+    })();
+  }, [reload]);
+
+  const saveProps = async () => {
+    if (!ticket) return;
+    setSavingProps(true);
+    try {
+      const updated = await apiJsonBody<unknown>(`/api/tickets/${id}`, "PATCH", {
+        status,
+        priority,
+        assigned_to: assignedTo.trim() || null,
+      });
+      setTicket(parseTicket(updated));
+    } catch {
+      setLoadErr("Mentés sikertelen.");
+    } finally {
+      setSavingProps(false);
+    }
+  };
+
+  const sendComment = async () => {
+    if (!ticket || !commentText.trim()) return;
+    setSendingComment(true);
+    try {
+      const updated = await apiJsonBody<unknown>(`/api/tickets/${id}/comments`, "POST", {
+        message: commentText.trim(),
+        is_internal: isInternal,
+      });
+      setTicket(parseTicket(updated));
+      setCommentText("");
+      setIsInternal(false);
+    } catch {
+      setLoadErr("Hozzászólás küldése sikertelen.");
+    } finally {
+      setSendingComment(false);
+    }
+  };
 
   const fmtDate = (d: Date) =>
     new Date(d).toLocaleString("hu-HU", {
@@ -135,6 +186,19 @@ export default function TicketDetailPage({
       hour: "2-digit",
       minute: "2-digit",
     });
+
+  if (!ticket) {
+    return (
+      <div className="flex flex-col gap-4 p-6">
+        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+          {loadErr ?? "Betöltés…"}
+        </p>
+        <Button variant="secondary" onClick={() => router.push("/tickets")}>
+          Vissza
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -179,11 +243,9 @@ export default function TicketDetailPage({
               }}
             >
               <Badge
-                variant={
-                  statusVariant[ticket.status as keyof typeof statusVariant] ?? "default"
-                }
+                variant={statusVariant[status as keyof typeof statusVariant] ?? "default"}
               >
-                {statusLabel[ticket.status as keyof typeof statusLabel] ?? ticket.status}
+                {statusLabel[status as keyof typeof statusLabel] ?? status}
               </Badge>
               <Badge
                 variant={
@@ -221,7 +283,7 @@ export default function TicketDetailPage({
               </span>
               <span>·</span>
               <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                <User size={13} /> Kontakt: {ticket.contact_id ?? "—"}
+                <User size={13} /> Kontakt: {contactName}
               </span>
             </div>
           </div>
@@ -462,9 +524,13 @@ export default function TicketDetailPage({
                   checked={isInternal}
                   onCheckedChange={(v) => setIsInternal(v === true)}
                 />
-                <Button variant="primary">
+                <Button
+                  variant="primary"
+                  disabled={sendingComment}
+                  onClick={() => void sendComment()}
+                >
                   <Send size={14} style={{ marginRight: "6px" }} />
-                  Küldés
+                  {sendingComment ? "Küldés…" : "Küldés"}
                 </Button>
               </div>
             </div>
@@ -608,7 +674,7 @@ export default function TicketDetailPage({
                 </Label>
                 <Select
                   value={status}
-                  onValueChange={(v) => setStatus(v as typeof status)}
+                  onValueChange={(v) => setStatus(v as TicketStatus)}
                 >
                   <SelectTrigger id="ticket-status" className="w-full">
                     <SelectValue />
@@ -638,8 +704,14 @@ export default function TicketDetailPage({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">Nincs kiosztva</SelectItem>
-                    <SelectItem value="staff1">Kovács János</SelectItem>
-                    <SelectItem value="staff2">Nagy Péter</SelectItem>
+                    {crmUsers.map((u) => {
+                      const label = u.display_name?.trim() || u.email;
+                      return (
+                        <SelectItem key={u._id} value={label}>
+                          {label}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -652,7 +724,7 @@ export default function TicketDetailPage({
                 </Label>
                 <Select
                   value={priority}
-                  onValueChange={(v) => setPriority(v as typeof priority)}
+                  onValueChange={(v) => setPriority(v as TicketPriority)}
                 >
                   <SelectTrigger id="ticket-priority" className="w-full">
                     <SelectValue />
@@ -666,6 +738,15 @@ export default function TicketDetailPage({
                   </SelectContent>
                 </Select>
               </div>
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full"
+                disabled={savingProps}
+                onClick={() => void saveProps()}
+              >
+                {savingProps ? "Mentés…" : "Tulajdonságok mentése"}
+              </Button>
             </div>
 
             {ticket.project_id && (

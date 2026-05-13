@@ -1,29 +1,17 @@
 "use client";
 
 import { Card, Button, Badge, PageHeader } from "@crm/ui";
+import type { Contract } from "@crm/types";
+import { apiJson } from "@/lib/api-client";
+import { parseContract } from "@/lib/entity-parsers";
 import { useRouter } from "next/navigation";
-import { FileCheck, PenLine, Files, FileSignature, Eye } from "lucide-react";
+import { useEffect, useState } from "react";
+import { FileCheck, PenLine, Files, Eye } from "lucide-react";
 
-const mockContracts = [
-  {
-    _id: "c1",
-    contract_number: "SZ-000001",
-    name: "Éves karbantartási szerződés 2026",
-    category: "Karbantartási szerződés",
-    status: "sent",
-    valid_until: new Date("2026-12-31"),
-  },
-  {
-    _id: "c4",
-    contract_number: "SZ-000004",
-    name: "Biztonsági rendszer üzemeltetési szerz.",
-    category: "Vagyonvédelmi szerződés",
-    status: "signed_digital",
-    valid_until: null,
-  },
-];
-
-const portalStatusMap: Record<string, { label: string; variant: any }> = {
+const portalStatusMap: Record<
+  string,
+  { label: string; variant: "info" | "success" | "default" | "error" }
+> = {
   sent: { label: "Aláírásra vár", variant: "info" },
   signed_digital: { label: "Aláírva", variant: "success" },
   signed_paper: { label: "Aláírva", variant: "success" },
@@ -33,18 +21,38 @@ const portalStatusMap: Record<string, { label: string; variant: any }> = {
 
 export default function PortalContractsPage() {
   const router = useRouter();
+  const [rows, setRows] = useState<Contract[]>([]);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
 
-  const signed = mockContracts.filter(
+  useEffect(() => {
+    const ac = new AbortController();
+    (async () => {
+      try {
+        const raw = await apiJson<unknown[]>("/api/contracts", { signal: ac.signal });
+        setRows(raw.map(parseContract));
+        setLoadErr(null);
+      } catch {
+        if (!ac.signal.aborted) setLoadErr("A szerződések nem tölthetők be.");
+      }
+    })();
+    return () => ac.abort();
+  }, []);
+
+  const signed = rows.filter(
     (c) => c.status === "signed_digital" || c.status === "signed_paper",
   ).length;
-  const pending = mockContracts.filter((c) => c.status === "sent").length;
-  const total = mockContracts.length;
+  const pending = rows.filter((c) => c.status === "sent").length;
+  const total = rows.length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       <PageHeader title="Szerződések" subtitle="Az Önnel kötött érvényes szerződések" />
+      {loadErr && (
+        <p className="text-sm text-red-400 px-1" role="alert">
+          {loadErr}
+        </p>
+      )}
 
-      {/* Summary cards */}
       <div
         style={{
           display: "grid",
@@ -54,7 +62,7 @@ export default function PortalContractsPage() {
       >
         {[
           {
-            label: "Aktív szerződések",
+            label: "Aláírt szerződések",
             value: signed,
             icon: <FileCheck size={20} />,
             color: "#22c55e",
@@ -118,7 +126,6 @@ export default function PortalContractsPage() {
         ))}
       </div>
 
-      {/* Contracts table */}
       <Card>
         <div style={{ overflowX: "auto" }}>
           <table
@@ -153,10 +160,10 @@ export default function PortalContractsPage() {
               </tr>
             </thead>
             <tbody>
-              {mockContracts.map((c) => {
-                const s = portalStatusMap[c.status] || {
+              {rows.map((c) => {
+                const s = portalStatusMap[c.status] ?? {
                   label: "Ismeretlen",
-                  variant: "default",
+                  variant: "default" as const,
                 };
                 return (
                   <tr
@@ -221,7 +228,7 @@ export default function PortalContractsPage() {
                       }}
                     >
                       {c.valid_until
-                        ? new Date(c.valid_until).toLocaleDateString("hu-HU")
+                        ? c.valid_until.toLocaleDateString("hu-HU")
                         : "Határozatlan"}
                     </td>
                     <td

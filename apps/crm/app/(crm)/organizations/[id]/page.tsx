@@ -1,12 +1,10 @@
 "use client";
 
 import {
-  PageHeader,
   Card,
   Button,
   Input,
   Badge,
-  Table,
   Checkbox,
   Label,
   Select,
@@ -17,7 +15,15 @@ import {
   Textarea,
 } from "@crm/ui";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { use, useEffect, useState } from "react";
+import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
+import type {
+  Address,
+  Contact,
+  DomainHostingRecord,
+  InventoryItem,
+  PortalPermissions,
+} from "@crm/types";
 import {
   Building2,
   Briefcase,
@@ -34,31 +40,259 @@ import {
 } from "lucide-react";
 import { ContactContractsTab } from "../../contacts/[id]/ContactContractsTab";
 
+const SERVICE_OPTIONS = [
+  "IT üzemeltetés",
+  "Hálózatépítés",
+  "NIS2 megfelelőség",
+  "Webfejlesztés",
+  "Biztonságtechnika",
+] as const;
+
+const PORTAL_PERM_LABELS: Record<keyof PortalPermissions, string> = {
+  menu_tickets: "Ticketek",
+  menu_worklogs: "Munkalapok",
+  menu_offers: "Ajánlatok",
+  menu_completion_certificates: "Teljesítési igazolások",
+  menu_projects: "Projektek",
+  menu_contracts: "Szerződések",
+  menu_invoices: "Számlák",
+  menu_company_profile: "Cégprofil",
+  menu_settings: "Beállítások",
+};
+
+function parseContact(raw: unknown): Contact {
+  const r = raw as Record<string, unknown>;
+  return {
+    ...(r as unknown as Contact),
+    created_at: new Date(String(r.created_at)),
+    updated_at: new Date(String(r.updated_at)),
+  };
+}
+
+function parseInventoryRows(raw: unknown[]): InventoryItem[] {
+  return raw.map((row) => {
+    const r = row as Record<string, unknown>;
+    return {
+      ...(r as unknown as InventoryItem),
+      warranty_end: r.warranty_end ? new Date(String(r.warranty_end)) : null,
+      created_at: new Date(String(r.created_at)),
+      updated_at: new Date(String(r.updated_at)),
+    };
+  });
+}
+
+function parseDomainRows(raw: unknown[]): DomainHostingRecord[] {
+  return raw.map((row) => {
+    const r = row as Record<string, unknown>;
+    return {
+      ...(r as unknown as DomainHostingRecord),
+      expiry_date: r.expiry_date ? new Date(String(r.expiry_date)) : null,
+      created_at: new Date(String(r.created_at)),
+      updated_at: new Date(String(r.updated_at)),
+    };
+  });
+}
+
+function fmtAddr(a: Address | null | undefined): string {
+  if (!a) return "";
+  return [a.street, a.zip, a.city, a.country].filter(Boolean).join(", ");
+}
+
+function fmtDate(d: Date | null): string {
+  if (!d) return "—";
+  return new Intl.DateTimeFormat("hu-HU").format(d);
+}
+
 export default function OrganizationDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { id } = use(params);
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("services");
+  const [contact, setContact] = useState<Contact | null>(null);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [domainRows, setDomainRows] = useState<DomainHostingRecord[]>([]);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const org = {
-    _id: "org1",
-    name: "Acme Kft.",
-    tax_id: "12345678-2-41",
-    address: "1054 Budapest, Tech utca 1.",
-    portal_permissions: {
-      menu_tickets: true,
-      menu_worklogs: true,
-      menu_offers: false,
-      menu_completion_certificates: true,
-      menu_projects: true,
-      menu_contracts: true,
-      menu_invoices: false,
-      menu_company_profile: true,
-      menu_settings: true,
-    },
+  const [name, setName] = useState("");
+  const [taxNumber, setTaxNumber] = useState("");
+  const [street, setStreet] = useState("");
+  const [zip, setZip] = useState("");
+  const [city, setCity] = useState("");
+  const [country, setCountry] = useState("");
+
+  const [servicesSel, setServicesSel] = useState<string[]>([]);
+  const [contractType, setContractType] = useState<Contact["contract_type"]>("ongoing");
+  const [serviceNotes, setServiceNotes] = useState("");
+
+  const [portalPerms, setPortalPerms] = useState<PortalPermissions | null>(null);
+
+  useEffect(() => {
+    const ac = new AbortController();
+    (async () => {
+      try {
+        const raw = await apiJson<unknown>(`/api/contacts/${id}`, { signal: ac.signal });
+        const c = parseContact(raw);
+        setContact(c);
+        setName(c.name);
+        setTaxNumber(c.tax_number ?? "");
+        setStreet(c.address?.street ?? "");
+        setZip(c.address?.zip ?? "");
+        setCity(c.address?.city ?? "");
+        setCountry(c.address?.country ?? "");
+        setServicesSel([...c.active_services]);
+        setContractType(c.contract_type ?? "ongoing");
+        setServiceNotes(c.notes ?? "");
+        setPortalPerms({ ...c.portal_permissions });
+        setLoadErr(null);
+      } catch {
+        if (!ac.signal.aborted) {
+          setLoadErr("Nem sikerült betölteni a kapcsolatot.");
+        }
+      }
+    })();
+    return () => ac.abort();
+  }, [id]);
+
+  useEffect(() => {
+    if (!contact) return;
+    const ac = new AbortController();
+    (async () => {
+      try {
+        const [inv, dom] = await Promise.all([
+          apiJson<unknown[]>(`/api/inventory?contact_id=${id}`, { signal: ac.signal }),
+          apiJson<unknown[]>(`/api/domain-hosting?contact_id=${id}`, {
+            signal: ac.signal,
+          }),
+        ]);
+        setInventory(parseInventoryRows(inv));
+        setDomainRows(parseDomainRows(dom));
+      } catch {
+        /* list errors are non-fatal */
+      }
+    })();
+    return () => ac.abort();
+  }, [id, contact]);
+
+  const saveBasic = async () => {
+    setSaving(true);
+    setLoadErr(null);
+    try {
+      const raw = await apiJsonBody(`/api/contacts/${id}`, "PATCH", {
+        name: name.trim(),
+        tax_number: taxNumber.trim() || null,
+        address: {
+          street: street.trim(),
+          zip: zip.trim(),
+          city: city.trim(),
+          country: country.trim(),
+        },
+      });
+      setContact(parseContact(raw));
+    } catch (e) {
+      setLoadErr(e instanceof ApiError ? e.message : "Mentés sikertelen.");
+    } finally {
+      setSaving(false);
+    }
   };
+
+  const saveServices = async () => {
+    setSaving(true);
+    setLoadErr(null);
+    try {
+      const raw = await apiJsonBody(`/api/contacts/${id}`, "PATCH", {
+        active_services: servicesSel,
+        contract_type: contractType,
+        notes: serviceNotes.trim() || null,
+      });
+      setContact(parseContact(raw));
+    } catch (e) {
+      setLoadErr(e instanceof ApiError ? e.message : "Mentés sikertelen.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const savePortal = async () => {
+    if (!portalPerms) return;
+    setSaving(true);
+    setLoadErr(null);
+    try {
+      const raw = await apiJsonBody(`/api/contacts/${id}`, "PATCH", {
+        portal_permissions: portalPerms,
+      });
+      setContact(parseContact(raw));
+      setPortalPerms({ ...parseContact(raw).portal_permissions });
+    } catch (e) {
+      setLoadErr(e instanceof ApiError ? e.message : "Mentés sikertelen.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const refreshInventory = async () => {
+    const inv = await apiJson<unknown[]>(`/api/inventory?contact_id=${id}`);
+    setInventory(parseInventoryRows(inv));
+  };
+
+  const refreshDomain = async () => {
+    const dom = await apiJson<unknown[]>(`/api/domain-hosting?contact_id=${id}`);
+    setDomainRows(parseDomainRows(dom));
+  };
+
+  const addDomainRow = async (record_type: DomainHostingRecord["record_type"]) => {
+    const label = window.prompt("Megnevezés (pl. domain vagy csomag neve)")?.trim();
+    if (!label || !contact) return;
+    await apiJsonBody("/api/domain-hosting", "POST", {
+      contact_id: contact._id,
+      record_type,
+      label,
+      provider: null,
+      expiry_date: null,
+      auto_renew: null,
+      details: null,
+    });
+    await refreshDomain();
+  };
+
+  const addInventoryItem = async () => {
+    if (!contact) return;
+    const nameIn = window.prompt("Eszköz megnevezése")?.trim();
+    if (!nameIn) return;
+    await apiJsonBody("/api/inventory", "POST", {
+      contact_id: contact._id,
+      name: nameIn,
+      category: "hardware",
+      status: "active",
+    });
+    await refreshInventory();
+  };
+
+  if (!contact && !loadErr) {
+    return (
+      <div className="flex flex-col gap-4 p-6 text-[var(--color-text-muted)]">
+        Betöltés…
+      </div>
+    );
+  }
+
+  if (loadErr && !contact) {
+    return (
+      <div className="flex flex-col gap-4 p-6">
+        <p className="text-[var(--color-status-error)]">{loadErr}</p>
+        <Button variant="secondary" onClick={() => router.push("/organizations")}>
+          Vissza
+        </Button>
+      </div>
+    );
+  }
+
+  if (!contact) {
+    return null;
+  }
 
   const tabs = [
     { id: "basic", label: "Alapadatok", icon: <Building2 size={16} /> },
@@ -79,15 +313,20 @@ export default function OrganizationDetailPage({
 
   return (
     <div className="flex flex-col gap-6">
+      {loadErr && (
+        <p className="text-sm text-[var(--color-status-error)] px-1" role="alert">
+          {loadErr}
+        </p>
+      )}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
-            {org.name}
+            {contact.name}
           </h1>
           <div className="flex items-center gap-4 text-sm text-[var(--color-text-muted)] mt-2">
-            <span>Adószám: {org.tax_id}</span>
+            <span>Adószám: {contact.tax_number ?? "—"}</span>
             <span>•</span>
-            <span>{org.address}</span>
+            <span>{fmtAddr(contact.address)}</span>
           </div>
         </div>
         <div>
@@ -123,13 +362,46 @@ export default function OrganizationDetailPage({
               Alapadatok
             </h3>
             <div className="grid grid-cols-2 gap-4 max-w-2xl">
-              <Input label="Szervezet neve" defaultValue={org.name} />
-              <Input label="Adószám" defaultValue={org.tax_id} />
-              <div className="col-span-2">
-                <Input label="Cím" defaultValue={org.address} />
-              </div>
+              <Input
+                label="Szervezet neve"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+              <Input
+                label="Adószám"
+                value={taxNumber}
+                onChange={(e) => setTaxNumber(e.target.value)}
+              />
+              <Input
+                label="Utca, házszám"
+                value={street}
+                onChange={(e) => setStreet(e.target.value)}
+                className="col-span-2"
+              />
+              <Input
+                label="Irányítószám"
+                value={zip}
+                onChange={(e) => setZip(e.target.value)}
+              />
+              <Input
+                label="Város"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+              />
+              <Input
+                label="Ország"
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                className="col-span-2"
+              />
               <div className="col-span-2 mt-4">
-                <Button variant="primary">Mentés</Button>
+                <Button
+                  variant="primary"
+                  disabled={saving}
+                  onClick={() => void saveBasic()}
+                >
+                  {saving ? "Mentés…" : "Mentés"}
+                </Button>
               </div>
             </div>
           </Card>
@@ -142,20 +414,20 @@ export default function OrganizationDetailPage({
                 Aktív szolgáltatások
               </h3>
               <div className="space-y-3">
-                {[
-                  "IT üzemeltetés",
-                  "Hálózatépítés",
-                  "NIS2 megfelelőség",
-                  "Webfejlesztés",
-                  "Biztonságtechnika",
-                ].map((srv) => (
+                {SERVICE_OPTIONS.map((srv) => (
                   <div
                     key={srv}
                     className="flex items-center justify-between p-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border-subtle)] rounded-md"
                   >
                     <span className="text-sm font-medium">{srv}</span>
                     <Checkbox
-                      defaultChecked={srv === "IT üzemeltetés"}
+                      checked={servicesSel.includes(srv)}
+                      onCheckedChange={(v) => {
+                        const on = v === true;
+                        setServicesSel((prev) =>
+                          on ? [...prev, srv] : prev.filter((s) => s !== srv),
+                        );
+                      }}
                       aria-label={srv}
                     />
                   </div>
@@ -170,7 +442,10 @@ export default function OrganizationDetailPage({
                 </h3>
                 <div className="mb-4 flex flex-col gap-1.5">
                   <Label htmlFor="org-contract-type">Szerződés típusa</Label>
-                  <Select defaultValue="ongoing">
+                  <Select
+                    value={contractType ?? "ongoing"}
+                    onValueChange={(v) => setContractType(v as Contact["contract_type"])}
+                  >
                     <SelectTrigger id="org-contract-type" className="w-full">
                       <SelectValue />
                     </SelectTrigger>
@@ -178,18 +453,26 @@ export default function OrganizationDetailPage({
                       <SelectItem value="project">Projekt alapú</SelectItem>
                       <SelectItem value="ongoing">Folyamatos support</SelectItem>
                       <SelectItem value="mixed">Vegyes</SelectItem>
+                      <SelectItem value="one_time">Egyszeri</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <Textarea
-                  label="Szolgáltatási megjegyzések"
-                  defaultValue="24/7 SLA az IT üzemeltetésre."
+                  label="Megjegyzések (kapcsolat)"
+                  value={serviceNotes}
+                  onChange={(e) => setServiceNotes(e.target.value)}
                   className="min-h-[120px]"
                 />
               </Card>
               <div className="flex justify-end">
-                <Button variant="primary">Módosítások mentése</Button>
+                <Button
+                  variant="primary"
+                  disabled={saving}
+                  onClick={() => void saveServices()}
+                >
+                  {saving ? "Mentés…" : "Módosítások mentése"}
+                </Button>
               </div>
             </div>
           </div>
@@ -198,106 +481,103 @@ export default function OrganizationDetailPage({
         {activeTab === "domain_hosting" && (
           <div className="space-y-6">
             <Card className="p-6 space-y-4">
-              <div className="flex justify-between items-center border-b border-[var(--color-border-subtle)] pb-2">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border-subtle)] pb-4">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-                  Domainek
+                  Domain, tárhely, SSL
                 </h3>
-                <Button variant="ghost" className="h-8 px-2 text-sm">
-                  <Plus size={14} className="mr-1" /> Új domain
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-8 px-2 text-sm"
+                    onClick={() => void addDomainRow("domain")}
+                  >
+                    <Plus size={14} className="mr-1" /> Új domain
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-8 px-2 text-sm"
+                    onClick={() => void addDomainRow("hosting")}
+                  >
+                    <Plus size={14} className="mr-1" /> Új tárhely
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-8 px-2 text-sm"
+                    onClick={() => void addDomainRow("ssl")}
+                  >
+                    <Plus size={14} className="mr-1" /> Új SSL
+                  </Button>
+                </div>
               </div>
 
-              <div className="p-3 bg-[var(--color-status-error)]/10 border border-[var(--color-status-error)]/30 rounded-md text-sm text-[var(--color-status-error)] flex items-center gap-3">
-                <AlertTriangle size={16} /> <strong>acme.hu</strong> - Lejárat: 12 nap
-                múlva (2026.05.11.)
-              </div>
+              {domainRows.some(
+                (r) =>
+                  r.expiry_date &&
+                  r.expiry_date.getTime() - Date.now() < 30 * 24 * 60 * 60 * 1000 &&
+                  r.expiry_date.getTime() > Date.now(),
+              ) && (
+                <div className="p-3 bg-[var(--color-status-warning)]/10 border border-[var(--color-status-warning)]/30 rounded-md text-sm text-[var(--color-status-warning)] flex items-center gap-3">
+                  <AlertTriangle size={16} />{" "}
+                  <span>
+                    Van 30 napon belül lejáró bejegyzés — ellenőrizd a táblázatot.
+                  </span>
+                </div>
+              )}
 
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
                   <thead className="text-xs text-[var(--color-text-muted)] uppercase bg-[var(--color-bg-secondary)]">
                     <tr>
-                      <th className="px-4 py-2">Domain</th>
-                      <th className="px-4 py-2">Regisztrátor</th>
+                      <th className="px-4 py-2">Típus</th>
+                      <th className="px-4 py-2">Megnevezés</th>
+                      <th className="px-4 py-2">Szolgáltató</th>
                       <th className="px-4 py-2">Lejárat</th>
-                      <th className="px-4 py-2 text-center">Auto-Renew</th>
+                      <th className="px-4 py-2 text-center">Auto-renew</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-b border-[var(--color-border-subtle)]">
-                      <td className="px-4 py-2 font-medium">acme.hu</td>
-                      <td className="px-4 py-2 text-[var(--color-text-muted)]">
-                        Rackhost
-                      </td>
-                      <td className="px-4 py-2 text-[var(--color-status-error)] font-medium">
-                        2026.05.11.
-                      </td>
-                      <td className="px-4 py-2 text-center">
-                        <Badge variant="error">Kikapcsolva</Badge>
-                      </td>
-                    </tr>
-                    <tr className="border-b border-[var(--color-border-subtle)]">
-                      <td className="px-4 py-2 font-medium">acme-shop.hu</td>
-                      <td className="px-4 py-2 text-[var(--color-text-muted)]">
-                        Rackhost
-                      </td>
-                      <td className="px-4 py-2">2027.01.20.</td>
-                      <td className="px-4 py-2 text-center">
-                        <Badge variant="success">Aktív</Badge>
-                      </td>
-                    </tr>
+                    {domainRows.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={5}
+                          className="px-4 py-6 text-[var(--color-text-muted)]"
+                        >
+                          Még nincs bejegyzés. Használd az „Új …” gombokat.
+                        </td>
+                      </tr>
+                    ) : (
+                      domainRows.map((row) => (
+                        <tr
+                          key={row._id}
+                          className="border-b border-[var(--color-border-subtle)]"
+                        >
+                          <td className="px-4 py-2 font-medium capitalize">
+                            {row.record_type}
+                          </td>
+                          <td className="px-4 py-2">{row.label}</td>
+                          <td className="px-4 py-2 text-[var(--color-text-muted)]">
+                            {row.provider ?? "—"}
+                          </td>
+                          <td className="px-4 py-2">{fmtDate(row.expiry_date)}</td>
+                          <td className="px-4 py-2 text-center">
+                            {row.auto_renew === true ? (
+                              <Badge variant="success">Igen</Badge>
+                            ) : row.auto_renew === false ? (
+                              <Badge variant="error">Nem</Badge>
+                            ) : (
+                              <Badge variant="default">—</Badge>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
             </Card>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="p-6 space-y-4">
-                <div className="flex justify-between items-center border-b border-[var(--color-border-subtle)] pb-2">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-                    Tárhely (Hosting)
-                  </h3>
-                  <Button variant="ghost" className="h-8 px-2 text-sm">
-                    <Plus size={14} className="mr-1" /> Új
-                  </Button>
-                </div>
-                <div className="p-4 border border-[var(--color-border-subtle)] rounded-md bg-[var(--color-bg-secondary)]">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="font-bold">DigitalOcean Droplet</span>
-                    <Badge variant="default">Aktív</Badge>
-                  </div>
-                  <div className="text-sm text-[var(--color-text-muted)] space-y-1">
-                    <div>Csomag: 4GB / 2 CPU</div>
-                    <div>Megújul: Minden hónap 1.</div>
-                    <div>IP: 104.248.X.X</div>
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="p-6 space-y-4">
-                <div className="flex justify-between items-center border-b border-[var(--color-border-subtle)] pb-2">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-                    SSL Tanúsítványok
-                  </h3>
-                  <Button variant="ghost" className="h-8 px-2 text-sm">
-                    <Plus size={14} className="mr-1" /> Új
-                  </Button>
-                </div>
-                <div className="p-4 border border-[var(--color-border-subtle)] rounded-md bg-[var(--color-bg-secondary)]">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="font-bold">*.acme.hu</span>
-                    <Badge variant="success">Érvényes</Badge>
-                  </div>
-                  <div className="text-sm text-[var(--color-text-muted)] space-y-1">
-                    <div>Szolgáltató: Let's Encrypt</div>
-                    <div>Lejárat: 2026.06.20.</div>
-                    <div>
-                      Auto-renew:{" "}
-                      <span className="text-[var(--color-status-success)]">Igen</span>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            </div>
           </div>
         )}
 
@@ -309,7 +589,7 @@ export default function OrganizationDetailPage({
                   <Server className="text-[var(--color-accent-primary)]" />
                   Rendszerelem Leltár
                 </h3>
-                <Button variant="primary">
+                <Button variant="primary" onClick={() => void addInventoryItem()}>
                   <Plus size={16} className="mr-2" /> Új eszköz
                 </Button>
               </div>
@@ -327,30 +607,49 @@ export default function OrganizationDetailPage({
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-b border-[var(--color-border-subtle)] hover:bg-[var(--color-bg-secondary)] transition-colors">
-                      <td className="px-4 py-4 font-medium">Core Switch (Budaörs)</td>
-                      <td className="px-4 py-4 text-[var(--color-text-muted)]">
-                        Hálózat (Switch)
-                      </td>
-                      <td className="px-4 py-4 font-mono text-xs">J123-ABCD-4567</td>
-                      <td className="px-4 py-4">2028.10.15.</td>
-                      <td className="px-4 py-4">
-                        <Badge variant="success">Aktív</Badge>
-                      </td>
-                    </tr>
-                    <tr className="border-b border-[var(--color-border-subtle)] hover:bg-[var(--color-bg-secondary)] transition-colors">
-                      <td className="px-4 py-4 font-medium">Main File Server</td>
-                      <td className="px-4 py-4 text-[var(--color-text-muted)]">
-                        Szerver
-                      </td>
-                      <td className="px-4 py-4 font-mono text-xs">SV-99283-ZZ</td>
-                      <td className="px-4 py-4 text-[var(--color-status-warning)]">
-                        2026.06.01.
-                      </td>
-                      <td className="px-4 py-4">
-                        <Badge variant="success">Aktív</Badge>
-                      </td>
-                    </tr>
+                    {inventory.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={5}
+                          className="px-4 py-6 text-[var(--color-text-muted)]"
+                        >
+                          Még nincs leltári tétel.
+                        </td>
+                      </tr>
+                    ) : (
+                      inventory.map((row) => (
+                        <tr
+                          key={row._id}
+                          className="border-b border-[var(--color-border-subtle)] hover:bg-[var(--color-bg-secondary)] transition-colors"
+                        >
+                          <td className="px-4 py-4 font-medium">{row.name}</td>
+                          <td className="px-4 py-4 text-[var(--color-text-muted)]">
+                            {row.category === "hardware"
+                              ? "Hardver"
+                              : row.category === "software"
+                                ? "Szoftver"
+                                : "Licenc"}
+                          </td>
+                          <td className="px-4 py-4 font-mono text-xs">
+                            {row.serial_number ?? "—"}
+                          </td>
+                          <td className="px-4 py-4">{fmtDate(row.warranty_end)}</td>
+                          <td className="px-4 py-4">
+                            <Badge
+                              variant={
+                                row.status === "active"
+                                  ? "success"
+                                  : row.status === "maintenance"
+                                    ? "warning"
+                                    : "default"
+                              }
+                            >
+                              {row.status}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -369,28 +668,45 @@ export default function OrganizationDetailPage({
             </p>
 
             <div className="space-y-4">
-              {Object.entries(org.portal_permissions).map(([key, value]) => (
-                <div
-                  key={key}
-                  className="flex items-center justify-between p-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border-subtle)] rounded-md"
-                >
-                  <span className="text-sm font-medium">
-                    {key.replace("menu_", "").replace("_", " ").toUpperCase()}
-                  </span>
-                  <Checkbox defaultChecked={value} aria-label={key} />
-                </div>
-              ))}
+              {portalPerms &&
+                (Object.keys(PORTAL_PERM_LABELS) as (keyof PortalPermissions)[]).map(
+                  (key) => (
+                    <div
+                      key={key}
+                      className="flex items-center justify-between p-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border-subtle)] rounded-md"
+                    >
+                      <span className="text-sm font-medium">
+                        {PORTAL_PERM_LABELS[key]}
+                      </span>
+                      <Checkbox
+                        checked={portalPerms[key]}
+                        onCheckedChange={(v) => {
+                          setPortalPerms((prev) =>
+                            prev ? { ...prev, [key]: v === true } : prev,
+                          );
+                        }}
+                        aria-label={key}
+                      />
+                    </div>
+                  ),
+                )}
             </div>
 
             <div className="pt-4 flex justify-end">
-              <Button variant="primary">Jogosultságok mentése</Button>
+              <Button
+                variant="primary"
+                disabled={saving || !portalPerms}
+                onClick={() => void savePortal()}
+              >
+                {saving ? "Mentés…" : "Jogosultságok mentése"}
+              </Button>
             </div>
           </Card>
         )}
 
         {activeTab === "contracts" && (
           <div className="py-2">
-            <ContactContractsTab contactId={org._id} />
+            <ContactContractsTab contactId={contact._id} />
           </div>
         )}
 
@@ -416,14 +732,20 @@ export default function OrganizationDetailPage({
                     : "Igazolások"}
             </h2>
             <p className="text-sm mt-2 text-center max-w-md">
-              A {org.name} számára létrehozott és látható bejegyzések.
+              A {contact.name} számára létrehozott és látható bejegyzések.
             </p>
             <Button
               variant="secondary"
               className="mt-6"
-              onClick={() => router.push(`/${activeTab.replace("_", "-")}/new`)}
+              onClick={() => {
+                const listPath =
+                  activeTab === "certificates"
+                    ? `/completion-certificates?contact_id=${contact._id}`
+                    : `/${activeTab}?contact_id=${contact._id}`;
+                router.push(listPath);
+              }}
             >
-              <Plus size={16} className="mr-2" /> Új hozzáadása
+              <Plus size={16} className="mr-2" /> Lista megnyitása
             </Button>
           </Card>
         )}

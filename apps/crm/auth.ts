@@ -1,5 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import type { Session, User } from "next-auth";
+import type { JWT } from "next-auth/jwt";
 import bcrypt from "bcryptjs";
 import { connectDb, CrmUserModel } from "@crm/db";
 import type { RoleKey } from "@crm/types";
@@ -7,6 +9,15 @@ import type { RoleKey } from "@crm/types";
 function isCrmRoleKey(k: string): k is "crm.admin" | "crm.staff" {
   return k === "crm.admin" || k === "crm.staff";
 }
+
+type CrmUserLean = {
+  _id: { toString(): string } | string;
+  password_hash: string;
+  email: string;
+  display_name?: string | null;
+  tenantId: string;
+  roleKeys?: string[];
+};
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -30,7 +41,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
         await connectDb();
-        const user = await CrmUserModel.findOne({ email: email.toLowerCase() }).lean();
+        const user = (await CrmUserModel.findOne({
+          email: email.toLowerCase(),
+        }).lean()) as CrmUserLean | null;
         if (!user?.password_hash) {
           return null;
         }
@@ -53,14 +66,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: { token: JWT; user: User | undefined }) {
       if (user) {
         token.tenantId = user.tenantId;
         token.roleKeys = user.roleKeys;
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: Session; token: JWT }) {
       if (session.user) {
         session.user.id = token.sub ?? "";
         session.user.tenantId = token.tenantId as string;

@@ -5,56 +5,9 @@ import type { Column } from "@crm/ui";
 import type { CompletionCertificate } from "@crm/types";
 import { Search, Download, Clock, CheckCircle, FileSignature } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-
-const myCertificates: CompletionCertificate[] = [
-  {
-    _id: "cc1",
-    certificate_number: "CC-000001",
-    tenantId: "tenant1",
-    contact_id: "Tech Solutions Kft.",
-    project_id: null,
-    created_by: "staff1",
-    title: "Irodaház hálózatépítés és szerver telepítés",
-    status: "accepted",
-    work_period_start: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-    work_period_end: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    total_hours: 40,
-    worklog_ids: ["w1", "w2"],
-    ticket_ids: [],
-    client_name: "Nagy Péter",
-    client_title: "Ügyvezető",
-    client_signature: "sig_data",
-    signed_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    work_summary: "A munkálatok a szerződésnek megfelelően elkészültek.",
-    pdf_url: "#",
-    created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    updated_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
-  },
-  {
-    _id: "cc2",
-    certificate_number: "CC-000002",
-    tenantId: "tenant1",
-    contact_id: "Tech Solutions Kft.",
-    project_id: "p2",
-    created_by: "staff2",
-    title: "Kamera rendszer karbantartás – október",
-    status: "sent",
-    work_period_start: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-    work_period_end: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-    total_hours: 4,
-    worklog_ids: ["w2"],
-    ticket_ids: [],
-    client_name: "",
-    client_title: "",
-    client_signature: null,
-    signed_at: null,
-    work_summary: "Havi rendes karbantartás elvégzése.",
-    pdf_url: null,
-    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-    updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-  },
-];
+import { useEffect, useState } from "react";
+import { apiJson } from "@/lib/api-client";
+import { parseCompletionCertificate } from "@/lib/entity-parsers";
 
 const statusVariant = {
   draft: "default",
@@ -72,17 +25,35 @@ const statusLabel = {
 export default function PartnerCompletionCertificatesPage() {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [rows, setRows] = useState<CompletionCertificate[]>([]);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
 
-  const filtered = myCertificates.filter(
+  useEffect(() => {
+    const ac = new AbortController();
+    (async () => {
+      try {
+        const raw = await apiJson<unknown[]>("/api/completion-certificates", {
+          signal: ac.signal,
+        });
+        setRows(raw.map(parseCompletionCertificate));
+        setLoadErr(null);
+      } catch {
+        if (!ac.signal.aborted) setLoadErr("Az igazolások nem tölthetők be.");
+      }
+    })();
+    return () => ac.abort();
+  }, []);
+
+  const filtered = rows.filter(
     (c) =>
       c.title.toLowerCase().includes(search.toLowerCase()) ||
       c.certificate_number.toLowerCase().includes(search.toLowerCase()),
   );
 
   const counts = {
-    total: myCertificates.length,
-    pending: myCertificates.filter((c) => c.status === "sent").length,
-    accepted: myCertificates.filter((c) => c.status === "accepted").length,
+    total: rows.length,
+    pending: rows.filter((c) => c.status === "sent").length,
+    accepted: rows.filter((c) => c.status === "accepted").length,
   };
 
   const columns: Column<CompletionCertificate>[] = [
@@ -179,6 +150,11 @@ export default function PartnerCompletionCertificatesPage() {
         title="Teljesítési igazolások"
         subtitle="Munkavégzések jóváhagyása és archiválása"
       />
+      {loadErr && (
+        <p className="text-sm text-red-400 px-1" role="alert">
+          {loadErr}
+        </p>
+      )}
 
       <div
         style={{

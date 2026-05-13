@@ -11,15 +11,23 @@
     "test": "echo \"No tests yet for partner portal app\""
   },
   "dependencies": {
+    "@crm/auth": "workspace:*",
+    "@crm/db": "workspace:*",
+    "@crm/modules": "workspace:*",
     "@crm/rbac": "workspace:*",
     "@crm/types": "workspace:*",
     "@crm/ui": "workspace:*",
+    "@next/env": "^15.5.18",
+    "bcryptjs": "^3.0.2",
     "lucide-react": "^0.511.0",
     "next": "^15.0.0",
+    "next-auth": "5.0.0-beta.28",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zod": "^3.24.3"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "autoprefixer": "^10.5.0",
     "postcss": "^8.5.14",
     "tailwindcss": "^3.4.19",

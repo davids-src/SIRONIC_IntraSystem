@@ -1,156 +1,157 @@
 "use client";
 
-import { PageHeader, Card, Button, Input } from "@crm/ui";
-import { Building2, Mail, Phone, MapPin, Save, Globe } from "lucide-react";
-import { useState } from "react";
+import { PageHeader, Card, Input } from "@crm/ui";
+import type { Contact } from "@crm/types";
+import { apiJson } from "@/lib/api-client";
+import { Building2, MapPin } from "lucide-react";
+import { useEffect, useState } from "react";
+
+function parseContact(raw: unknown): Contact {
+  const r = raw as Record<string, unknown>;
+  return {
+    ...(r as unknown as Contact),
+    created_at: new Date(String(r.created_at)),
+    updated_at: new Date(String(r.updated_at)),
+  };
+}
+
+function fmtAddr(c: Contact): string {
+  const a = c.address;
+  if (!a) return "";
+  return [a.zip, a.city, a.street, a.country].filter(Boolean).join(", ");
+}
 
 export default function CompanyProfilePage() {
-  const [saving, setSaving] = useState(false);
+  const [contact, setContact] = useState<Contact | null>(null);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
 
-  const handleSave = () => {
-    setSaving(true);
-    setTimeout(() => setSaving(false), 1000);
-  };
+  useEffect(() => {
+    const ac = new AbortController();
+    (async () => {
+      try {
+        const raw = await apiJson<unknown>("/api/me", { signal: ac.signal });
+        setContact(parseContact(raw));
+        setLoadErr(null);
+      } catch {
+        if (!ac.signal.aborted) setLoadErr("Az adatok nem tölthetők be.");
+      }
+    })();
+    return () => ac.abort();
+  }, []);
+
+  if (!contact && !loadErr) {
+    return <div className="p-6 text-[var(--color-text-muted)]">Betöltés…</div>;
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       <PageHeader
         title="Cégprofil"
-        subtitle="Saját céges adatok, számlázási információk és kapcsolattartók kezelése"
-        actions={
-          <Button variant="primary" onClick={handleSave}>
-            {saving ? (
-              "Mentés..."
-            ) : (
-              <>
-                <Save size={16} style={{ marginRight: "8px" }} />
-                Adatok mentése
-              </>
-            )}
-          </Button>
-        }
+        subtitle="A portálhoz kapcsolt ügyfél adatai (csak olvasható)"
       />
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(350px, 1fr))",
-          gap: "24px",
-        }}
-      >
-        {/* Alap adatok */}
-        <Card style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              borderBottom: "1px solid var(--border-subtle)",
-              paddingBottom: "16px",
-            }}
-          >
+      {loadErr && (
+        <p className="text-sm text-red-400 px-1" role="alert">
+          {loadErr}
+        </p>
+      )}
+      {contact && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(350px, 1fr))",
+            gap: "24px",
+          }}
+        >
+          <Card style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             <div
               style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "10px",
-                backgroundColor: "var(--accent-badge-bg)",
-                color: "var(--accent-primary)",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
+                gap: "12px",
+                borderBottom: "1px solid var(--border-subtle)",
+                paddingBottom: "16px",
               }}
             >
-              <Building2 size={20} />
-            </div>
-            <div>
-              <h2
+              <div
                 style={{
-                  fontSize: "1.125rem",
-                  fontWeight: 700,
-                  margin: 0,
-                  color: "var(--text-primary)",
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "10px",
+                  backgroundColor: "var(--accent-badge-bg)",
+                  color: "var(--accent-primary)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                Alapinformációk
-              </h2>
-              <p
-                style={{
-                  fontSize: "0.875rem",
-                  margin: "2px 0 0",
-                  color: "var(--text-muted)",
-                }}
-              >
-                A cég hivatalos adatai
-              </p>
+                <Building2 size={20} />
+              </div>
+              <div>
+                <h2
+                  style={{
+                    fontSize: "1.125rem",
+                    fontWeight: 700,
+                    margin: 0,
+                    color: "var(--text-primary)",
+                  }}
+                >
+                  Alapinformációk
+                </h2>
+              </div>
             </div>
-          </div>
+            <Input label="Cégnév" value={contact.name} readOnly />
+            <Input label="Adószám" value={contact.tax_number ?? "—"} readOnly />
+            <Input
+              label="Cégjegyzékszám"
+              value={contact.registration_number ?? "—"}
+              readOnly
+            />
+            <Input label="E-mail" value={contact.email ?? "—"} readOnly />
+          </Card>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            <Input label="Cégnév" defaultValue="Kovács és Társa Kft." />
-            <Input label="Adószám" defaultValue="12345678-2-11" />
-            <Input label="Cégjegyzékszám" defaultValue="01-09-123456" />
-            <Input label="Weboldal" defaultValue="www.kovacs-tarsa.hu" />
-          </div>
-        </Card>
-
-        {/* Elérhetőségek */}
-        <Card style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              borderBottom: "1px solid var(--border-subtle)",
-              paddingBottom: "16px",
-            }}
-          >
+          <Card style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             <div
               style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "10px",
-                backgroundColor: "var(--status-info)",
-                opacity: 0.8,
-                color: "#fff",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
+                gap: "12px",
+                borderBottom: "1px solid var(--border-subtle)",
+                paddingBottom: "16px",
               }}
             >
-              <MapPin size={20} />
-            </div>
-            <div>
-              <h2
+              <div
                 style={{
-                  fontSize: "1.125rem",
-                  fontWeight: 700,
-                  margin: 0,
-                  color: "var(--text-primary)",
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "10px",
+                  backgroundColor: "var(--status-info)",
+                  opacity: 0.8,
+                  color: "#fff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                Elérhetőségek
-              </h2>
-              <p
-                style={{
-                  fontSize: "0.875rem",
-                  margin: "2px 0 0",
-                  color: "var(--text-muted)",
-                }}
-              >
-                Központi iroda és kapcsolattartás
-              </p>
+                <MapPin size={20} />
+              </div>
+              <div>
+                <h2
+                  style={{
+                    fontSize: "1.125rem",
+                    fontWeight: 700,
+                    margin: 0,
+                    color: "var(--text-primary)",
+                  }}
+                >
+                  Cím és telefon
+                </h2>
+              </div>
             </div>
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            <Input label="Irányítószám, Város" defaultValue="1111 Budapest" />
-            <Input label="Utca, házszám" defaultValue="Minta utca 12." />
-            <Input label="Központi E-mail" defaultValue="info@kovacs-tarsa.hu" />
-            <Input label="Központi Telefonszám" defaultValue="+36 1 234 5678" />
-          </div>
-        </Card>
-      </div>
+            <Input label="Cím" value={fmtAddr(contact)} readOnly />
+            <Input label="Telefon" value={contact.phone ?? "—"} readOnly />
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

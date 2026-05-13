@@ -52,6 +52,15 @@ export interface CrmUser {
 
 export type OfferStatus = "draft" | "sent" | "accepted" | "rejected";
 
+export interface OfferLine {
+  price_list_item_id: string | null;
+  description: string;
+  quantity: number;
+  unit: string;
+  net_unit_price: number;
+  tax_rate: number;
+}
+
 export interface Offer {
   _id: string;
   tenantId: string;
@@ -63,6 +72,8 @@ export interface Offer {
   status: OfferStatus;
   valid_until: Date | null;
   created_by: string;
+  lines: OfferLine[];
+  notes: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -81,6 +92,40 @@ export interface Invoice {
   issued_at: Date | null;
   due_at: Date | null;
   created_by: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type InventoryCategory = "hardware" | "software" | "license";
+export type InventoryStatus = "active" | "maintenance" | "retired";
+
+export interface InventoryItem {
+  _id: string;
+  tenantId: string;
+  contact_id: string;
+  name: string;
+  category: InventoryCategory;
+  serial_number: string | null;
+  status: InventoryStatus;
+  assigned_to: string | null;
+  warranty_end: Date | null;
+  notes: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type DomainHostingRecordType = "domain" | "hosting" | "ssl";
+
+export interface DomainHostingRecord {
+  _id: string;
+  tenantId: string;
+  contact_id: string;
+  record_type: DomainHostingRecordType;
+  label: string;
+  provider: string | null;
+  expiry_date: Date | null;
+  auto_renew: boolean | null;
+  details: string | null;
   created_at: Date;
   updated_at: Date;
 }

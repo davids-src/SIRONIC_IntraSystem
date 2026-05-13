@@ -5,60 +5,9 @@ import type { Column } from "@crm/ui";
 import type { Project } from "@crm/types";
 import { Search, Filter, FolderKanban, CheckCircle, Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-
-const myProjects: Project[] = [
-  {
-    _id: "p1",
-    project_number: "PR-000001",
-    tenantId: "tenant1",
-    contact_id: "Tech Solutions Kft.",
-    created_by: "staff1",
-    assigned_to: "Kovács János",
-    contract_type: "project",
-    status: "open",
-    name: "Új irodaház hálózatépítés",
-    description: "Komplett hálózati infrastruktúra kialakítása az új irodában.",
-    start_date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-    deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    closed_at: null,
-    budget_hours: 120,
-    staging_links: [],
-    checklist: [],
-    phases: [],
-    portal_visible: true,
-    category: "Hálózatépítés",
-    notes: null,
-    created_at: new Date(),
-    updated_at: new Date(),
-    contract_warning_dismissed: false,
-  },
-  {
-    _id: "p2",
-    project_number: "PR-000002",
-    tenantId: "tenant1",
-    contact_id: "Tech Solutions Kft.",
-    created_by: "staff1",
-    assigned_to: "Nagy Péter",
-    contract_type: "ongoing",
-    status: "open",
-    name: "Weboldal karbantartás 2024",
-    description: "Éves karbantartási szerződés a weboldalhoz.",
-    start_date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
-    deadline: new Date(Date.now() + 300 * 24 * 60 * 60 * 1000),
-    closed_at: null,
-    budget_hours: 50,
-    staging_links: [],
-    checklist: [],
-    phases: [],
-    portal_visible: true,
-    category: "Webfejlesztés",
-    notes: null,
-    created_at: new Date(),
-    updated_at: new Date(),
-    contract_warning_dismissed: false,
-  },
-];
+import { useEffect, useState } from "react";
+import { apiJson } from "@/lib/api-client";
+import { parseProject } from "@/lib/entity-parsers";
 
 const statusVariant = { open: "info", on_hold: "warning", closed: "default" } as const;
 const statusLabel = {
@@ -70,8 +19,24 @@ const statusLabel = {
 export default function PartnerProjectsPage() {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [rows, setRows] = useState<Project[]>([]);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
 
-  const filtered = myProjects.filter(
+  useEffect(() => {
+    const ac = new AbortController();
+    (async () => {
+      try {
+        const raw = await apiJson<unknown[]>("/api/projects", { signal: ac.signal });
+        setRows(raw.map(parseProject));
+        setLoadErr(null);
+      } catch {
+        if (!ac.signal.aborted) setLoadErr("A projektek nem tölthetők be.");
+      }
+    })();
+    return () => ac.abort();
+  }, []);
+
+  const filtered = rows.filter(
     (p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.project_number.toLowerCase().includes(search.toLowerCase()) ||
@@ -79,9 +44,9 @@ export default function PartnerProjectsPage() {
   );
 
   const counts = {
-    total: myProjects.length,
-    open: myProjects.filter((p) => p.status === "open").length,
-    closed: myProjects.filter((p) => p.status === "closed").length,
+    total: rows.length,
+    open: rows.filter((p) => p.status === "open").length,
+    closed: rows.filter((p) => p.status === "closed").length,
   };
 
   const columns: Column<Project>[] = [
@@ -159,6 +124,11 @@ export default function PartnerProjectsPage() {
         title="Projektek"
         subtitle="Folyamatban lévő fejlesztések és szerződések állapota"
       />
+      {loadErr && (
+        <p className="text-sm text-red-400 px-1" role="alert">
+          {loadErr}
+        </p>
+      )}
 
       <div
         style={{

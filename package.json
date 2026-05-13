@@ -11,7 +11,9 @@
     "dev": "pnpm exec turbo run dev",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
-    "typecheck": "pnpm -r typecheck",
+    "dev:crm": "pnpm --filter @crm/crm-app dev",
+    "dev:portal": "pnpm --filter @crm/partner-portal-app dev",
+    "typecheck": "pnpm -r run typecheck",
     "format": "prettier --check .",
     "format:write": "prettier --write .",
     "prepare": "husky"

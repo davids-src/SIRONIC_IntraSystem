@@ -3,36 +3,56 @@
 import { Card, Button, Badge } from "@crm/ui";
 import { useRouter } from "next/navigation";
 import { Plus, FileSignature } from "lucide-react";
+import { useEffect, useState } from "react";
+import type { Contract, ContractStatus } from "@crm/types";
+import { apiJson, ApiError } from "@/lib/api-client";
 
-const mockContactContracts = [
-  {
-    _id: "c1",
-    contract_number: "SZ-000001",
-    name: "Éves karbantartási szerződés 2026",
-    category: "Karbantartási szerződés",
-    status: "sent",
-    valid_until: new Date("2026-12-31"),
-  },
-  {
-    _id: "c4",
-    contract_number: "SZ-000004",
-    name: "Biztonsági rendszer üzemeltetési szerz.",
-    category: "Vagyonvédelmi szerződés",
-    status: "signed_digital",
-    valid_until: null,
-  },
-];
-
-const statusLabels: Record<string, { label: string; variant: any }> = {
+const statusLabels: Record<
+  ContractStatus,
+  { label: string; variant: "default" | "info" | "success" | "error" }
+> = {
   draft: { label: "Vázlat", variant: "default" },
   sent: { label: "Kiküldve", variant: "info" },
   signed_digital: { label: "Digitálisan aláírva", variant: "success" },
   signed_paper: { label: "Papíron aláírva", variant: "success" },
-  cancelled: { label: "Törölve", variant: "danger" },
+  cancelled: { label: "Törölve", variant: "error" },
 };
+
+function parseContract(raw: unknown): Contract {
+  const c = raw as Record<string, unknown>;
+  return {
+    ...(c as unknown as Contract),
+    valid_from: c["valid_from"] ? new Date(String(c["valid_from"])) : null,
+    valid_until: c["valid_until"] ? new Date(String(c["valid_until"])) : null,
+    signed_at: c["signed_at"] ? new Date(String(c["signed_at"])) : null,
+    created_at: new Date(String(c["created_at"])),
+    updated_at: new Date(String(c["updated_at"])),
+  };
+}
 
 export function ContactContractsTab({ contactId }: { contactId: string }) {
   const router = useRouter();
+  const [rows, setRows] = useState<Contract[]>([]);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    const ac = new AbortController();
+    (async () => {
+      try {
+        const data = await apiJson<unknown[]>(
+          `/api/contracts?contact_id=${encodeURIComponent(contactId)}`,
+          { signal: ac.signal },
+        );
+        setRows(data.map(parseContract));
+        setLoadErr(null);
+      } catch (e) {
+        if (!ac.signal.aborted) {
+          setLoadErr(e instanceof ApiError ? e.message : "Betöltés sikertelen.");
+        }
+      }
+    })();
+    return () => ac.abort();
+  }, [contactId]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -58,7 +78,13 @@ export function ContactContractsTab({ contactId }: { contactId: string }) {
         </Button>
       </div>
 
-      {mockContactContracts.length === 0 ? (
+      {loadErr && (
+        <p className="text-sm text-[var(--color-status-error)]" role="alert">
+          {loadErr}
+        </p>
+      )}
+
+      {rows.length === 0 && !loadErr ? (
         <Card className="p-8" style={{ textAlign: "center" }}>
           <FileSignature
             size={40}
@@ -70,7 +96,7 @@ export function ContactContractsTab({ contactId }: { contactId: string }) {
             Ehhez a kontakthoz még nincs szerződés.
           </p>
         </Card>
-      ) : (
+      ) : rows.length > 0 ? (
         <Card>
           <div style={{ overflowX: "auto" }}>
             <table
@@ -100,10 +126,10 @@ export function ContactContractsTab({ contactId }: { contactId: string }) {
                 </tr>
               </thead>
               <tbody>
-                {mockContactContracts.map((c) => {
-                  const s = statusLabels[c.status] || {
-                    label: "Ismeretlen",
-                    variant: "default",
+                {rows.map((c) => {
+                  const s = statusLabels[c.status] ?? {
+                    label: c.status,
+                    variant: "default" as const,
                   };
                   return (
                     <tr
@@ -169,7 +195,7 @@ export function ContactContractsTab({ contactId }: { contactId: string }) {
             </table>
           </div>
         </Card>
-      )}
+      ) : null}
     </div>
   );
 }

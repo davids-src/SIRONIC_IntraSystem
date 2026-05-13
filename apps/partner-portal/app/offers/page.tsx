@@ -3,61 +3,53 @@
 import { PageHeader, Card, Table, Badge, Button, Input } from "@crm/ui";
 import type { Column } from "@crm/ui";
 import { Search, FileText, CheckCircle, Clock } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type { Offer } from "@crm/types";
+import { apiJson } from "@/lib/api-client";
+import { parseOffer } from "@/lib/entity-parsers";
 
-interface Offer {
-  _id: string;
-  offer_number: string;
-  title: string;
-  total_amount: number;
-  status: "sent" | "accepted" | "rejected";
-  valid_until: Date;
-  created_at: Date;
-}
-
-const myOffers: Offer[] = [
-  {
-    _id: "o1",
-    offer_number: "OFF-2024-001",
-    title: "Szerver infrastruktúra kiépítése",
-    total_amount: 1250000,
-    status: "accepted",
-    valid_until: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
-    created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-  },
-  {
-    _id: "o2",
-    offer_number: "OFF-2024-002",
-    title: "Kamerarendszer bővítés",
-    total_amount: 450000,
-    status: "sent",
-    valid_until: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-  },
-];
-
-const statusVariant = { sent: "info", accepted: "success", rejected: "error" } as const;
-const statusLabel = {
+const statusVariant = {
+  draft: "default",
+  sent: "info",
+  accepted: "success",
+  rejected: "error",
+} as const;
+const statusLabel: Record<Offer["status"], string> = {
+  draft: "Piszkozat",
   sent: "Döntésre vár",
   accepted: "Elfogadva",
   rejected: "Elutasítva",
-} as const;
+};
 
 export default function PartnerOffersPage() {
-  const router = useRouter();
   const [search, setSearch] = useState("");
+  const [rows, setRows] = useState<Offer[]>([]);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
 
-  const filtered = myOffers.filter(
+  useEffect(() => {
+    const ac = new AbortController();
+    (async () => {
+      try {
+        const raw = await apiJson<unknown[]>("/api/offers", { signal: ac.signal });
+        setRows(raw.map(parseOffer));
+        setLoadErr(null);
+      } catch {
+        if (!ac.signal.aborted) setLoadErr("Az ajánlatok nem tölthetők be.");
+      }
+    })();
+    return () => ac.abort();
+  }, []);
+
+  const filtered = rows.filter(
     (o) =>
       o.title.toLowerCase().includes(search.toLowerCase()) ||
       o.offer_number.toLowerCase().includes(search.toLowerCase()),
   );
 
   const counts = {
-    total: myOffers.length,
-    pending: myOffers.filter((o) => o.status === "sent").length,
-    accepted: myOffers.filter((o) => o.status === "accepted").length,
+    total: rows.length,
+    pending: rows.filter((o) => o.status === "sent").length,
+    accepted: rows.filter((o) => o.status === "accepted").length,
   };
 
   const columns: Column<Offer>[] = [
@@ -101,7 +93,9 @@ export default function PartnerOffersPage() {
       header: "Állapot",
       width: "140px",
       render: (row) => (
-        <Badge variant={statusVariant[row.status]}>{statusLabel[row.status]}</Badge>
+        <Badge variant={statusVariant[row.status] ?? "default"}>
+          {statusLabel[row.status] ?? row.status}
+        </Badge>
       ),
     },
     {
@@ -109,8 +103,8 @@ export default function PartnerOffersPage() {
       header: "Érvényesség",
       width: "120px",
       render: (row) => {
-        const d = new Date(row.valid_until);
-        const expired = d < new Date() && row.status === "sent";
+        const d = row.valid_until;
+        const expired = d && d < new Date() && row.status === "sent";
         return (
           <span
             style={{
@@ -118,7 +112,7 @@ export default function PartnerOffersPage() {
               color: expired ? "#e53935" : "var(--color-text-primary, #fff)",
             }}
           >
-            {d.toLocaleDateString("hu-HU")}
+            {d ? d.toLocaleDateString("hu-HU") : "—"}
           </span>
         );
       },
@@ -131,6 +125,11 @@ export default function PartnerOffersPage() {
         title="Ajánlatok"
         subtitle="Kapott árajánlatok áttekintése és jóváhagyása"
       />
+      {loadErr && (
+        <p className="text-sm text-red-400 px-1" role="alert">
+          {loadErr}
+        </p>
+      )}
 
       <div
         style={{
@@ -225,7 +224,9 @@ export default function PartnerOffersPage() {
           data={filtered}
           columns={columns}
           keyField="_id"
-          onRowClick={(row) => router.push(`/offers/${row._id}`)}
+          onRowClick={() => {
+            /* részletek a CRM-ben */
+          }}
           emptyMessage="Nincs megjeleníthető ajánlat"
         />
       </Card>

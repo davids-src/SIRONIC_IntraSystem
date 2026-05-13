@@ -1,204 +1,128 @@
 "use client";
 
-import { PageHeader, Card, Table, Badge, Button, Input } from "@crm/ui";
+import { PageHeader, Card, Table, Badge, Input } from "@crm/ui";
 import type { Column } from "@crm/ui";
-import { Search, Download, Box, Laptop, Shield, SearchIcon } from "lucide-react";
-import { useState } from "react";
+import type { InventoryItem } from "@crm/types";
+import { apiJson } from "@/lib/api-client";
+import { parseInventoryItem } from "@/lib/entity-parsers";
+import { Search, Box, Laptop, Shield } from "lucide-react";
+import { useEffect, useState } from "react";
 
-type InventoryItem = {
-  id: string;
-  name: string;
-  category: "hardware" | "software" | "license";
-  serialNumber: string;
-  status: "active" | "maintenance" | "retired";
-  assignedTo: string;
-  warrantyEnd: string;
-};
-
-const mockInventory: InventoryItem[] = [
-  {
-    id: "INV-001",
-    name: "Dell Latitude 5530 Laptop",
-    category: "hardware",
-    serialNumber: "DL-5530-X92",
-    status: "active",
-    assignedTo: "Kovács János",
-    warrantyEnd: "2027-12-31",
-  },
-  {
-    id: "INV-002",
-    name: "Cisco Meraki MS120 Switch",
-    category: "hardware",
-    serialNumber: "Q2MW-XXXX-YYYY",
-    status: "active",
-    assignedTo: "Központi iroda",
-    warrantyEnd: "2026-06-15",
-  },
-  {
-    id: "INV-003",
-    name: "Microsoft 365 Business Premium",
-    category: "license",
-    serialNumber: "M365-BP-100",
-    status: "active",
-    assignedTo: "Mindenki",
-    warrantyEnd: "2025-01-01",
-  },
-  {
-    id: "INV-004",
-    name: "HP LaserJet Enterprise",
-    category: "hardware",
-    serialNumber: "HP-LE-999",
-    status: "maintenance",
-    assignedTo: "Központi iroda",
-    warrantyEnd: "2024-11-20",
-  },
-];
-
-const categoryIcons = {
-  hardware: <Laptop size={14} />,
-  software: <Box size={14} />,
+const catIcon = {
+  hardware: <Box size={14} />,
+  software: <Laptop size={14} />,
   license: <Shield size={14} />,
-};
+} as const;
 
-const categoryLabels = {
+const catLabel = {
   hardware: "Hardver",
   software: "Szoftver",
   license: "Licenc",
-};
-
-const statusVariant = {
-  active: "success",
-  maintenance: "warning",
-  retired: "default",
 } as const;
-
-const statusLabels = {
-  active: "Aktív",
-  maintenance: "Karbantartás alatt",
-  retired: "Kivezetve",
-};
 
 export default function PartnerInventoryPage() {
   const [search, setSearch] = useState("");
+  const [rows, setRows] = useState<InventoryItem[]>([]);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
 
-  const filtered = mockInventory.filter(
-    (item) =>
-      item.name.toLowerCase().includes(search.toLowerCase()) ||
-      item.serialNumber.toLowerCase().includes(search.toLowerCase()) ||
-      item.assignedTo.toLowerCase().includes(search.toLowerCase()),
+  useEffect(() => {
+    const ac = new AbortController();
+    (async () => {
+      try {
+        const raw = await apiJson<unknown[]>("/api/inventory", { signal: ac.signal });
+        setRows(raw.map(parseInventoryItem));
+        setLoadErr(null);
+      } catch {
+        if (!ac.signal.aborted) setLoadErr("A leltár nem tölthető be.");
+      }
+    })();
+    return () => ac.abort();
+  }, []);
+
+  const filtered = rows.filter(
+    (r) =>
+      r.name.toLowerCase().includes(search.toLowerCase()) ||
+      (r.serial_number ?? "").toLowerCase().includes(search.toLowerCase()),
   );
 
   const columns: Column<InventoryItem>[] = [
     {
       key: "name",
-      header: "Eszköz neve",
+      header: "Eszköz",
       render: (row) => (
-        <div>
-          <div style={{ fontWeight: 600, color: "var(--text-primary)" }}>{row.name}</div>
-          <div
-            style={{
-              fontSize: "0.75rem",
-              color: "var(--text-muted)",
-              marginTop: "2px",
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-            }}
-          >
-            {categoryIcons[row.category]} {categoryLabels[row.category]}
-          </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[var(--color-text-muted)]">{catIcon[row.category]}</span>
+          <span className="font-medium">{row.name}</span>
         </div>
       ),
     },
     {
-      key: "serialNumber",
-      header: "Azonosító / Gyári szám",
+      key: "category",
+      header: "Típus",
+      width: "100px",
+      render: (row) => <Badge variant="default">{catLabel[row.category]}</Badge>,
+    },
+    {
+      key: "serial_number",
+      header: "SN",
+      width: "140px",
       render: (row) => (
-        <span
-          style={{
-            fontFamily: "monospace",
-            fontSize: "0.875rem",
-            color: "var(--text-secondary)",
-          }}
-        >
-          {row.serialNumber}
+        <span className="font-mono text-xs text-[var(--color-text-muted)]">
+          {row.serial_number ?? "—"}
         </span>
       ),
     },
     {
-      key: "assignedTo",
-      header: "Hozzárendelve",
-    },
-    {
-      key: "status",
-      header: "Állapot",
-      width: "140px",
+      key: "warranty_end",
+      header: "Garancia",
+      width: "110px",
       render: (row) => (
-        <Badge variant={statusVariant[row.status]}>{statusLabels[row.status]}</Badge>
+        <span className="text-sm text-[var(--color-text-muted)]">
+          {row.warranty_end ? row.warranty_end.toLocaleDateString("hu-HU") : "—"}
+        </span>
       ),
     },
     {
-      key: "warrantyEnd",
-      header: "Garancia vége",
-      width: "120px",
-      render: (row) => {
-        const isExpired = new Date(row.warrantyEnd) < new Date();
-        return (
-          <span
-            style={{
-              color: isExpired ? "var(--status-error)" : "inherit",
-              fontSize: "0.875rem",
-            }}
-          >
-            {row.warrantyEnd}
-          </span>
-        );
-      },
+      key: "status",
+      header: "Státusz",
+      width: "100px",
+      render: (row) => (
+        <Badge variant={row.status === "active" ? "success" : "default"}>
+          {row.status}
+        </Badge>
+      ),
     },
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-      <PageHeader
-        title="Eszköznyilvántartás"
-        subtitle="A szervezetéhez rendelt hardverek, szoftverek és licencek áttekintése"
-        actions={
-          <Button variant="secondary">
-            <Download size={16} style={{ marginRight: "8px" }} />
-            Exportálás PDF-be
-          </Button>
-        }
-      />
-
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Leltár" subtitle="Regisztrált eszközök és licencek" />
+      {loadErr && (
+        <p className="text-sm text-red-400 px-1" role="alert">
+          {loadErr}
+        </p>
+      )}
       <Card className="p-4">
-        <div style={{ position: "relative", maxWidth: "400px" }}>
-          <SearchIcon
-            size={16}
-            style={{
-              position: "absolute",
-              left: "12px",
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: "var(--text-muted)",
-              pointerEvents: "none",
-            }}
+        <div className="relative max-w-md">
+          <Search
+            size={15}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none"
           />
           <Input
             label=""
-            placeholder="Keresés eszköznév, azonosító vagy felelős alapján..."
+            placeholder="Keresés…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ paddingLeft: "36px", margin: 0 }}
+            className="pl-9"
           />
         </div>
       </Card>
-
       <Card className="p-0 overflow-hidden">
         <Table<InventoryItem>
           data={filtered}
           columns={columns}
-          keyField="id"
-          emptyMessage="Nincs megjeleníthető eszköz."
+          keyField="_id"
+          emptyMessage="Nincs leltári tétel"
         />
       </Card>
     </div>

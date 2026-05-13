@@ -30,7 +30,7 @@ type WorklogRow = Worklog & { contact_name: string };
 function parseWorklog(raw: unknown, contactName: string): WorklogRow {
   const w = raw as Record<string, unknown>;
   return {
-    ...(w as Worklog),
+    ...(w as unknown as Worklog),
     contact_name: contactName,
     work_date: new Date(String(w["work_date"])),
     created_at: new Date(String(w["created_at"])),

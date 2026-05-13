@@ -39,8 +39,16 @@ export async function GET(req: Request) {
     guard(actor, { module: "worklog", action: "view", scope: "global" });
     const { searchParams } = new URL(req.url);
     const q = searchParams.get("q")?.trim();
+    const contactId = searchParams.get("contact_id")?.trim();
+    const projectId = searchParams.get("project_id")?.trim();
     return await withDb(async () => {
       const filter: Record<string, unknown> = { tenantId: actor.tenantId };
+      if (contactId) {
+        filter.contact_id = contactId;
+      }
+      if (projectId) {
+        filter.project_id = projectId;
+      }
       if (q) {
         filter.$or = [
           { work_description: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") },

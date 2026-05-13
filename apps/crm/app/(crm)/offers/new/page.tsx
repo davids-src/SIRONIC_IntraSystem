@@ -1,6 +1,19 @@
 "use client";
 
-import { PageHeader, Card, Badge, Button, Input, Textarea } from "@crm/ui";
+import {
+  PageHeader,
+  Card,
+  Badge,
+  Button,
+  Input,
+  Textarea,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@crm/ui";
 import {
   Plus,
   Minus,
@@ -14,7 +27,25 @@ import {
   Send,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type { Contact, PriceListItem } from "@crm/types";
+import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
+
+function mapPriceListItem(p: PriceListItem): PriceItem {
+  const category: PriceItem["category"] =
+    p.type === "product" || p.type === "package" ? "hardware" : "service";
+  return {
+    _id: p._id,
+    code: p.item_number,
+    name: p.name,
+    category,
+    unit: p.unit,
+    unit_price: p.net_price,
+    tax_percent: p.tax_rate,
+    description: p.description ?? "",
+    preferred_supplier: p.preferred_supplier,
+  };
+}
 
 // -------------------------------------------------------
 // Típusok
@@ -38,87 +69,8 @@ interface CartItem {
 }
 
 // -------------------------------------------------------
-// Mock árlista adatok
+// Árlista: API-ból
 // -------------------------------------------------------
-const priceList: PriceItem[] = [
-  {
-    _id: "p1",
-    code: "SRV-INST-01",
-    name: "Szerver fizikai telepítése",
-    category: "service",
-    unit: "óra",
-    unit_price: 25000,
-    tax_percent: 27,
-    description: "Szerver beépítése, kábelezése, alapvető tesztek",
-    preferred_supplier: null,
-  },
-  {
-    _id: "p2",
-    code: "NET-CONF-01",
-    name: "Hálózati switch konfiguráció (L2/L3)",
-    category: "service",
-    unit: "óra",
-    unit_price: 30000,
-    tax_percent: 27,
-    description: "VLAN-ok, útválasztás, port security beállítása",
-    preferred_supplier: null,
-  },
-  {
-    _id: "p3",
-    code: "CAM-HIK-2MP",
-    name: "Hikvision DS-2CD2123G2-I 2MP kamera",
-    category: "hardware",
-    unit: "db",
-    unit_price: 18000,
-    tax_percent: 27,
-    description: "2MP IP kamera, IR, H.265+, PoE",
-    preferred_supplier: "Power Biztonságtechnika",
-  },
-  {
-    _id: "p4",
-    code: "HW-SRV-STD",
-    name: "Standard 1U Rack Szerver (Alapkonfig)",
-    category: "hardware",
-    unit: "db",
-    unit_price: 850000,
-    tax_percent: 27,
-    description: "1U szerver, 32GB RAM, 2x 1TB SSD, 1x CPU",
-    preferred_supplier: "Acer Hungary Kft.",
-  },
-  {
-    _id: "p5",
-    code: "SW-MS-365",
-    name: "Microsoft 365 Business Standard",
-    category: "license",
-    unit: "felh/hó",
-    unit_price: 4500,
-    tax_percent: 27,
-    description: "Havi előfizetés felhasználónként",
-    preferred_supplier: null,
-  },
-  {
-    _id: "p6",
-    code: "NET-CABLE-CAT6",
-    name: "Cat6 UTP kábel telepítése",
-    category: "service",
-    unit: "fm",
-    unit_price: 1200,
-    tax_percent: 27,
-    description: "Strukturált hálózat kiépítése Cat6-os kábellel",
-    preferred_supplier: null,
-  },
-  {
-    _id: "p7",
-    code: "SEC-KESZULEK-01",
-    name: "Riasztóközpont csere",
-    category: "hardware",
-    unit: "db",
-    unit_price: 65000,
-    tax_percent: 27,
-    description: "Honeywell Galaxy Flex3 12 zónás vezérlő",
-    preferred_supplier: null,
-  },
-];
 
 const categoryVariant = {
   hardware: "default",
@@ -151,12 +103,45 @@ export default function NewOfferPage() {
   const [step, setStep] = useState(0);
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [priceList, setPriceList] = useState<PriceItem[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [header, setHeader] = useState({
-    contact: "",
+    contact_id: "",
     title: "",
     valid_days: "30",
     notes: "",
   });
+
+  useEffect(() => {
+    const ac = new AbortController();
+    (async () => {
+      try {
+        const [pl, cr] = await Promise.all([
+          apiJson<unknown[]>("/api/price-list", { signal: ac.signal }),
+          apiJson<unknown[]>("/api/contacts", { signal: ac.signal }),
+        ]);
+        setPriceList(pl.map((r) => mapPriceListItem(r as PriceListItem)));
+        setContacts(
+          cr.map((r) => {
+            const x = r as Record<string, unknown>;
+            return {
+              ...(x as unknown as Contact),
+              created_at: new Date(String(x["created_at"])),
+              updated_at: new Date(String(x["updated_at"])),
+            };
+          }),
+        );
+        setLoadErr(null);
+      } catch {
+        if (!ac.signal.aborted) {
+          setLoadErr("Az árlista vagy ügyfelek nem tölthetők be.");
+        }
+      }
+    })();
+    return () => ac.abort();
+  }, []);
 
   // -------------------------------------------------------
   // Cart helpers
@@ -196,6 +181,44 @@ export default function NewOfferPage() {
   );
   const totalGross = totalNet + totalVat;
 
+  const contactLabel = contacts.find((c) => c._id === header.contact_id)?.name ?? "";
+
+  const buildPayload = (status: "draft" | "sent") => {
+    const days = Number.parseInt(header.valid_days, 10) || 30;
+    const valid_until = new Date();
+    valid_until.setDate(valid_until.getDate() + days);
+    const lines = cart.map((c) => ({
+      price_list_item_id: c.item._id,
+      description: c.item.name,
+      quantity: c.qty,
+      unit: c.item.unit,
+      net_unit_price: c.custom_price ?? c.item.unit_price,
+      tax_rate: c.item.tax_percent,
+    }));
+    return {
+      title: header.title.trim(),
+      contact_id: header.contact_id,
+      status,
+      valid_until,
+      notes: header.notes.trim() || null,
+      lines,
+    };
+  };
+
+  const saveOffer = async (status: "draft" | "sent") => {
+    if (!header.contact_id || !header.title.trim() || cart.length === 0) return;
+    setSaving(true);
+    setLoadErr(null);
+    try {
+      await apiJsonBody("/api/offers", "POST", buildPayload(status));
+      router.push("/offers");
+    } catch (e) {
+      setLoadErr(e instanceof ApiError ? e.message : "Mentés sikertelen.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const filtered = priceList.filter(
     (p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -207,7 +230,7 @@ export default function NewOfferPage() {
   // RENDER
   // -------------------------------------------------------
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="Új ajánlat készítése"
         subtitle="Kattintsd össze az ajánlat tételeit az árlistából"
@@ -217,6 +240,12 @@ export default function NewOfferPage() {
           </Button>
         }
       />
+
+      {loadErr && (
+        <p className="text-sm text-[var(--color-status-error)] px-1" role="alert">
+          {loadErr}
+        </p>
+      )}
 
       {/* Step indicator */}
       <div style={{ display: "flex", alignItems: "center", gap: "0" }}>
@@ -316,12 +345,24 @@ export default function NewOfferPage() {
               maxWidth: "560px",
             }}
           >
-            <Input
-              label="Ügyfél neve *"
-              placeholder="pl. Tech Solutions Kft."
-              value={header.contact}
-              onChange={(e) => setHeader({ ...header, contact: e.target.value })}
-            />
+            <div className="flex flex-col gap-1.5 max-w-[560px]">
+              <Label>Ügyfél *</Label>
+              <Select
+                value={header.contact_id || undefined}
+                onValueChange={(v) => setHeader({ ...header, contact_id: v })}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Válassz ügyfelet" />
+                </SelectTrigger>
+                <SelectContent>
+                  {contacts.map((c) => (
+                    <SelectItem key={c._id} value={c._id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Input
               label="Ajánlat tárgya *"
               placeholder="pl. Irodaház kamerarendszer bővítése"
@@ -346,7 +387,7 @@ export default function NewOfferPage() {
             <Button
               variant="primary"
               onClick={() => setStep(1)}
-              style={{ opacity: !header.contact || !header.title ? 0.5 : 1 }}
+              style={{ opacity: !header.contact_id || !header.title ? 0.5 : 1 }}
             >
               Tovább: Tételek hozzáadása
               <ChevronRight size={16} style={{ marginLeft: "6px" }} />
@@ -803,7 +844,7 @@ export default function NewOfferPage() {
               }}
             >
               {[
-                { label: "Ügyfél", value: header.contact },
+                { label: "Ügyfél", value: contactLabel || "—" },
                 { label: "Tárgy", value: header.title },
                 { label: "Érvényes", value: `${header.valid_days} nap` },
                 {
@@ -960,13 +1001,21 @@ export default function NewOfferPage() {
             <Button variant="secondary" onClick={() => setStep(1)}>
               Vissza szerkeszteni
             </Button>
-            <Button variant="secondary">
+            <Button
+              variant="secondary"
+              disabled={saving}
+              onClick={() => void saveOffer("draft")}
+            >
               <FileText size={16} style={{ marginRight: "6px" }} />
               Mentés piszkozatként
             </Button>
-            <Button variant="primary">
+            <Button
+              variant="primary"
+              disabled={saving}
+              onClick={() => void saveOffer("sent")}
+            >
               <Send size={16} style={{ marginRight: "6px" }} />
-              Ajánlat véglegesítése
+              {saving ? "Mentés…" : "Ajánlat véglegesítése"}
             </Button>
           </div>
         </div>

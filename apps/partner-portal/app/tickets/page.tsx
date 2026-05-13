@@ -12,60 +12,9 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-
-const myTickets: Ticket[] = [
-  {
-    _id: "t1",
-    ticket_number: "TK-000001",
-    tenantId: "tenant1",
-    contact_id: "org1",
-    one_time_contact_name: null,
-    one_time_contact_phone: null,
-    project_id: null,
-    created_by: "user1",
-    assigned_to: "Kovács János",
-    source: "partner_portal",
-    category: "Hibabejelentés",
-    priority: "high",
-    status: "new",
-    title: "Szerver leállás a központi irodában",
-    description: "A szerver nem elérhető, a belső hálózat megszakadt.",
-    location: "Központi iroda",
-    affected_items: "SRV-01 szerver",
-    attachments: [],
-    comments: [],
-    resolution_notes: null,
-    resolved_at: null,
-    created_at: new Date(Date.now() - 1 * 60 * 60 * 1000),
-    updated_at: new Date(Date.now() - 1 * 60 * 60 * 1000),
-  },
-  {
-    _id: "t2",
-    ticket_number: "TK-000002",
-    tenantId: "tenant1",
-    contact_id: "org1",
-    one_time_contact_name: null,
-    one_time_contact_phone: null,
-    project_id: null,
-    created_by: "user1",
-    assigned_to: "Nagy Péter",
-    source: "crm",
-    category: "Karbantartás",
-    priority: "medium",
-    status: "in_progress",
-    title: "Kamera rendszer karbantartása",
-    description: "Havi rendes karbantartás a 2. telephelyen.",
-    location: "2. telephely",
-    affected_items: "CAM-01, CAM-02",
-    attachments: [],
-    comments: [],
-    resolution_notes: null,
-    resolved_at: null,
-    created_at: new Date(Date.now() - 24 * 60 * 60 * 1000),
-    updated_at: new Date(Date.now() - 12 * 60 * 60 * 1000),
-  },
-];
+import { useEffect, useState } from "react";
+import { apiJson } from "@/lib/api-client";
+import { parseTicket } from "@/lib/entity-parsers";
 
 const priorityVariant = {
   low: "info",
@@ -97,17 +46,33 @@ const statusLabel = {
 export default function PartnerTicketsPage() {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [rows, setRows] = useState<Ticket[]>([]);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
 
-  const filtered = myTickets.filter(
+  useEffect(() => {
+    const ac = new AbortController();
+    (async () => {
+      try {
+        const raw = await apiJson<unknown[]>("/api/tickets", { signal: ac.signal });
+        setRows(raw.map(parseTicket));
+        setLoadErr(null);
+      } catch {
+        if (!ac.signal.aborted) setLoadErr("A ticketek nem tölthetők be.");
+      }
+    })();
+    return () => ac.abort();
+  }, []);
+
+  const filtered = rows.filter(
     (t) =>
       t.title.toLowerCase().includes(search.toLowerCase()) ||
       t.ticket_number.toLowerCase().includes(search.toLowerCase()),
   );
 
   const counts = {
-    new: myTickets.filter((t) => t.status === "new").length,
-    in_progress: myTickets.filter((t) => t.status === "in_progress").length,
-    resolved: myTickets.filter((t) => t.status === "resolved").length,
+    new: rows.filter((t) => t.status === "new").length,
+    in_progress: rows.filter((t) => t.status === "in_progress").length,
+    resolved: rows.filter((t) => t.status === "resolved").length,
   };
 
   const columns: Column<Ticket>[] = [
@@ -191,6 +156,12 @@ export default function PartnerTicketsPage() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
+      {loadErr && (
+        <p className="text-sm text-red-400 px-1" role="alert">
+          {loadErr}
+        </p>
+      )}
+
       <PageHeader
         title="Ticketek"
         subtitle="Bejelentett hibák és szervizigények nyomon követése"

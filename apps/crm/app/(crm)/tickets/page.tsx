@@ -18,7 +18,7 @@ import { useEffect, useState } from "react";
 function parseTicket(raw: unknown): Ticket {
   const t = raw as Record<string, unknown>;
   return {
-    ...(t as Ticket),
+    ...(t as unknown as Ticket),
     created_at: new Date(String(t["created_at"])),
     updated_at: new Date(String(t["updated_at"])),
     resolved_at: t["resolved_at"] ? new Date(String(t["resolved_at"])) : null,

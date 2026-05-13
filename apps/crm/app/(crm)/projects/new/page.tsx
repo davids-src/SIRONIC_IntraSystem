@@ -15,13 +15,37 @@ import {
   SelectValue,
 } from "@crm/ui";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Save, Plus, Trash2, GripVertical } from "lucide-react";
+import type { Contact } from "@crm/types";
+import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
+
+type CrmUserRow = {
+  _id: string;
+  display_name: string | null;
+  email: string;
+};
 
 export default function NewProjectPage() {
   const router = useRouter();
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [users, setUsers] = useState<CrmUserRow[]>([]);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
+  const [projectName, setProjectName] = useState("");
+  const [description, setDescription] = useState("");
+  const [contactId, setContactId] = useState<string>("");
+  const [staffId, setStaffId] = useState<string>("");
   const [projectType, setProjectType] = useState("network");
+  const [contractType, setContractType] = useState<string>("project");
+  const [startDate, setStartDate] = useState(
+    () => new Date().toISOString().split("T")[0] ?? "",
+  );
+  const [deadline, setDeadline] = useState("");
+  const [budgetHours, setBudgetHours] = useState("");
+  const [portalVisible, setPortalVisible] = useState(true);
+
   const [phases, setPhases] = useState([
     { name: "Felmérés", due_date: "" },
     { name: "Tervezés", due_date: "" },
@@ -29,14 +53,42 @@ export default function NewProjectPage() {
     { name: "Tesztelés", due_date: "" },
     { name: "Átadás", due_date: "" },
   ]);
-  const [checklist, setChecklist] = useState([
+  const [checklist, setChecklist] = useState<
+    { label: string; category: string; required: boolean }[]
+  >([
     { label: "Helyszínrajz / alaprajz", category: "documents", required: true },
     { label: "Eszközlista igény", category: "technical", required: true },
   ]);
 
+  useEffect(() => {
+    const ac = new AbortController();
+    (async () => {
+      try {
+        const [cRows, uRows] = await Promise.all([
+          apiJson<unknown[]>("/api/contacts", { signal: ac.signal }),
+          apiJson<CrmUserRow[]>("/api/crm-users", { signal: ac.signal }),
+        ]);
+        const parsed = cRows.map((r) => {
+          const x = r as Record<string, unknown>;
+          return {
+            ...(x as unknown as Contact),
+            created_at: new Date(String(x["created_at"])),
+            updated_at: new Date(String(x["updated_at"])),
+          };
+        });
+        setContacts(parsed);
+        setUsers(uRows);
+      } catch {
+        if (!ac.signal.aborted) {
+          setLoadErr("Nem sikerült betölteni az ügyfeleket vagy a munkatársakat.");
+        }
+      }
+    })();
+    return () => ac.abort();
+  }, []);
+
   const applyTypePresets = (val: string) => {
     setProjectType(val);
-
     if (val === "web") {
       setPhases([
         { name: "Tervezés", due_date: "" },
@@ -61,6 +113,73 @@ export default function NewProjectPage() {
         { label: "Helyszínrajz", category: "documents", required: true },
         { label: "Kamera elhelyezési igény", category: "technical", required: true },
       ]);
+    } else {
+      setPhases([
+        { name: "Felmérés", due_date: "" },
+        { name: "Tervezés", due_date: "" },
+        { name: "Telepítés", due_date: "" },
+        { name: "Tesztelés", due_date: "" },
+        { name: "Átadás", due_date: "" },
+      ]);
+      setChecklist([
+        { label: "Helyszínrajz / alaprajz", category: "documents", required: true },
+        { label: "Eszközlista igény", category: "technical", required: true },
+      ]);
+    }
+  };
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!projectName.trim() || !contactId) {
+      setLoadErr("A projekt neve és az ügyfél kötelező.");
+      return;
+    }
+    const staff = users.find((u) => u._id === staffId);
+    const assigned_to = staff?.display_name?.trim() || staff?.email || null;
+    const bh = budgetHours.trim() ? Number(budgetHours) : null;
+    setSaving(true);
+    setLoadErr(null);
+    try {
+      const phasesPayload = phases
+        .map((p, i) => ({
+          name: p.name.trim(),
+          order: i,
+          status: "pending" as const,
+          due_date: p.due_date ? new Date(p.due_date) : null,
+        }))
+        .filter((p) => p.name.length > 0);
+      const checklistPayload = checklist
+        .filter((c) => c.label.trim().length > 0)
+        .map((c) => ({
+          label: c.label.trim(),
+          category: c.category as
+            | "content"
+            | "assets"
+            | "documents"
+            | "technical"
+            | "other",
+          required: c.required,
+        }));
+      const body = {
+        name: projectName.trim(),
+        description: description.trim() || " ",
+        contact_id: contactId,
+        assigned_to,
+        category: projectType,
+        contract_type: contractType as "project" | "ongoing" | "mixed" | "one_time",
+        start_date: startDate ? new Date(startDate) : null,
+        deadline: deadline ? new Date(deadline) : null,
+        budget_hours: bh !== null && !Number.isNaN(bh) ? bh : null,
+        portal_visible: portalVisible,
+        phases: phasesPayload,
+        checklist: checklistPayload,
+      };
+      const created = await apiJsonBody<{ _id: string }>("/api/projects", "POST", body);
+      router.push(`/projects/${created._id}`);
+    } catch (err) {
+      setLoadErr(err instanceof ApiError ? err.message : "Mentés sikertelen.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -76,13 +195,13 @@ export default function NewProjectPage() {
         }
       />
 
-      <form
-        className="flex flex-col gap-6"
-        onSubmit={(e) => {
-          e.preventDefault();
-          router.push("/projects");
-        }}
-      >
+      {loadErr && (
+        <p className="text-sm text-[var(--color-status-error)]" role="alert">
+          {loadErr}
+        </p>
+      )}
+
+      <form className="flex flex-col gap-6" onSubmit={(e) => void submit(e)}>
         <Card className="flex flex-col gap-4 p-6">
           <h3 className="border-b border-[var(--color-border-subtle)] pb-2 text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
             Alapadatok
@@ -93,32 +212,40 @@ export default function NewProjectPage() {
               <Input
                 label="Projekt neve *"
                 required
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
                 placeholder="Pl. Új irodaház hálózatépítés"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="project-org">Ügyfél (Szervezet) *</Label>
-              <Select defaultValue="org1">
+              <Select value={contactId || undefined} onValueChange={setContactId}>
                 <SelectTrigger id="project-org" className="w-full">
                   <SelectValue placeholder="Válassz szervezetet" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="org1">Acme Kft.</SelectItem>
-                  <SelectItem value="org2">GlobalTech Zrt.</SelectItem>
+                  {contacts.map((c) => (
+                    <SelectItem key={c._id} value={c._id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="project-staff">Felelős munkatárs</Label>
-              <Select defaultValue="staff1">
+              <Select value={staffId || undefined} onValueChange={setStaffId}>
                 <SelectTrigger id="project-staff" className="w-full">
                   <SelectValue placeholder="Válassz munkatársat" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="staff1">Kovács János</SelectItem>
-                  <SelectItem value="staff2">Nagy Péter</SelectItem>
+                  {users.map((u) => (
+                    <SelectItem key={u._id} value={u._id}>
+                      {u.display_name ?? u.email}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -142,19 +269,26 @@ export default function NewProjectPage() {
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="project-contract-type">Szerződés típusa *</Label>
-              <Select defaultValue="project">
+              <Select value={contractType} onValueChange={setContractType}>
                 <SelectTrigger id="project-contract-type" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="project">Projekt alapú (egyszeri)</SelectItem>
                   <SelectItem value="ongoing">Folyamatos support</SelectItem>
+                  <SelectItem value="mixed">Vegyes</SelectItem>
+                  <SelectItem value="one_time">Egyszeri</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="md:col-span-2">
-              <Textarea label="Leírás" placeholder="Rövid összefoglaló a projektről..." />
+              <Textarea
+                label="Leírás"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Rövid összefoglaló a projektről..."
+              />
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:col-span-2">
@@ -162,9 +296,15 @@ export default function NewProjectPage() {
                 type="date"
                 label="Kezdés *"
                 required
-                defaultValue={new Date().toISOString().split("T")[0]}
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
               />
-              <Input type="date" label="Határidő" />
+              <Input
+                type="date"
+                label="Határidő"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+              />
             </div>
 
             <div>
@@ -172,15 +312,22 @@ export default function NewProjectPage() {
                 type="number"
                 label="Tervezett munkaórák (Budget)"
                 placeholder="Pl. 120"
+                value={budgetHours}
+                onChange={(e) => setBudgetHours(e.target.value)}
               />
             </div>
 
             <div className="flex flex-col gap-2 md:col-span-2">
-              <CheckboxFieldRow
-                id="portal_visible"
-                defaultChecked
-                label="Látható a Partner Portálon"
-              />
+              <div className="flex flex-row items-center gap-2">
+                <Checkbox
+                  id="portal_visible"
+                  checked={portalVisible}
+                  onCheckedChange={(v) => setPortalVisible(v === true)}
+                />
+                <Label htmlFor="portal_visible" className="cursor-pointer font-normal">
+                  Látható a Partner Portálon
+                </Label>
+              </div>
             </div>
           </div>
         </Card>
@@ -351,31 +498,12 @@ export default function NewProjectPage() {
           <Button type="button" variant="ghost" onClick={() => router.back()}>
             Mégse
           </Button>
-          <Button type="submit" variant="primary">
+          <Button type="submit" variant="primary" disabled={saving}>
             <Save size={16} className="mr-2" />
-            Projekt Mentése
+            {saving ? "Mentés…" : "Projekt mentése"}
           </Button>
         </div>
       </form>
-    </div>
-  );
-}
-
-function CheckboxFieldRow({
-  id,
-  label,
-  defaultChecked,
-}: {
-  id: string;
-  label: string;
-  defaultChecked?: boolean;
-}) {
-  return (
-    <div className="flex flex-row items-center gap-2">
-      <Checkbox id={id} defaultChecked={defaultChecked} />
-      <Label htmlFor={id} className="cursor-pointer font-normal">
-        {label}
-      </Label>
     </div>
   );
 }

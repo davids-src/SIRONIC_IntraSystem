@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { PartnerShell } from "./partner-shell";
+import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "SIRONIC Partner Portal",
@@ -13,7 +14,9 @@ export default function RootLayout({
   return (
     <html lang="hu" className="dark">
       <body>
-        <PartnerShell>{children}</PartnerShell>
+        <Providers>
+          <PartnerShell>{children}</PartnerShell>
+        </Providers>
       </body>
     </html>
   );

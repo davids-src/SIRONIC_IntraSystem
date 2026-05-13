@@ -28,7 +28,15 @@ export async function GET(req: Request) {
     return await withDb(async () => {
       const { searchParams } = new URL(req.url);
       const q = searchParams.get("q")?.trim();
+      const contactId = searchParams.get("contact_id")?.trim();
+      const projectId = searchParams.get("project_id")?.trim();
       const filter: Record<string, unknown> = { tenantId: actor.tenantId };
+      if (contactId) {
+        filter.contact_id = contactId;
+      }
+      if (projectId) {
+        filter.project_id = projectId;
+      }
       if (q) {
         filter.$or = [
           { title: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") },

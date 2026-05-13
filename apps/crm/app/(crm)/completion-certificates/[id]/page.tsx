@@ -5,47 +5,170 @@ import {
   Card,
   Button,
   Input,
+  Textarea,
   Badge,
-  Table,
   Label,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Textarea,
 } from "@crm/ui";
+import type { CompletionCertificate, CompletionCertificateStatus } from "@crm/types";
+import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 import { useRouter } from "next/navigation";
-import { useState, use } from "react";
-import {
-  Save,
-  FileSignature,
-  FileText,
-  CheckCircle2,
-  Search,
-  Link as LinkIcon,
-  Trash2,
-  Download,
-} from "lucide-react";
+import { use, useEffect, useState } from "react";
+
+function parseCc(raw: unknown): CompletionCertificate {
+  const r = raw as Record<string, unknown>;
+  return {
+    ...(r as unknown as CompletionCertificate),
+    work_period_start: r.work_period_start ? new Date(String(r.work_period_start)) : null,
+    work_period_end: r.work_period_end ? new Date(String(r.work_period_end)) : null,
+    signed_at: r.signed_at ? new Date(String(r.signed_at)) : null,
+    created_at: new Date(String(r.created_at)),
+    updated_at: new Date(String(r.updated_at)),
+  };
+}
+
+const statusLabel: Record<CompletionCertificateStatus, string> = {
+  draft: "Piszkozat",
+  sent: "Kiküldve",
+  accepted: "Elfogadva",
+  rejected: "Elutasítva",
+};
 
 export default function CompletionCertificateFormPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { id } = use(params);
   const router = useRouter();
-  const resolvedParams = use(params);
-  const id = resolvedParams.id;
   const isNew = id === "new";
 
-  // Form state mock
-  const [status, setStatus] = useState(isNew ? "draft" : "signed");
+  const [doc, setDoc] = useState<CompletionCertificate | null>(null);
+  const [title, setTitle] = useState("");
+  const [workSummary, setWorkSummary] = useState("");
+  const [status, setStatus] = useState<CompletionCertificateStatus>("draft");
+  const [clientName, setClientName] = useState("");
+  const [totalHours, setTotalHours] = useState("");
+  const [periodStart, setPeriodStart] = useState("");
+  const [periodEnd, setPeriodEnd] = useState("");
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (isNew) return;
+    const ac = new AbortController();
+    (async () => {
+      try {
+        const raw = await apiJson<unknown>(`/api/completion-certificates/${id}`, {
+          signal: ac.signal,
+        });
+        const c = parseCc(raw);
+        setDoc(c);
+        setTitle(c.title);
+        setWorkSummary(c.work_summary);
+        setStatus(c.status);
+        setClientName(c.client_name ?? "");
+        setTotalHours(c.total_hours != null ? String(c.total_hours) : "");
+        setPeriodStart(
+          c.work_period_start ? c.work_period_start.toISOString().slice(0, 10) : "",
+        );
+        setPeriodEnd(
+          c.work_period_end ? c.work_period_end.toISOString().slice(0, 10) : "",
+        );
+        setLoadErr(null);
+      } catch {
+        if (!ac.signal.aborted) setLoadErr("Az igazolás nem tölthető be.");
+      }
+    })();
+    return () => ac.abort();
+  }, [id, isNew]);
+
+  const save = async () => {
+    if (isNew) {
+      if (!title.trim() || !workSummary.trim()) {
+        setLoadErr("Cím és összefoglaló kötelező.");
+        return;
+      }
+      setSaving(true);
+      setLoadErr(null);
+      try {
+        const created = await apiJsonBody<Record<string, unknown>>(
+          "/api/completion-certificates",
+          "POST",
+          {
+            title: title.trim(),
+            work_summary: workSummary.trim(),
+            status: "draft",
+            total_hours: totalHours.trim() === "" ? null : Number.parseFloat(totalHours),
+            work_period_start: periodStart ? new Date(periodStart) : null,
+            work_period_end: periodEnd ? new Date(periodEnd) : null,
+          },
+        );
+        router.replace(`/completion-certificates/${String(created._id)}`);
+      } catch (e) {
+        setLoadErr(e instanceof ApiError ? e.message : "Mentés sikertelen.");
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
+    setSaving(true);
+    setLoadErr(null);
+    try {
+      const raw = await apiJsonBody<unknown>(
+        `/api/completion-certificates/${id}`,
+        "PATCH",
+        {
+          title: title.trim(),
+          work_summary: workSummary.trim(),
+          status,
+          client_name: clientName.trim() || null,
+          total_hours: totalHours.trim() === "" ? null : Number.parseFloat(totalHours),
+          work_period_start: periodStart ? new Date(periodStart) : null,
+          work_period_end: periodEnd ? new Date(periodEnd) : null,
+        },
+      );
+      setDoc(parseCc(raw));
+    } catch (e) {
+      setLoadErr(e instanceof ApiError ? e.message : "Mentés sikertelen.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!isNew && !doc && !loadErr) {
+    return <div className="p-6 text-[var(--color-text-muted)]">Betöltés…</div>;
+  }
+  if (!isNew && loadErr && !doc) {
+    return (
+      <div className="p-6 space-y-4">
+        <p className="text-[var(--color-status-error)]">{loadErr}</p>
+        <Button
+          variant="secondary"
+          onClick={() => router.push("/completion-certificates")}
+        >
+          Vissza
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-w-3xl">
       <PageHeader
-        title={isNew ? "Új teljesítési igazolás" : `Teljesítési igazolás: CC-000001`}
-        subtitle="Szerződések és projektek lezárása, elvégzett munkák igazolása"
+        title={
+          isNew
+            ? "Új teljesítési igazolás"
+            : doc
+              ? doc.certificate_number
+              : "Teljesítési igazolás"
+        }
+        subtitle="Szerződések és projektek lezárása"
         actions={
           <Button
             variant="secondary"
@@ -55,267 +178,79 @@ export default function CompletionCertificateFormPage({
           </Button>
         }
       />
+      {loadErr && (
+        <p className="text-sm text-[var(--color-status-error)]" role="alert">
+          {loadErr}
+        </p>
+      )}
+      {!isNew && doc && (
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-[var(--color-text-muted)]">Állapot:</span>
+          <Badge variant="default">{statusLabel[doc.status]}</Badge>
+        </div>
+      )}
 
-      <form
-        className="space-y-8"
-        onSubmit={(e) => {
-          e.preventDefault();
-          router.push("/completion-certificates");
-        }}
-      >
-        {/* Status bar */}
+      <Card className="p-6 space-y-4">
+        <Input label="Cím *" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <Textarea
+          label="Munka összefoglalója *"
+          value={workSummary}
+          onChange={(e) => setWorkSummary(e.target.value)}
+          rows={5}
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input
+            type="date"
+            label="Munkaidőszak kezdete"
+            value={periodStart}
+            onChange={(e) => setPeriodStart(e.target.value)}
+          />
+          <Input
+            type="date"
+            label="Munkaidőszak vége"
+            value={periodEnd}
+            onChange={(e) => setPeriodEnd(e.target.value)}
+          />
+        </div>
+        <Input
+          label="Összesített órák (opcionális)"
+          value={totalHours}
+          onChange={(e) => setTotalHours(e.target.value)}
+          inputMode="decimal"
+        />
         {!isNew && (
-          <div className="flex items-center gap-3 p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-border-subtle)] rounded-lg">
-            <span className="text-sm font-medium text-[var(--color-text-muted)]">
-              Állapot:
-            </span>
-            <Badge
-              variant={
-                status === "draft"
-                  ? "default"
-                  : status === "signed"
-                    ? "success"
-                    : "warning"
-              }
-            >
-              {status === "draft"
-                ? "Piszkozat"
-                : status === "signed"
-                  ? "Aláírva (Elfogadva)"
-                  : "Véglegesített (Aláírásra vár)"}
-            </Badge>
-            <div className="flex-1"></div>
-            {status === "draft" && (
-              <Button
-                type="button"
-                variant="primary"
-                onClick={() => setStatus("finalized")}
+          <>
+            <div className="space-y-2">
+              <Label>Státusz</Label>
+              <Select
+                value={status}
+                onValueChange={(v) => setStatus(v as CompletionCertificateStatus)}
               >
-                <CheckCircle2 size={16} className="mr-2" />
-                Véglegesítés (Küldés ügyfélnek)
-              </Button>
-            )}
-            {(status === "finalized" || status === "signed") && (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() =>
-                  window.open(`/completion-certificates/${id}/print`, "_blank")
-                }
-              >
-                <Download size={16} style={{ marginRight: "8px" }} />
-                Megtekintés / PDF
-              </Button>
-            )}
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Header Section */}
-          <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2">
-              Alapadatok
-            </h3>
-
-            <div className="grid grid-cols-2 gap-6">
-              <div className="col-span-2 flex flex-col gap-1.5">
-                <Label htmlFor="cc-org">Szervezet *</Label>
-                <Select defaultValue="org1" disabled={status !== "draft"}>
-                  <SelectTrigger id="cc-org" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="org1">Acme Kft.</SelectItem>
-                    <SelectItem value="org2">GlobalTech Zrt.</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="col-span-2">
-                <Input
-                  label="Projekt megnevezése / Tárgy *"
-                  placeholder="Pl. Új irodaház hálózatépítés"
-                  required
-                  disabled={status !== "draft"}
-                  defaultValue={
-                    !isNew ? "Új irodaház hálózatépítés és szerver telepítés" : ""
-                  }
-                />
-              </div>
-
-              <div className="col-span-2">
-                <Input
-                  type="date"
-                  label="Teljesítés dátuma *"
-                  required
-                  disabled={status !== "draft"}
-                  defaultValue={new Date().toISOString().split("T")[0]}
-                />
-              </div>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(statusLabel) as CompletionCertificateStatus[]).map(
+                    (s) => (
+                      <SelectItem key={s} value={s}>
+                        {statusLabel[s]}
+                      </SelectItem>
+                    ),
+                  )}
+                </SelectContent>
+              </Select>
             </div>
-          </Card>
-
-          {/* Details Section */}
-          <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2">
-              Összegzés
-            </h3>
-
-            <div className="space-y-6">
-              <Textarea
-                label="Elvégzett feladatok és eredmények összefoglalása *"
-                required
-                disabled={status !== "draft"}
-                defaultValue={
-                  !isNew
-                    ? "A megrendelt hálózatépítési és szerver telepítési munkálatok a szerződésben foglaltak szerint, határidőre és a műszaki előírásoknak megfelelően elkészültek."
-                    : ""
-                }
-                className="min-h-[165px] resize-y"
-              />
-            </div>
-          </Card>
-        </div>
-
-        {/* Linked Worklogs Section */}
-        <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
-          <div className="flex justify-between items-center border-b border-[var(--color-border-subtle)] pb-2">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-              Csatolt Munkalapok
-            </h3>
-            {status === "draft" && (
-              <Button type="button" variant="ghost" className="text-sm h-8 px-2">
-                <LinkIcon size={14} className="mr-1" /> Munkalap csatolása
-              </Button>
-            )}
-          </div>
-
-          <div className="text-sm text-[var(--color-text-secondary)]">
-            A teljesítési igazoláshoz csatolt munkalapok részletesen tartalmazzák az
-            elvégzett munkákat és a felhasznált anyagokat.
-          </div>
-
-          {!isNew && (
-            <div className="overflow-x-auto border border-[var(--color-border-subtle)] rounded-lg">
-              <table className="w-full text-left border-collapse min-w-[600px]">
-                <thead>
-                  <tr className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-subtle)]">
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-                      Munkalap ID
-                    </th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-                      Dátum
-                    </th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-                      Technikus
-                    </th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-                      Állapot
-                    </th>
-                    <th className="px-4 py-3 w-12 text-center"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--color-border-subtle)] text-sm">
-                  <tr className="bg-[var(--color-bg-card)] hover:bg-[var(--color-bg-card-hover)] transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs">WL-000001</td>
-                    <td className="px-4 py-3">2026.04.24. 08:00</td>
-                    <td className="px-4 py-3">Kovács János</td>
-                    <td className="px-4 py-3">
-                      <Badge variant="success">Aláírt</Badge>
-                    </td>
-                    <td className="px-4 py-3 text-center align-middle">
-                      {status === "draft" && (
-                        <button
-                          type="button"
-                          className="text-[var(--color-text-muted)] hover:text-[var(--color-status-error)] transition-colors p-2 rounded-md hover:bg-red-500/10"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                  <tr className="bg-[var(--color-bg-card)] hover:bg-[var(--color-bg-card-hover)] transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs">WL-000002</td>
-                    <td className="px-4 py-3">2026.04.25. 14:00</td>
-                    <td className="px-4 py-3">Kovács János</td>
-                    <td className="px-4 py-3">
-                      <Badge variant="success">Aláírt</Badge>
-                    </td>
-                    <td className="px-4 py-3 text-center align-middle">
-                      {status === "draft" && (
-                        <button
-                          type="button"
-                          className="text-[var(--color-text-muted)] hover:text-[var(--color-status-error)] transition-colors p-2 rounded-md hover:bg-red-500/10"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
-
-        {/* Signatures */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2 flex items-center gap-2">
-              <FileSignature size={16} /> Szállító (SIRONIC) Aláírása
-            </h3>
             <Input
-              label="Képviselő neve *"
-              required
-              disabled={status !== "draft"}
-              defaultValue="Kovács János"
+              label="Ügyfél aláíró neve"
+              value={clientName}
+              onChange={(e) => setClientName(e.target.value)}
             />
-            <div className="h-32 bg-[var(--color-bg-primary)] border border-dashed border-[var(--color-border-default)] rounded-md flex items-center justify-center text-[var(--color-text-muted)] relative">
-              {!isNew && status === "signed" ? (
-                <span className="font-serif italic text-3xl opacity-80 text-[var(--color-text-primary)]">
-                  Kovács János
-                </span>
-              ) : (
-                "Aláírás pad helye"
-              )}
-            </div>
-          </Card>
-
-          <Card className="p-8 shadow-sm border border-[var(--color-border-subtle)] rounded-xl space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2 flex items-center gap-2">
-              <FileSignature size={16} /> Megrendelő Aláírása
-            </h3>
-            <Input
-              label="Képviselő neve *"
-              required
-              disabled={status !== "draft"}
-              defaultValue={!isNew ? "Nagy Péter" : ""}
-            />
-            <div className="h-32 bg-[var(--color-bg-primary)] border border-dashed border-[var(--color-border-default)] rounded-md flex items-center justify-center text-[var(--color-text-muted)] relative">
-              {!isNew && status === "signed" ? (
-                <span className="font-serif italic text-3xl opacity-80 text-[var(--color-text-primary)]">
-                  Nagy Péter
-                </span>
-              ) : (
-                "Aláírás pad helye (Ügyfél portálon)"
-              )}
-            </div>
-          </Card>
-        </div>
-
-        {/* Footer Actions */}
-        {status === "draft" && (
-          <div className="flex justify-end gap-3 sticky bottom-4 bg-[var(--color-bg-card)] p-4 rounded-xl border border-[var(--color-border-subtle)] shadow-xl">
-            <Button type="button" variant="ghost" onClick={() => router.back()}>
-              Mégse
-            </Button>
-            <Button type="submit" variant="primary">
-              <Save size={16} className="mr-2" />
-              Mentés Piszkozatként
-            </Button>
-          </div>
+          </>
         )}
-      </form>
+        <Button variant="primary" disabled={saving} onClick={() => void save()}>
+          {saving ? "Mentés…" : isNew ? "Létrehozás" : "Mentés"}
+        </Button>
+      </Card>
     </div>
   );
 }

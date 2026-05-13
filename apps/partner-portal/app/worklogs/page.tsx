@@ -11,68 +11,10 @@ import {
   Clock,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Worklog } from "@crm/types";
-
-// Mock data (Partner Portal side)
-const myWorklogs: Worklog[] = [
-  {
-    _id: "w1",
-    worklog_number: "WL-000001",
-    tenantId: "tenant1",
-    contact_id: "org1",
-    one_time_contact_name: null,
-    one_time_contact_phone: null,
-    project_id: null,
-    created_by: "staff1",
-    ticket_id: "t1",
-    status: "finalized",
-    work_date: new Date(Date.now() - 24 * 60 * 60 * 1000),
-    work_start: "08:00",
-    work_end: "12:30",
-    technician_name: "Kovács János",
-    technician_signature: null,
-    client_name: "Nagy Péter",
-    client_signature: "signed",
-    site_address: "Központi iroda, Budapest",
-    work_category: "IT támogatás",
-    work_description: "Szerver hiba elhárítása, hálózati switch újraindítása.",
-    items: [],
-    travel_km: 15,
-    notes: "",
-    pdf_url: "#",
-    created_at: new Date(Date.now() - 24 * 60 * 60 * 1000),
-    updated_at: new Date(Date.now() - 20 * 60 * 60 * 1000),
-  },
-  {
-    _id: "w2",
-    worklog_number: "WL-000002",
-    tenantId: "tenant1",
-    contact_id: "org1",
-    one_time_contact_name: null,
-    one_time_contact_phone: null,
-    project_id: null,
-    created_by: "staff1",
-    ticket_id: null,
-    status: "draft",
-    work_date: new Date(),
-    work_start: "14:00",
-    work_end: "16:00",
-    technician_name: "Kovács János",
-    technician_signature: null,
-    client_name: "",
-    client_signature: null,
-    site_address: "2. telephely, Győr",
-    work_category: "Karbantartás",
-    work_description: "Kamera rendszer tisztítása és fókusz beállítása.",
-    items: [],
-    travel_km: 120,
-    notes: "",
-    pdf_url: null,
-    created_at: new Date(),
-    updated_at: new Date(),
-  },
-];
+import { apiJson } from "@/lib/api-client";
+import { parseWorklog } from "@/lib/entity-parsers";
 
 const statusVariant = { draft: "default", finalized: "success" } as const;
 const statusLabel = { draft: "Folyamatban", finalized: "Véglegesített" } as const;
@@ -80,8 +22,24 @@ const statusLabel = { draft: "Folyamatban", finalized: "Véglegesített" } as co
 export default function PartnerWorklogsPage() {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [rows, setRows] = useState<Worklog[]>([]);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
 
-  const filtered = myWorklogs.filter(
+  useEffect(() => {
+    const ac = new AbortController();
+    (async () => {
+      try {
+        const raw = await apiJson<unknown[]>("/api/worklogs", { signal: ac.signal });
+        setRows(raw.map(parseWorklog));
+        setLoadErr(null);
+      } catch {
+        if (!ac.signal.aborted) setLoadErr("A munkalapok nem tölthetők be.");
+      }
+    })();
+    return () => ac.abort();
+  }, []);
+
+  const filtered = rows.filter(
     (w) =>
       w.worklog_number.toLowerCase().includes(search.toLowerCase()) ||
       w.work_category.toLowerCase().includes(search.toLowerCase()) ||
@@ -89,9 +47,9 @@ export default function PartnerWorklogsPage() {
   );
 
   const counts = {
-    total: myWorklogs.length,
-    finalized: myWorklogs.filter((w) => w.status === "finalized").length,
-    draft: myWorklogs.filter((w) => w.status === "draft").length,
+    total: rows.length,
+    finalized: rows.filter((w) => w.status === "finalized").length,
+    draft: rows.filter((w) => w.status === "draft").length,
   };
 
   const columns: Column<Worklog>[] = [
@@ -199,6 +157,11 @@ export default function PartnerWorklogsPage() {
           Önhöz kapcsolódó szervizes és projekt munkalapok
         </p>
       </div>
+      {loadErr && (
+        <p className="text-sm text-red-400 px-1" role="alert">
+          {loadErr}
+        </p>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         {[

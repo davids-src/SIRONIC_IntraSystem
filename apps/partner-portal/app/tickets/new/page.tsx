@@ -16,12 +16,30 @@ import {
 import { useRouter } from "next/navigation";
 import { UploadCloud, X, Plus } from "lucide-react";
 import { useState } from "react";
+import { apiJsonBody, ApiError } from "@/lib/api-client";
+
+const CATEGORY_BY_KEY: Record<string, string> = {
+  incident: "Hibabejelentés",
+  service_request: "Szervizigény",
+  maintenance: "Karbantartás",
+  security: "Biztonságtechnika",
+};
 
 export default function NewTicketPage() {
   const router = useRouter();
 
+  const [title, setTitle] = useState("");
+  const [categoryKey, setCategoryKey] = useState("incident");
+  const [priority, setPriority] = useState<"low" | "medium" | "high" | "critical">(
+    "medium",
+  );
+  const [affectedItems, setAffectedItems] = useState("");
+  const [location, setLocation] = useState("");
+  const [description, setDescription] = useState("");
   const [devices, setDevices] = useState<string[]>([]);
   const [deviceInput, setDeviceInput] = useState("");
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const addDevice = () => {
     if (deviceInput.trim() && !devices.includes(deviceInput.trim())) {
@@ -34,10 +52,33 @@ export default function NewTicketPage() {
     setDevices(devices.filter((d) => d !== device));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Logic to save ticket
-    router.push("/tickets");
+    if (!title.trim() || !description.trim() || !affectedItems.trim()) {
+      setLoadErr("Tárgy, érintett rendszer és leírás kötelező.");
+      return;
+    }
+    setSaving(true);
+    setLoadErr(null);
+    try {
+      const extra = devices.length ? devices.join(", ") : "";
+      const affected = extra
+        ? `${affectedItems.trim()} (${extra})`
+        : affectedItems.trim();
+      await apiJsonBody("/api/tickets", "POST", {
+        title: title.trim(),
+        description: description.trim(),
+        category: CATEGORY_BY_KEY[categoryKey] ?? "Egyéb",
+        priority,
+        location: location.trim() || null,
+        affected_items: affected,
+      });
+      router.push("/tickets");
+    } catch (err) {
+      setLoadErr(err instanceof ApiError ? err.message : "Beküldés sikertelen.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -47,7 +88,12 @@ export default function NewTicketPage() {
         subtitle="Kérjük, írd le részletesen a problémát vagy igényt."
       />
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={(e) => void handleSubmit(e)} className="space-y-6">
+        {loadErr && (
+          <p className="text-sm text-[var(--color-status-error)]" role="alert">
+            {loadErr}
+          </p>
+        )}
         <Card className="p-6 space-y-6">
           <div className="space-y-4">
             <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2">
@@ -58,12 +104,14 @@ export default function NewTicketPage() {
               label="Tárgy / Rövid megnevezés *"
               placeholder="Pl. Szerver elérhetetlen a központi irodában"
               required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
             />
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="partner-ticket-type">Típus *</Label>
-                <Select defaultValue="incident">
+                <Select value={categoryKey} onValueChange={setCategoryKey}>
                   <SelectTrigger id="partner-ticket-type" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
@@ -78,7 +126,12 @@ export default function NewTicketPage() {
 
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="partner-ticket-priority">Prioritás *</Label>
-                <Select defaultValue="medium">
+                <Select
+                  value={priority}
+                  onValueChange={(v) =>
+                    setPriority(v as "low" | "medium" | "high" | "critical")
+                  }
+                >
                   <SelectTrigger id="partner-ticket-priority" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
@@ -103,8 +156,15 @@ export default function NewTicketPage() {
                 label="Érintett rendszer *"
                 placeholder="Pl. Hálózat, Kamera, Beléptető..."
                 required
+                value={affectedItems}
+                onChange={(e) => setAffectedItems(e.target.value)}
               />
-              <Input label="Helyszín" placeholder="Pl. Központi iroda, 2. emelet" />
+              <Input
+                label="Helyszín"
+                placeholder="Pl. Központi iroda, 2. emelet"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+              />
             </div>
 
             <div>
@@ -157,6 +217,8 @@ export default function NewTicketPage() {
               placeholder="Kérjük, írd le a lehető legrészletesebben a tapasztaltakat..."
               required
               className="min-h-[150px] resize-y"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
             />
 
             <div>
@@ -180,8 +242,8 @@ export default function NewTicketPage() {
           <Button type="button" variant="ghost" onClick={() => router.back()}>
             Mégse
           </Button>
-          <Button type="submit" variant="primary">
-            Beküldés
+          <Button type="submit" variant="primary" disabled={saving}>
+            {saving ? "Küldés…" : "Beküldés"}
           </Button>
         </div>
       </form>

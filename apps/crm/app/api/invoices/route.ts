@@ -19,8 +19,12 @@ export async function GET(req: Request) {
     guard(actor, { module: "invoice", action: "view", scope: "global" });
     const { searchParams } = new URL(req.url);
     const q = searchParams.get("q")?.trim();
+    const contactId = searchParams.get("contact_id")?.trim();
     return await withDb(async () => {
       const filter: Record<string, unknown> = { tenantId: actor.tenantId };
+      if (contactId) {
+        filter.contact_id = contactId;
+      }
       if (q) {
         filter.$or = [
           { title: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") },

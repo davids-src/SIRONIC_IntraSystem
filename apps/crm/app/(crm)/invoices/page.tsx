@@ -12,7 +12,7 @@ type InvoiceRow = Invoice & { contact_name: string };
 function parseInvoice(raw: unknown, contactName: string): InvoiceRow {
   const inv = raw as Record<string, unknown>;
   return {
-    ...(inv as Invoice),
+    ...(inv as unknown as Invoice),
     contact_name: contactName,
     issued_at: inv["issued_at"] ? new Date(String(inv["issued_at"])) : null,
     due_at: inv["due_at"] ? new Date(String(inv["due_at"])) : null,

@@ -1,7 +1,9 @@
 # =============================================================================
 # SIRONIC CRM – environment variables
 # =============================================================================
-# Copy this file to `.env.local` in this directory (`apps/crm/.env.local`).
+# Copy this file to `.env.local` in this directory (`apps/crm/.env.local`), or
+# put shared variables in `.env` / `.env.local` at the repo root — both CRM and
+# partner-portal load root env first, then their app directory (app wins on conflicts).
 # Never commit `.env.local` or real secrets.
 #
 # Legend: [REQUIRED] must be set for the app to work in that mode.

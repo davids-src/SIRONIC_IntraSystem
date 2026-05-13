@@ -1,6 +1,6 @@
 "use client";
 
-import { PageHeader, Card, Badge, Button, Input, TextareaControl } from "@crm/ui";
+import { PageHeader, Card, Badge, Button, TextareaControl } from "@crm/ui";
 import type { Ticket } from "@crm/types";
 import {
   MessageSquare,
@@ -11,56 +11,9 @@ import {
   Send,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { use } from "react";
-
-// Hardcoded single ticket for UI demo
-const mockTicket: Ticket = {
-  _id: "t1",
-  ticket_number: "TK-000001",
-  tenantId: "tenant1",
-  contact_id: "org1",
-  one_time_contact_name: null,
-  one_time_contact_phone: null,
-  project_id: null,
-  created_by: "user1",
-  assigned_to: "Kovács János",
-  source: "partner_portal",
-  category: "Hibabejelentés",
-  priority: "high",
-  status: "new",
-  title: "Szerver leállás a központi irodában",
-  description:
-    "A központi fájlszerver nem elérhető tegnap este óta. A belső hálózat megszakadt, senki nem éri el a megosztott meghajtókat.",
-  location: "Központi iroda, 1054 Budapest",
-  affected_items: "SRV-01 (Main File Server), SW-04 (Core Switch)",
-  attachments: [
-    { filename: "error_log.txt", url: "#", size: 12400, uploaded_at: new Date() },
-    { filename: "screenshot.png", url: "#", size: 1024000, uploaded_at: new Date() },
-  ],
-  comments: [
-    {
-      _id: "c1",
-      author_id: "Saját felhasználó (Te)",
-      author_role: "partner",
-      message: "Kérlek, sürgősen nézzetek rá, leállt a munka!",
-      is_internal: false,
-      created_at: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    },
-    {
-      _id: "c2",
-      author_id: "SIRONIC Support",
-      author_role: "crm_staff",
-      message:
-        "Látom a hibát a monitorozó rendszerben. Valószínűleg a switch dobta el a kapcsolatot. Egy kolléga hamarosan indul a helyszínre.",
-      is_internal: false, // Internal comment (c3) would be filtered out on the backend. This is a public response.
-      created_at: new Date(Date.now() - 1.5 * 60 * 60 * 1000),
-    },
-  ],
-  resolution_notes: null,
-  resolved_at: null,
-  created_at: new Date(Date.now() - 2 * 60 * 60 * 1000),
-  updated_at: new Date(Date.now() - 1 * 60 * 60 * 1000),
-};
+import { use, useEffect, useState } from "react";
+import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
+import { parseTicket } from "@/lib/entity-parsers";
 
 const priorityColorMap: Record<
   string,
@@ -89,7 +42,42 @@ export default function PartnerTicketDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const router = useRouter();
-  const ticket = mockTicket; // In real app, fetch based on use(params).id
+  const { id } = use(params);
+  const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [commentText, setCommentText] = useState("");
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    const ac = new AbortController();
+    (async () => {
+      try {
+        const raw = await apiJson<unknown>(`/api/tickets/${id}`, { signal: ac.signal });
+        setTicket(parseTicket(raw));
+        setLoadErr(null);
+      } catch {
+        if (!ac.signal.aborted) setLoadErr("A ticket nem elérhető.");
+      }
+    })();
+    return () => ac.abort();
+  }, [id]);
+
+  const sendComment = async () => {
+    if (!commentText.trim() || !ticket) return;
+    setSending(true);
+    setLoadErr(null);
+    try {
+      const raw = await apiJsonBody<unknown>(`/api/tickets/${id}/comments`, "POST", {
+        message: commentText.trim(),
+      });
+      setTicket(parseTicket(raw));
+      setCommentText("");
+    } catch (e) {
+      setLoadErr(e instanceof ApiError ? e.message : "Üzenet küldése sikertelen.");
+    } finally {
+      setSending(false);
+    }
+  };
 
   const priorityLabels: Record<string, string> = {
     low: "Alacsony",
@@ -106,7 +94,21 @@ export default function PartnerTicketDetailPage({
     closed: "Lezárva",
   };
 
-  // Partner specific filtering (would happen on backend in real app)
+  if (!ticket && !loadErr) {
+    return <div className="p-6 text-[var(--color-text-muted)]">Betöltés…</div>;
+  }
+  if (loadErr && !ticket) {
+    return (
+      <div className="p-6 space-y-4">
+        <p className="text-red-400">{loadErr}</p>
+        <Button variant="secondary" onClick={() => router.push("/tickets")}>
+          Vissza
+        </Button>
+      </div>
+    );
+  }
+  if (!ticket) return null;
+
   const publicComments = ticket.comments.filter((c) => !c.is_internal);
 
   return (
@@ -120,6 +122,12 @@ export default function PartnerTicketDetailPage({
           </Button>
         }
       />
+
+      {loadErr && (
+        <p className="text-sm text-amber-400 px-1" role="alert">
+          {loadErr}
+        </p>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column (Main Content) */}
@@ -229,13 +237,20 @@ export default function PartnerTicketDetailPage({
               {ticket.status !== "closed" && (
                 <div className="border border-[var(--color-border-subtle)] rounded-xl overflow-hidden bg-[var(--color-bg-card)] focus-within:border-[var(--color-accent-primary)] focus-within:ring-1 focus-within:ring-[var(--color-accent-primary)] transition-all">
                   <TextareaControl
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
                     placeholder="Kérdezz, vagy írj választ a támogatásnak..."
                     className="min-h-[100px] w-full resize-y border-0 bg-transparent p-4 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] outline-none"
                   />
                   <div className="flex justify-end items-center bg-[var(--color-bg-secondary)] px-4 py-3 border-t border-[var(--color-border-subtle)]">
-                    <Button variant="primary" className="py-1.5 px-4 text-sm">
+                    <Button
+                      variant="primary"
+                      className="py-1.5 px-4 text-sm"
+                      disabled={sending}
+                      onClick={() => void sendComment()}
+                    >
                       <Send size={14} className="mr-2" />
-                      Küldés
+                      {sending ? "Küldés…" : "Küldés"}
                     </Button>
                   </div>
                 </div>

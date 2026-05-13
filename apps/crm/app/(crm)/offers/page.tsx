@@ -12,7 +12,7 @@ type OfferRow = Offer & { contact_name: string };
 function parseOffer(raw: unknown, contactName: string): OfferRow {
   const o = raw as Record<string, unknown>;
   return {
-    ...(o as Offer),
+    ...(o as unknown as Offer),
     contact_name: contactName,
     valid_until: o["valid_until"] ? new Date(String(o["valid_until"])) : null,
     created_at: new Date(String(o["created_at"])),

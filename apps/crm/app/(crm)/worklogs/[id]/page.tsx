@@ -15,7 +15,9 @@ import {
   InputControl,
 } from "@crm/ui";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, use, Suspense } from "react";
+import { useState, use, Suspense, useEffect, useCallback } from "react";
+import type { Contact, CrmUser, Worklog, WorklogItem } from "@crm/types";
+import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 import {
   Save,
   FileSignature,
@@ -33,43 +35,225 @@ const WORK_CATEGORIES = [
   "Karbantartás",
   "Egyéb",
 ];
-const mockContacts = [
-  { _id: "org1", name: "Acme Kft." },
-  { _id: "org2", name: "Alpha Épület Zrt." },
-  { _id: "org3", name: "Beta Logisztika Kft." },
-];
-const mockTechnicians = ["Kovács János", "Nagy Péter", "Szabó Anna"];
-
 const sectionHeaderCls = "text-xs font-semibold uppercase tracking-wider pb-2 border-b";
+
+function parseWorklog(raw: unknown): Worklog {
+  const r = raw as Record<string, unknown>;
+  const items = Array.isArray(r.items)
+    ? (r.items as Record<string, unknown>[]).map((it) => ({
+        description: String(it.description ?? ""),
+        quantity: Number(it.quantity) || 1,
+        unit: String(it.unit ?? "db"),
+        unit_price:
+          it.unit_price === null || it.unit_price === undefined
+            ? null
+            : Number(it.unit_price),
+        price_list_item_id:
+          it.price_list_item_id === null || it.price_list_item_id === undefined
+            ? null
+            : String(it.price_list_item_id),
+      }))
+    : [];
+  return {
+    ...(r as unknown as Worklog),
+    work_date: new Date(String(r.work_date)),
+    created_at: new Date(String(r.created_at)),
+    updated_at: new Date(String(r.updated_at)),
+    items,
+  };
+}
+
+const emptyItem = (): WorklogItem => ({
+  description: "",
+  quantity: 1,
+  unit: "db",
+  unit_price: null,
+  price_list_item_id: null,
+});
 
 function WorklogFormContent({ id }: { id: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const isNew = id === "new";
-  const [status, setStatus] = useState("draft");
 
-  // Form fields
-  const [contactId, setContactId] = useState(isNew ? "" : "org1");
-  const [category, setCategory] = useState(isNew ? "" : "IT Támogatás");
-  const [technician, setTechnician] = useState(isNew ? "" : "Kovács János");
+  const [status, setStatus] = useState<Worklog["status"]>("draft");
+  const [worklogNumber, setWorklogNumber] = useState<string | null>(null);
+  const [contacts, setContacts] = useState<{ _id: string; name: string }[]>([]);
+  const [crmUsers, setCrmUsers] = useState<{ value: string; label: string }[]>([]);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const [contactId, setContactId] = useState("");
+  const [category, setCategory] = useState("");
   const [workDate, setWorkDate] = useState(new Date().toISOString().split("T")[0]);
   const [workStart, setWorkStart] = useState("08:00");
   const [workEnd, setWorkEnd] = useState("16:00");
-  const [siteAddress, setSiteAddress] = useState(isNew ? "" : "Központi iroda, Budapest");
-  const [description, setDescription] = useState(
-    isNew ? "" : "Szerver hiba elhárítása, hálózati switch újraindítása.",
-  );
-  const [travelKm, setTravelKm] = useState(isNew ? "" : "15");
-  const [notes, setNotes] = useState(
-    isNew ? "" : "A switch egyik portja kontakthibás volt.",
-  );
-  const [technicianName, setTechnicianName] = useState(isNew ? "" : "Kovács János");
-  const [clientName, setClientName] = useState(isNew ? "" : "Nagy Péter");
+  const [siteAddress, setSiteAddress] = useState("");
+  const [description, setDescription] = useState("");
+  const [travelKm, setTravelKm] = useState("");
+  const [notes, setNotes] = useState("");
+  const [technicianName, setTechnicianName] = useState("");
+  const [clientName, setClientName] = useState("");
+  const [items, setItems] = useState<WorklogItem[]>([emptyItem()]);
 
   const disabled = status !== "draft";
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    const ac = new AbortController();
+    (async () => {
+      try {
+        const [cList, uList] = await Promise.all([
+          apiJson<unknown[]>("/api/contacts", { signal: ac.signal }),
+          apiJson<unknown[]>("/api/crm-users", { signal: ac.signal }),
+        ]);
+        setContacts(
+          cList.map((row) => {
+            const c = row as Pick<Contact, "_id" | "name">;
+            return { _id: c._id, name: c.name };
+          }),
+        );
+        setCrmUsers(
+          uList.map((row) => {
+            const u = row as CrmUser;
+            const label = u.display_name?.trim() || u.email;
+            return { value: label, label };
+          }),
+        );
+      } catch {
+        /* non-fatal */
+      }
+    })();
+    return () => ac.abort();
+  }, []);
+
+  useEffect(() => {
+    const fromUrl = searchParams.get("contact_id")?.trim();
+    if (isNew && fromUrl) setContactId(fromUrl);
+  }, [isNew, searchParams]);
+
+  useEffect(() => {
+    if (isNew) return;
+    const ac = new AbortController();
+    (async () => {
+      try {
+        const raw = await apiJson<unknown>(`/api/worklogs/${id}`, { signal: ac.signal });
+        const w = parseWorklog(raw);
+        setWorklogNumber(w.worklog_number);
+        setStatus(w.status);
+        setContactId(w.contact_id ?? "");
+        setCategory(w.work_category);
+        setTechnicianName(w.technician_name);
+        setWorkDate(w.work_date.toISOString().split("T")[0]);
+        setWorkStart(w.work_start ?? "08:00");
+        setWorkEnd(w.work_end ?? "16:00");
+        setSiteAddress(w.site_address ?? "");
+        setDescription(w.work_description);
+        setTravelKm(w.travel_km != null ? String(w.travel_km) : "");
+        setNotes(w.notes ?? "");
+        setClientName(w.client_name ?? "");
+        setItems(w.items.length ? w.items : [emptyItem()]);
+        setLoadErr(null);
+      } catch {
+        if (!ac.signal.aborted) {
+          setLoadErr("A munkalap nem tölthető be.");
+        }
+      }
+    })();
+    return () => ac.abort();
+  }, [id, isNew]);
+
+  const buildPayload = useCallback(() => {
+    const travelParsed = travelKm.trim() === "" ? null : Number(travelKm);
+    const travel_km = Number.isFinite(travelParsed as number) ? travelParsed : null;
+    const cleanedItems = items
+      .filter((it) => it.description.trim())
+      .map((it) => ({
+        description: it.description.trim(),
+        quantity: Math.max(1, it.quantity || 1),
+        unit: (it.unit || "db").trim() || "db",
+        unit_price: it.unit_price,
+        price_list_item_id: it.price_list_item_id,
+      }));
+    const lineItems =
+      cleanedItems.length > 0
+        ? cleanedItems
+        : [
+            {
+              description: "—",
+              quantity: 1,
+              unit: "db",
+              unit_price: null,
+              price_list_item_id: null,
+            },
+          ];
+
+    return {
+      work_date: new Date(workDate ?? new Date().toISOString().slice(0, 10)),
+      work_start: workStart || null,
+      work_end: workEnd || null,
+      technician_name: (technicianName.trim() || "—").slice(0, 200),
+      client_name: clientName.trim() || null,
+      site_address: siteAddress.trim() || null,
+      work_category: (category.trim() || "Egyéb").slice(0, 200),
+      work_description: (description.trim() || "—").slice(0, 20000),
+      items: lineItems,
+      travel_km,
+      notes: notes.trim() || null,
+      contact_id: contactId.trim() || null,
+    };
+  }, [
+    travelKm,
+    items,
+    workDate,
+    workStart,
+    workEnd,
+    technicianName,
+    clientName,
+    siteAddress,
+    category,
+    description,
+    notes,
+    contactId,
+  ]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    router.push("/worklogs");
+    if (disabled) return;
+    setSaving(true);
+    setLoadErr(null);
+    try {
+      if (isNew) {
+        const created = await apiJsonBody<unknown>("/api/worklogs", "POST", {
+          ...buildPayload(),
+          status: "draft",
+        });
+        const w = parseWorklog(created);
+        router.replace(`/worklogs/${w._id}`);
+        return;
+      }
+      await apiJsonBody(`/api/worklogs/${id}`, "PATCH", buildPayload());
+      router.push("/worklogs");
+    } catch (err) {
+      setLoadErr(err instanceof ApiError ? err.message : "Mentés sikertelen.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const finalize = async () => {
+    if (isNew || disabled) return;
+    setSaving(true);
+    setLoadErr(null);
+    try {
+      await apiJsonBody(`/api/worklogs/${id}`, "PATCH", buildPayload());
+      const raw = await apiJsonBody<unknown>(`/api/worklogs/${id}/finalize`, "POST", {});
+      const w = parseWorklog(raw);
+      setStatus(w.status);
+    } catch (err) {
+      setLoadErr(err instanceof ApiError ? err.message : "Véglegesítés sikertelen.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const SectionHeader = ({ title }: { title: string }) => (
@@ -104,9 +288,7 @@ function WorklogFormContent({ id }: { id: string }) {
             Vissza a munkalapokhoz
           </button>
           <h1 className="text-2xl font-bold text-white truncate">
-            {isNew
-              ? "Új munkalap rögzítése"
-              : `Munkalap: WL-${id.slice(-6).padStart(6, "0")}`}
+            {isNew ? "Új munkalap rögzítése" : `Munkalap: ${worklogNumber ?? id}`}
           </h1>
           <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
             Részletes adminisztráció és anyagfelhasználás
@@ -128,7 +310,7 @@ function WorklogFormContent({ id }: { id: string }) {
             </Button>
           )}
           {status === "draft" && !isNew && (
-            <Button variant="primary" onClick={() => setStatus("finalized")}>
+            <Button variant="primary" disabled={saving} onClick={() => void finalize()}>
               <CheckCircle2 size={15} style={{ marginRight: "6px" }} />
               Véglegesítés
             </Button>
@@ -136,7 +318,13 @@ function WorklogFormContent({ id }: { id: string }) {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      {loadErr && (
+        <p className="text-sm text-red-400 px-1" role="alert">
+          {loadErr}
+        </p>
+      )}
+
+      <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-6">
         {/* Section 1: Alapadatok */}
         <div
           className="rounded-xl border p-6 flex flex-col gap-4"
@@ -161,7 +349,7 @@ function WorklogFormContent({ id }: { id: string }) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__empty__">-- Szervezet --</SelectItem>
-                  {mockContacts.map((c) => (
+                  {contacts.map((c) => (
                     <SelectItem key={c._id} value={c._id}>
                       {c.name}
                     </SelectItem>
@@ -192,8 +380,8 @@ function WorklogFormContent({ id }: { id: string }) {
             <div className="flex flex-col gap-2">
               <Label htmlFor="wl-technician">Technikus</Label>
               <Select
-                value={technician || "__empty__"}
-                onValueChange={(v) => setTechnician(v === "__empty__" ? "" : v)}
+                value={technicianName || "__empty__"}
+                onValueChange={(v) => setTechnicianName(v === "__empty__" ? "" : v)}
                 disabled={disabled}
               >
                 <SelectTrigger id="wl-technician" className="w-full">
@@ -201,9 +389,9 @@ function WorklogFormContent({ id }: { id: string }) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__empty__">-- Technikus --</SelectItem>
-                  {mockTechnicians.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
+                  {crmUsers.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -294,7 +482,7 @@ function WorklogFormContent({ id }: { id: string }) {
           </div>
         </div>
 
-        {/* Section 3: Szervizelt eszközök */}
+        {/* Section 3: tételek (szerviz / anyag) */}
         <div
           className="rounded-xl border p-6 flex flex-col gap-4"
           style={{
@@ -310,7 +498,7 @@ function WorklogFormContent({ id }: { id: string }) {
                 borderColor: "var(--color-border-subtle)",
               }}
             >
-              Szervizelt Eszközök
+              Tételek
             </div>
             {!disabled && (
               <button
@@ -322,8 +510,9 @@ function WorklogFormContent({ id }: { id: string }) {
                   border: "none",
                   cursor: "pointer",
                 }}
+                onClick={() => setItems((prev) => [...prev, emptyItem()])}
               >
-                <Plus size={13} /> Új eszköz
+                <Plus size={13} /> Új tétel
               </button>
             )}
           </div>
@@ -339,7 +528,7 @@ function WorklogFormContent({ id }: { id: string }) {
                     borderBottom: "1px solid var(--color-border-subtle)",
                   }}
                 >
-                  {["Eszköz neve", "Típus", "Sorozatszám", "Elvégzett feladat", ""].map(
+                  {["Megnevezés", "Mennyiség", "Egység", "Egységár (opcionális)", ""].map(
                     (h) => (
                       <th
                         key={h}
@@ -353,132 +542,109 @@ function WorklogFormContent({ id }: { id: string }) {
                 </tr>
               </thead>
               <tbody>
-                <tr style={{ borderBottom: "1px solid var(--color-border-subtle)" }}>
-                  {["SRV-01", "Szerver", "SN-123", "Újraindítás"].map((val, i) => (
-                    <td key={i} className="p-2">
+                {items.map((row, idx) => (
+                  <tr
+                    key={idx}
+                    style={{ borderBottom: "1px solid var(--color-border-subtle)" }}
+                  >
+                    <td className="p-2">
                       <InputControl
-                        defaultValue={!isNew ? val : ""}
-                        placeholder={
-                          ["Eszköz neve", "Típus", "SN...", "Elvégzett feladat"][i]
+                        value={row.description}
+                        onChange={(e) =>
+                          setItems((prev) =>
+                            prev.map((it, i) =>
+                              i === idx ? { ...it, description: e.target.value } : it,
+                            ),
+                          )
                         }
+                        placeholder="Leírás"
                         disabled={disabled}
-                        type={i === 2 ? "number" : "text"}
-                        className="h-9 w-full min-w-[100px] text-sm md:min-w-[120px]"
-                        style={{
-                          minWidth: i === 3 ? "200px" : i === 2 ? "140px" : "120px",
-                        }}
+                        className="h-9 w-full min-w-[200px] text-sm"
                       />
                     </td>
-                  ))}
-                  <td className="p-2 text-center">
-                    {!disabled && (
-                      <button
-                        type="button"
-                        className="p-1.5 rounded-md hover:bg-red-500/10 transition-colors"
-                        style={{
-                          border: "none",
-                          cursor: "pointer",
-                          background: "transparent",
-                          color: "var(--color-text-muted)",
-                        }}
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Section 4: Felhasznált anyagok */}
-        <div
-          className="rounded-xl border p-6 flex flex-col gap-4"
-          style={{
-            background: "var(--color-bg-card)",
-            borderColor: "var(--color-border-subtle)",
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <div
-              className={sectionHeaderCls + " flex-1"}
-              style={{
-                color: "var(--color-text-muted)",
-                borderColor: "var(--color-border-subtle)",
-              }}
-            >
-              Felhasznált Anyagok
-            </div>
-            {!disabled && (
-              <button
-                type="button"
-                className="text-xs flex items-center gap-1 px-2 py-1 rounded-md ml-3"
-                style={{
-                  background: "var(--color-bg-secondary)",
-                  color: "var(--color-accent-primary)",
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
-                <Plus size={13} /> Új anyag
-              </button>
-            )}
-          </div>
-          <div
-            className="overflow-x-auto rounded-lg border"
-            style={{ borderColor: "var(--color-border-subtle)" }}
-          >
-            <table className="w-full min-w-[580px]">
-              <thead>
-                <tr
-                  style={{
-                    background: "var(--color-bg-secondary)",
-                    borderBottom: "1px solid var(--color-border-subtle)",
-                  }}
-                >
-                  {["Megnevezés", "Cikkszám", "Mennyiség", "Egység", ""].map((h) => (
-                    <th
-                      key={h}
-                      className="text-left text-xs font-semibold uppercase tracking-wider px-4 py-3 whitespace-nowrap"
-                      style={{ color: "var(--color-text-muted)" }}
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <tr style={{ borderBottom: "1px solid var(--color-border-subtle)" }}>
-                  {["CAT6 Patch kábel 2m", "CAB-001", "1", "db"].map((val, i) => (
-                    <td key={i} className="p-2">
+                    <td className="p-2 w-24">
                       <InputControl
-                        defaultValue={!isNew ? val : ""}
-                        placeholder={["Anyag neve", "Opcionális", "0", "db, m..."][i]}
-                        type={i === 2 ? "number" : "text"}
+                        value={String(row.quantity)}
+                        onChange={(e) =>
+                          setItems((prev) =>
+                            prev.map((it, i) =>
+                              i === idx
+                                ? {
+                                    ...it,
+                                    quantity: Math.max(
+                                      1,
+                                      Number.parseInt(e.target.value, 10) || 1,
+                                    ),
+                                  }
+                                : it,
+                            ),
+                          )
+                        }
+                        type="number"
+                        min={1}
                         disabled={disabled}
-                        className="h-9 w-full min-w-[100px] text-sm"
-                        style={{ minWidth: i === 0 ? "200px" : "100px" }}
+                        className="h-9 w-full text-sm"
                       />
                     </td>
-                  ))}
-                  <td className="p-2 text-center">
-                    {!disabled && (
-                      <button
-                        type="button"
-                        className="p-1.5 rounded-md hover:bg-red-500/10 transition-colors"
-                        style={{
-                          border: "none",
-                          cursor: "pointer",
-                          background: "transparent",
-                          color: "var(--color-text-muted)",
+                    <td className="p-2 w-28">
+                      <InputControl
+                        value={row.unit}
+                        onChange={(e) =>
+                          setItems((prev) =>
+                            prev.map((it, i) =>
+                              i === idx ? { ...it, unit: e.target.value } : it,
+                            ),
+                          )
+                        }
+                        placeholder="db"
+                        disabled={disabled}
+                        className="h-9 w-full text-sm"
+                      />
+                    </td>
+                    <td className="p-2 w-32">
+                      <InputControl
+                        value={row.unit_price == null ? "" : String(row.unit_price)}
+                        onChange={(e) => {
+                          const v = e.target.value.trim();
+                          setItems((prev) =>
+                            prev.map((it, i) =>
+                              i === idx
+                                ? {
+                                    ...it,
+                                    unit_price:
+                                      v === "" ? null : Number.parseFloat(v) || null,
+                                  }
+                                : it,
+                            ),
+                          );
                         }}
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    )}
-                  </td>
-                </tr>
+                        type="number"
+                        disabled={disabled}
+                        className="h-9 w-full text-sm"
+                      />
+                    </td>
+                    <td className="p-2 text-center">
+                      {!disabled && items.length > 1 && (
+                        <button
+                          type="button"
+                          className="p-1.5 rounded-md hover:bg-red-500/10 transition-colors"
+                          style={{
+                            border: "none",
+                            cursor: "pointer",
+                            background: "transparent",
+                            color: "var(--color-text-muted)",
+                          }}
+                          onClick={() =>
+                            setItems((prev) => prev.filter((_, i) => i !== idx))
+                          }
+                          aria-label="Tétel törlése"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -550,9 +716,9 @@ function WorklogFormContent({ id }: { id: string }) {
               <Button type="button" variant="ghost" onClick={() => router.back()}>
                 Mégse
               </Button>
-              <Button type="submit" variant="primary">
+              <Button type="submit" variant="primary" disabled={saving}>
                 <Save size={15} style={{ marginRight: "6px" }} />
-                Mentés piszkozatként
+                {saving ? "Mentés…" : "Mentés piszkozatként"}
               </Button>
             </div>
           </div>

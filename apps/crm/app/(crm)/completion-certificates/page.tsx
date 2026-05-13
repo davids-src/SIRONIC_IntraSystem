@@ -21,7 +21,7 @@ type CertificateRow = CompletionCertificate & { contact_name: string };
 function parseCertificate(raw: unknown, contactName: string): CertificateRow {
   const c = raw as Record<string, unknown>;
   return {
-    ...(c as CompletionCertificate),
+    ...(c as unknown as CompletionCertificate),
     contact_name: contactName,
     work_period_start: c["work_period_start"]
       ? new Date(String(c["work_period_start"]))
