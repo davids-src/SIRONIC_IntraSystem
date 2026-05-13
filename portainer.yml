@@ -1,11 +1,12 @@
-# Portainer stack — replace image tags and environment values before deploy.
+# Portainer stack — replace OWNER, tags, and environment values before deploy.
+# Images: ghcr.io/<github-owner-lowercase>/<name>:<tag> (must match GHCR publish workflow).
 # Do not commit real secrets to git; edit this file only in Portainer / a private copy.
 version: "3.8"
 
 services:
   crm:
     container_name: sironic-crm
-    image: your-registry/sironic-crm:latest
+    image: ghcr.io/OWNER/sironic-crm:latest
     ports:
       - "8087:3000"
     environment:
@@ -20,7 +21,7 @@ services:
 
   partner-portal:
     container_name: sironic-partner-portal
-    image: your-registry/sironic-partner-portal:latest
+    image: ghcr.io/OWNER/sironic-partner-portal:latest
     ports:
       - "8088:3000"
     environment:
