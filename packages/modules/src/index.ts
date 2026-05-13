@@ -1,8 +1,16 @@
 import { hasPermission } from "@crm/rbac";
 import type { ActorContext, PermissionCheck } from "@crm/types";
 
+export class ForbiddenError extends Error {
+  override readonly name = "ForbiddenError";
+
+  constructor(message = "Forbidden") {
+    super(message);
+  }
+}
+
 export function authorizeOrThrow(actor: ActorContext, permission: PermissionCheck): void {
   if (!hasPermission(actor, permission)) {
-    throw new Error("Forbidden");
+    throw new ForbiddenError();
   }
 }

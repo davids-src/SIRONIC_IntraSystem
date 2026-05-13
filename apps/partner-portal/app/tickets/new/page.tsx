@@ -1,6 +1,18 @@
 "use client";
 
-import { PageHeader, Card, Button, Input } from "@crm/ui";
+import {
+  PageHeader,
+  Card,
+  Button,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+} from "@crm/ui";
 import { useRouter } from "next/navigation";
 import { UploadCloud, X, Plus } from "lucide-react";
 import { useState } from "react";
@@ -48,35 +60,35 @@ export default function NewTicketPage() {
               required
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
-                  Típus *
-                </label>
-                <select
-                  className="w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent-primary)] transition-colors"
-                  required
-                >
-                  <option value="incident">Hibabejelentés</option>
-                  <option value="service_request">Szervizigény</option>
-                  <option value="maintenance">Karbantartás</option>
-                  <option value="security">Biztonságtechnika</option>
-                </select>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="partner-ticket-type">Típus *</Label>
+                <Select defaultValue="incident">
+                  <SelectTrigger id="partner-ticket-type" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="incident">Hibabejelentés</SelectItem>
+                    <SelectItem value="service_request">Szervizigény</SelectItem>
+                    <SelectItem value="maintenance">Karbantartás</SelectItem>
+                    <SelectItem value="security">Biztonságtechnika</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
-                  Prioritás *
-                </label>
-                <select
-                  className="w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent-primary)] transition-colors"
-                  required
-                >
-                  <option value="low">Alacsony</option>
-                  <option value="medium">Közepes</option>
-                  <option value="high">Magas</option>
-                  <option value="critical">Kritikus</option>
-                </select>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="partner-ticket-priority">Prioritás *</Label>
+                <Select defaultValue="medium">
+                  <SelectTrigger id="partner-ticket-priority" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Alacsony</SelectItem>
+                    <SelectItem value="medium">Közepes</SelectItem>
+                    <SelectItem value="high">Magas</SelectItem>
+                    <SelectItem value="critical">Kritikus</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>
@@ -140,16 +152,12 @@ export default function NewTicketPage() {
               Részletek
             </h3>
 
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
-                Leírás *
-              </label>
-              <textarea
-                className="w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent-primary)] transition-colors min-h-[150px] resize-y"
-                placeholder="Kérjük, írd le a lehető legrészletesebben a tapasztaltakat..."
-                required
-              />
-            </div>
+            <Textarea
+              label="Leírás *"
+              placeholder="Kérjük, írd le a lehető legrészletesebben a tapasztaltakat..."
+              required
+              className="min-h-[150px] resize-y"
+            />
 
             <div>
               <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">

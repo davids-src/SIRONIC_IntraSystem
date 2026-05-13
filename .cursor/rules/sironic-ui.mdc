@@ -1,0 +1,40 @@
+---
+description: SIRONIC UI — forms, layout, Tailwind, and shadcn/Radix primitives from @crm/ui
+globs: apps/**/*.tsx,packages/ui/**/*.tsx
+alwaysApply: false
+---
+
+# SIRONIC UI rules
+
+## Form controls
+
+- Do **not** use raw HTML form controls: `<input>`, `<textarea>`, `<select>`, or `<input type="checkbox">` in app pages under `apps/`.
+- Use **`@crm/ui`** primitives instead:
+  - **Text fields / dates / numbers**: `Input` (supports `label`, `error`, and all standard input props).
+  - **Multi-line**: `Textarea` (with optional `label` / `error`), or `TextareaControl` when there is no field label wrapper (e.g. compact comment boxes, monospace editors).
+  - **Dropdowns**: Radix **`Select`** (`SelectTrigger`, `SelectValue`, `SelectContent`, `SelectItem`). Map legacy empty `""` options to a sentinel value (e.g. `__empty__`, `__none__`, `all`) and translate in `onValueChange` — Radix `SelectItem` must not use `value=""`.
+  - **Checkboxes**: `Checkbox` or **`CheckboxField`** when pairing with visible text.
+- **Dense tables / inline cells**: use **`InputControl`** (no outer label wrapper) instead of bare `<input>`.
+
+## Layout
+
+- **Page root**: `className="flex flex-col gap-6"` (or `gap-8` only if the page is intentionally sparse). Avoid anonymous `flex` without `flex-col` / `flex-row` and without `gap-*` or `space-y-*` when stacking multiple children.
+- **Cards**: outer padding `p-6`; inner field groups `flex flex-col gap-4` or `space-y-4`.
+- **Grids**: `grid grid-cols-1 gap-4 md:grid-cols-2` (or similar) with explicit `gap-*`.
+- **Filter toolbars**: `flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end` so controls align on small screens and wrap on large ones.
+
+## Styling
+
+- **Tailwind** is configured in each Next app; `content` includes `packages/ui`. Prefer **utility classes** and theme tokens (`border-border`, `bg-muted`, `text-muted-foreground`, etc.) over inline `style={{}}` for colors or spacing.
+- **CSS variables**: canonical names live in `apps/*/app/globals.css` (`--bg-primary`, `--text-muted`, …). Aliases `--color-*` exist for legacy references; prefer **`--text-*` / `--bg-*`** in new code.
+- **`className` merging**: in `@crm/ui`, use **`cn()`** from `@crm/ui` (or `../lib/utils` inside the package) when composing classes.
+
+## Accessibility
+
+- Associate text with controls: **`Label`** + matching `id` / `htmlFor`, or built-in `label` on `Input` / `Textarea`.
+- For icon-only search fields, add **`aria-label`** or a visually hidden **`Label`** with `className="sr-only"`.
+
+## Exceptions
+
+- **`input type="radio"`** is discouraged; prefer a **`Select`** for mutually exclusive options unless a product spec explicitly requires radio affordance.
+- Do not reintroduce raw `<select>` for styling convenience — use Radix **Select** for consistent focus, portal, and keyboard behavior.

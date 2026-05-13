@@ -1,6 +1,6 @@
 "use client";
 
-import { PageHeader, Card, Button } from "@crm/ui";
+import { PageHeader, Card, Button, Checkbox } from "@crm/ui";
 import { User, Bell, Lock, ShieldCheck, Mail, Smartphone } from "lucide-react";
 import { useState } from "react";
 
@@ -99,17 +99,12 @@ export default function PartnerSettingsPage() {
                   </div>
                 </div>
               </div>
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={notifications.email}
-                onChange={(e) =>
-                  setNotifications((prev) => ({ ...prev, email: e.target.checked }))
+                onCheckedChange={(v) =>
+                  setNotifications((prev) => ({ ...prev, email: v === true }))
                 }
-                style={{
-                  accentColor: "var(--accent-primary)",
-                  width: "18px",
-                  height: "18px",
-                }}
+                aria-label="E-mail értesítések"
               />
             </div>
 
@@ -137,17 +132,12 @@ export default function PartnerSettingsPage() {
                   </div>
                 </div>
               </div>
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={notifications.sms}
-                onChange={(e) =>
-                  setNotifications((prev) => ({ ...prev, sms: e.target.checked }))
+                onCheckedChange={(v) =>
+                  setNotifications((prev) => ({ ...prev, sms: v === true }))
                 }
-                style={{
-                  accentColor: "var(--accent-primary)",
-                  width: "18px",
-                  height: "18px",
-                }}
+                aria-label="SMS értesítések"
               />
             </div>
           </div>

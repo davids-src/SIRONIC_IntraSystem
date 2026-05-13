@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, Button, Badge } from "@crm/ui";
+import { Card, Button, Badge, Input } from "@crm/ui";
 import { useRouter } from "next/navigation";
 import { use, useState, useRef } from "react";
 import { ArrowLeft, Download, CheckCircle2, PenLine } from "lucide-react";
@@ -328,35 +328,12 @@ export default function PortalContractDetailPage({
                 elfogadom.
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                <div>
-                  <label
-                    style={{
-                      fontSize: "0.8rem",
-                      fontWeight: 600,
-                      color: "var(--text-muted, #888)",
-                      textTransform: "uppercase",
-                      display: "block",
-                      marginBottom: "6px",
-                    }}
-                  >
-                    Teljes neve *
-                  </label>
-                  <input
-                    value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
-                    placeholder="Pl. Kiss Gábor"
-                    style={{
-                      width: "100%",
-                      padding: "8px 12px",
-                      borderRadius: "6px",
-                      border: "1px solid var(--border-subtle, #2a2a2a)",
-                      background: "var(--bg-secondary, #141414)",
-                      color: "var(--text-primary, #fff)",
-                      fontSize: "0.875rem",
-                      boxSizing: "border-box",
-                    }}
-                  />
-                </div>
+                <Input
+                  label="Teljes neve *"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  placeholder="Pl. Kiss Gábor"
+                />
                 <div>
                   <label
                     style={{

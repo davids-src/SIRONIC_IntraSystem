@@ -1,6 +1,6 @@
 "use client";
 
-import { PageHeader, Card, Badge, Button, Input } from "@crm/ui";
+import { PageHeader, Card, Badge, Button, Input, TextareaControl } from "@crm/ui";
 import type { Ticket } from "@crm/types";
 import {
   MessageSquare,
@@ -228,9 +228,9 @@ export default function PartnerTicketDetailPage({
               {/* Add comment box */}
               {ticket.status !== "closed" && (
                 <div className="border border-[var(--color-border-subtle)] rounded-xl overflow-hidden bg-[var(--color-bg-card)] focus-within:border-[var(--color-accent-primary)] focus-within:ring-1 focus-within:ring-[var(--color-accent-primary)] transition-all">
-                  <textarea
+                  <TextareaControl
                     placeholder="Kérdezz, vagy írj választ a támogatásnak..."
-                    className="w-full bg-transparent border-none p-4 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] outline-none min-h-[100px] resize-y"
+                    className="min-h-[100px] w-full resize-y border-0 bg-transparent p-4 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] outline-none"
                   />
                   <div className="flex justify-end items-center bg-[var(--color-bg-secondary)] px-4 py-3 border-t border-[var(--color-border-subtle)]">
                     <Button variant="primary" className="py-1.5 px-4 text-sm">

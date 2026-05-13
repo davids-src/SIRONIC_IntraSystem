@@ -3,6 +3,8 @@
 import * as React from "react";
 import { AppShell } from "@crm/ui";
 import type { NavItem, SidebarUser } from "@crm/ui";
+import { signOut } from "next-auth/react";
+import { usePathname } from "next/navigation";
 
 import {
   LayoutDashboard,
@@ -73,15 +75,13 @@ const crmNavItems: NavItem[] = [
   },
 ];
 
-const seedUser: SidebarUser = {
-  name: "Admin",
-  role: "CRM Adminisztrátor",
-  avatarInitials: "AD",
-};
-
-import { usePathname } from "next/navigation";
-
-export function CrmShell({ children }: { children: React.ReactNode }) {
+export function CrmShell({
+  children,
+  sidebarUser,
+}: {
+  children: React.ReactNode;
+  sidebarUser: SidebarUser;
+}) {
   const pathname = usePathname() || "";
 
   if (pathname.endsWith("/print")) {
@@ -95,16 +95,21 @@ export function CrmShell({ children }: { children: React.ReactNode }) {
         appIcon: <ShieldCheck size={20} />,
         navItems: crmNavItems,
         currentPath: "",
-        user: seedUser,
+        user: sidebarUser,
       }}
       topbar={{
         breadcrumb: "SIRONIC CRM",
-        notificationCount: 3,
-        userInitials: "AD",
+        notificationCount: 0,
+        userInitials: sidebarUser.avatarInitials,
         userMenuItems: [
           { label: "Profil", onClick: () => {} },
           { label: "Beállítások", onClick: () => {} },
-          { label: "Kijelentkezés", onClick: () => {} },
+          {
+            label: "Kijelentkezés",
+            onClick: () => {
+              void signOut({ callbackUrl: "/login" });
+            },
+          },
         ],
       }}
     >

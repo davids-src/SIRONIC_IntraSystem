@@ -8,6 +8,9 @@
       }
     ],
     "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"]
+    },
     "noEmit": true,
     "incremental": true,
     "isolatedModules": true

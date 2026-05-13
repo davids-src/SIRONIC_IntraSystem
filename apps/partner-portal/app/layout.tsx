@@ -11,7 +11,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="hu">
+    <html lang="hu" className="dark">
       <body>
         <PartnerShell>{children}</PartnerShell>
       </body>

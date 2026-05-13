@@ -1,6 +1,6 @@
 "use client";
 
-import { PageHeader, Card, Table, Badge, Button, Input } from "@crm/ui";
+import { PageHeader, Card, Table, Badge, Button, Input, Label } from "@crm/ui";
 import type { Column } from "@crm/ui";
 import {
   Search,
@@ -252,28 +252,27 @@ export default function PartnerWorklogsPage() {
       </div>
 
       <div
-        className="rounded-xl border p-4 flex flex-wrap gap-3"
+        className="flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:flex-wrap sm:items-end"
         style={{
           background: "var(--color-bg-card)",
           borderColor: "var(--color-border-subtle)",
         }}
       >
-        <div className="flex-1 min-w-[180px] relative">
+        <div className="relative min-w-[180px] flex-1">
           <Search
             size={15}
-            className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+            className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2"
             style={{ color: "var(--color-text-muted)" }}
           />
-          <input
-            type="text"
+          <Label htmlFor="partner-wl-search" className="sr-only">
+            Keresés munkalapok között
+          </Label>
+          <Input
+            id="partner-wl-search"
             placeholder="Keresés munkalapban..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-10 pl-9 pr-3 rounded-md text-sm border text-white placeholder:text-gray-500 outline-none"
-            style={{
-              borderColor: "var(--color-border-default)",
-              background: "var(--color-bg-secondary)",
-            }}
+            className="pl-9"
           />
         </div>
       </div>

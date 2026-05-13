@@ -19,6 +19,10 @@ erDiagram
     Ticket ||--o{ Worklog : "tartalmazhat"
     Contact ||--o{ CompletionCertificate : "rendelkezik"
     Project ||--o{ CompletionCertificate : "tartalmazhat"
+    Contact ||--o{ Offer : "rendelkezik"
+    Contact ||--o{ Invoice : "rendelkezik"
+    Tenant ||--o{ Contact : "tartalmaz"
+    Tenant ||--o{ CrmUser : "tartalmaz"
     PriceListItem ||--o{ WorklogItem : "felhasználva"
 
     Contact {
@@ -82,6 +86,35 @@ erDiagram
         string type
         string name
         number net_price
+    }
+
+    Tenant {
+        string _id PK
+        string name
+    }
+
+    CrmUser {
+        string _id PK
+        string tenantId FK
+        string email
+        string password_hash
+        string[] roleKeys
+    }
+
+    Offer {
+        string _id PK
+        string tenantId
+        string contact_id FK
+        string offer_number
+        string status
+    }
+
+    Invoice {
+        string _id PK
+        string tenantId
+        string contact_id FK
+        string invoice_number
+        string status
     }
 ```
 
@@ -156,6 +189,22 @@ Cikktörzs; a munkalapokon, ajánlatokban felhasználható ismétlődő szolgál
 ### 7. Settings (Globális Rendszerbeállítások)
 
 Kulcs-Érték vagy string listák tárolása legördülő menükhöz és kategóriákhoz, pl. `ticket_categories`, `worklog_categories`, `contact_tags`.
+
+### 8. Tenant (Bérlő / szervezet)
+
+A CRM belső adatainak elsődleges elkülönítője. Az első regisztrációkor jön létre; minden üzleti rekord `tenantId` mezője erre mutat.
+
+### 9. CrmUser (CRM belső felhasználó)
+
+Bejelentkezéshez: `email` (egyedi), `password_hash`, `tenantId`, `roleKeys` (`crm.admin` \| `crm.staff`). A jelszó soha nem kerül API válaszokba.
+
+### 10. Offer (Ajánlat)
+
+Ügyfélhez (`contact_id`) kötött ajánlat, státusz: `draft` \| `sent` \| `accepted` \| `rejected`, összeg és érvényesség (`valid_until`).
+
+### 11. Invoice (Számla)
+
+Ügyfélhez kötött számla rekord (CRM nézet), státusz: `draft` \| `sent` \| `paid` \| `overdue` \| `cancelled`; opcionális `issued_at` / `due_at`.
 
 ## Biztonság és Jogosultság (RBAC)
 

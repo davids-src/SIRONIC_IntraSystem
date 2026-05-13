@@ -1,0 +1,49 @@
+# =============================================================================
+# SIRONIC CRM – environment variables
+# =============================================================================
+# Copy this file to `.env.local` in this directory (`apps/crm/.env.local`).
+# Never commit `.env.local` or real secrets.
+#
+# Legend: [REQUIRED] must be set for the app to work in that mode.
+#         [OPTIONAL] safe to omit; defaults or dev fallbacks apply.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# [REQUIRED] MONGODB_URI
+# -----------------------------------------------------------------------------
+# MongoDB connection string used by @crm/db (Mongoose) for all persistence:
+# users/tenants, bootstrap setup, contacts, tickets, APIs, etc.
+# Example: mongodb://127.0.0.1:27017/sironic_crm
+# Example (Atlas): mongodb+srv://USER:PASS@cluster.mongodb.net/sironic_crm?retryWrites=true&w=majority
+MONGODB_URI=mongodb://127.0.0.1:27017/sironic_crm
+
+# -----------------------------------------------------------------------------
+# [REQUIRED in production] AUTH_SECRET
+# -----------------------------------------------------------------------------
+# Secret used by Auth.js (NextAuth v5) to sign and encrypt JWTs and session
+# cookies. Generate a strong value, e.g.:
+#   openssl rand -base64 32
+# In development Auth.js may warn if unset; use a long random string in every
+# environment. Replace the placeholder below before any shared/staging deploy.
+AUTH_SECRET=local-dev-only-replace-with-openssl-rand-base64-32-chars-min
+
+# -----------------------------------------------------------------------------
+# [OPTIONAL] AUTH_URL
+# -----------------------------------------------------------------------------
+# Public base URL of this CRM app (no trailing slash). Used by Auth.js for
+# correct callback/redirect URLs in production and when not using `trustHost`
+# the same way. Prefer this name in Auth.js v5; NEXTAUTH_URL still works for
+# many setups.
+# Examples:
+#   http://localhost:3000
+#   https://crm.example.com
+# If omitted locally, `auth.ts` uses trustHost: true so localhost often still
+# works; set explicitly behind reverse proxies or non-default ports.
+# AUTH_URL=http://localhost:3000
+
+# -----------------------------------------------------------------------------
+# [OPTIONAL] NEXTAUTH_URL
+# -----------------------------------------------------------------------------
+# Legacy/alternate public URL variable (same purpose as AUTH_URL). Set one of
+# AUTH_URL or NEXTAUTH_URL if redirects or email links misbehave.
+# NEXTAUTH_URL=http://localhost:3000

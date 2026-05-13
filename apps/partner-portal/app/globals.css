@@ -5,6 +5,7 @@
 
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
+/* Design Tokens (canonical names) */
 :root {
   --bg-primary: #0a0a0a;
   --bg-secondary: #111111;
@@ -42,7 +43,35 @@
   --radius-md: 10px;
   --radius-lg: 14px;
   --radius-pill: 999px;
+
+  /* Aliases: --color-* (used in app TSX) → canonical tokens */
+  --color-bg-primary: var(--bg-primary);
+  --color-bg-secondary: var(--bg-secondary);
+  --color-bg-card: var(--bg-card);
+  --color-bg-card-hover: var(--bg-card-hover);
+  --color-bg-sidebar: var(--bg-sidebar);
+  --color-bg-topbar: var(--bg-topbar);
+  --color-accent-primary: var(--accent-primary);
+  --color-accent-primary-hover: var(--accent-primary-hover);
+  --color-accent-primary-muted: var(--accent-primary-muted);
+  --color-accent-badge-bg: var(--accent-badge-bg);
+  --color-accent-badge-text: var(--accent-badge-text);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-accent: var(--text-accent);
+  --color-border-default: var(--border-default);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-accent: var(--border-accent);
+  --color-status-success: var(--status-success);
+  --color-status-warning: var(--status-warning);
+  --color-status-error: var(--status-error);
+  --color-status-info: var(--status-info);
 }
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 *,
 *::before,

@@ -20,6 +20,7 @@ export type PermissionModule =
   | "contact"
   | "price_list"
   | "offer"
+  | "invoice"
   | "ticket"
   | "worklog"
   | "completion_certificate"
@@ -27,6 +28,62 @@ export type PermissionModule =
   | "project"
   | "contract"
   | "settings";
+
+/** CRM app login roles only (subset of RoleKey). */
+export type CrmRoleKey = "crm.admin" | "crm.staff";
+
+export interface Tenant {
+  _id: string;
+  name: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/** CRM internal user (no password in API responses). */
+export interface CrmUser {
+  _id: string;
+  tenantId: string;
+  email: string;
+  display_name: string | null;
+  roleKeys: CrmRoleKey[];
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type OfferStatus = "draft" | "sent" | "accepted" | "rejected";
+
+export interface Offer {
+  _id: string;
+  tenantId: string;
+  offer_number: string;
+  title: string;
+  contact_id: string;
+  total_amount: number;
+  currency: string;
+  status: OfferStatus;
+  valid_until: Date | null;
+  created_by: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type InvoiceStatus = "draft" | "sent" | "paid" | "overdue" | "cancelled";
+
+export interface Invoice {
+  _id: string;
+  tenantId: string;
+  invoice_number: string;
+  contact_id: string;
+  title: string | null;
+  total_amount: number;
+  currency: string;
+  status: InvoiceStatus;
+  issued_at: Date | null;
+  due_at: Date | null;
+  created_by: string;
+  created_at: Date;
+  updated_at: Date;
+}
 
 export type PermissionScope = "global" | "contact" | "resource";
 

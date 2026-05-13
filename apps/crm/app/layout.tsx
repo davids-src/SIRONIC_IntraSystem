@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { CrmShell } from "./crm-shell";
+import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "SIRONIC CRM",
@@ -11,9 +11,9 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="hu">
+    <html lang="hu" className="dark">
       <body>
-        <CrmShell>{children}</CrmShell>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
