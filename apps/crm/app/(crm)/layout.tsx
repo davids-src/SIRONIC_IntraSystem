@@ -5,6 +5,9 @@ import { connectDb, CrmUserModel } from "@crm/db";
 import { CrmShell } from "../crm-shell";
 import { toSidebarUser } from "@/lib/shell-user";
 
+/** Avoid DB during `next build` (no Mongo in CI); this tree always needs session + tenant checks at request time. */
+export const dynamic = "force-dynamic";
+
 export default async function CrmProtectedLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {

@@ -3,6 +3,8 @@ import { auth } from "@/auth";
 import { connectDb, CrmUserModel } from "@crm/db";
 import { LoginForm } from "./login-form";
 
+export const dynamic = "force-dynamic";
+
 export default async function LoginPage() {
   await connectDb();
   if ((await CrmUserModel.estimatedDocumentCount()) === 0) {
