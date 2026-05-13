@@ -1,0 +1,42 @@
+# Portainer stack — replace image tags and environment values before deploy.
+# Do not commit real secrets to git; edit this file only in Portainer / a private copy.
+version: "3.8"
+
+services:
+  crm:
+    container_name: sironic-crm
+    image: your-registry/sironic-crm:latest
+    ports:
+      - "8087:3000"
+    environment:
+      MONGODB_URI: "mongodb://user:password@mongo-host:27017/sironic_crm"
+      AUTH_SECRET: "replace-with-openssl-rand-base64-32-or-longer"
+      AUTH_URL: "https://crm.example.com"
+      NEXTAUTH_URL: "https://crm.example.com"
+    restart: unless-stopped
+    networks:
+      - default
+      - nginxproxy_default
+
+  partner-portal:
+    container_name: sironic-partner-portal
+    image: your-registry/sironic-partner-portal:latest
+    ports:
+      - "8088:3000"
+    environment:
+      MONGODB_URI: "mongodb://user:password@mongo-host:27017/sironic_crm"
+      AUTH_SECRET: "replace-with-a-different-long-random-secret"
+      AUTH_URL: "https://partner.example.com"
+      NEXTAUTH_URL: "https://partner.example.com"
+    restart: unless-stopped
+    networks:
+      - default
+      - nginxproxy_default
+
+# ==================== NETWORKS ====================
+networks:
+  default:
+    driver: bridge
+
+  nginxproxy_default:
+    external: true
