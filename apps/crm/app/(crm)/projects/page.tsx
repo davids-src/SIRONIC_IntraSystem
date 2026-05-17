@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { apiJson } from "@/lib/api-client";
 
 function parseProject(raw: unknown): Project {
   const p = raw as Record<string, unknown>;
@@ -45,13 +46,9 @@ export default function ProjectsPage() {
     const ac = new AbortController();
     (async () => {
       try {
-        const r = await fetch("/api/projects", { signal: ac.signal });
-        if (!r.ok) {
-          setLoadError("A projekt lista nem elérhető.");
-          return;
-        }
-        const data = (await r.json()) as unknown[];
+        const data = await apiJson<unknown[]>("/api/projects", { signal: ac.signal });
         setProjects(data.map((row) => parseProject(row)));
+        setLoadError(null);
       } catch {
         if (!ac.signal.aborted) {
           setLoadError("A projekt lista nem elérhető.");
@@ -63,10 +60,10 @@ export default function ProjectsPage() {
 
   const filtered = projects.filter(
     (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.project_number.toLowerCase().includes(search.toLowerCase()) ||
-      (p.contact_id ?? "").toLowerCase().includes(search.toLowerCase()) ||
-      (p.category ?? "").toLowerCase().includes(search.toLowerCase()),
+      (p.name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (p.project_number || "").toLowerCase().includes(search.toLowerCase()) ||
+      (p.contact_id || "").toLowerCase().includes(search.toLowerCase()) ||
+      (p.category || "").toLowerCase().includes(search.toLowerCase()),
   );
 
   const counts = {

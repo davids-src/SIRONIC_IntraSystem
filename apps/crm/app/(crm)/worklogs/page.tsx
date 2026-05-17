@@ -85,10 +85,10 @@ export default function WorklogsPage() {
     const q = search.toLowerCase();
     const matchSearch =
       !q ||
-      w.worklog_number.toLowerCase().includes(q) ||
-      w.contact_name.toLowerCase().includes(q) ||
-      w.technician_name.toLowerCase().includes(q) ||
-      w.work_category.toLowerCase().includes(q);
+      (w.worklog_number || "").toLowerCase().includes(q) ||
+      (w.contact_name || "").toLowerCase().includes(q) ||
+      (w.technician_name || "").toLowerCase().includes(q) ||
+      (w.work_category || "").toLowerCase().includes(q);
     const matchStatus = !statusFilter || w.status === statusFilter;
     return matchSearch && matchStatus;
   });

@@ -11,3 +11,5 @@ export { InvoiceModel } from "./invoice";
 export { InventoryItemModel } from "./inventory-item";
 export { DomainHostingRecordModel } from "./domain-hosting";
 export { PortalUserModel } from "./portal-user";
+export { SupplierModel } from "./supplier";
+export { PurchaseOrderModel } from "./purchase-order";

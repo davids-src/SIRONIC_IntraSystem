@@ -15,7 +15,8 @@ import {
   Hash,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { PriceListItem } from "@crm/types";
+import type { PriceListItem, Settings, ItemCategory, Supplier } from "@crm/types";
+import { apiJsonBody } from "@/lib/api-client";
 
 interface PurchaseRecord {
   _id: string;
@@ -89,6 +90,52 @@ export default function PriceListPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [prices, setPrices] = useState<PriceItem[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<ItemCategory[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+
+  // Modal states
+  const [showNewItemModal, setShowNewItemModal] = useState(false);
+  const [showNewPurchaseModal, setShowNewPurchaseModal] = useState<string | null>(null);
+
+  // New Item Form
+  const [newItem, setNewItem] = useState({
+    name: "",
+    category: "",
+    type: "product",
+    unit: "db",
+    net_price: 0,
+    tax_rate: 27,
+    description: "",
+    currency: "HUF",
+  });
+
+  // New Purchase Form
+  const [newPurchase, setNewPurchase] = useState({
+    supplier_id: "",
+    supplier_item_number: "",
+    net_purchase_price: 0,
+    notes: "",
+  });
+
+  // Usage History
+  const [usageHistory, setUsageHistory] = useState<Record<string, any[]>>({});
+  const [loadingUsage, setLoadingUsage] = useState<string | null>(null);
+
+  const loadUsage = async (id: string) => {
+    if (usageHistory[id]) return;
+    setLoadingUsage(id);
+    try {
+      const res = await fetch(`/api/price-list/${id}/usage`);
+      if (res.ok) {
+        const data = await res.json();
+        setUsageHistory((prev) => ({ ...prev, [id]: data.offers || [] }));
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingUsage(null);
+    }
+  };
 
   useEffect(() => {
     const ac = new AbortController();
@@ -101,6 +148,19 @@ export default function PriceListPage() {
         }
         const data = (await r.json()) as PriceListItem[];
         setPrices(data.map(mapPriceListItem));
+
+        // Fetch settings for categories
+        const rSet = await fetch("/api/settings", { signal: ac.signal });
+        if (rSet.ok) {
+          const s = (await rSet.json()) as Settings;
+          if (s.item_categories) setCategories(s.item_categories);
+        }
+
+        const rSup = await fetch("/api/suppliers", { signal: ac.signal });
+        if (rSup.ok) {
+          const supData = (await rSup.json()) as Supplier[];
+          setSuppliers(supData);
+        }
       } catch {
         if (!ac.signal.aborted) {
           setLoadError("Az árlista nem elérhető.");
@@ -133,13 +193,74 @@ export default function PriceListPage() {
     return pct;
   };
 
+  const handleCreateItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload = { ...newItem, description: newItem.description.trim() || null };
+      const res = await apiJsonBody("/api/price-list", "POST", payload);
+      if (res && typeof res === "object" && "_id" in res) {
+        setPrices((prev) => [...prev, mapPriceListItem(res as PriceListItem)]);
+        setShowNewItemModal(false);
+        setNewItem({
+          name: "",
+          category: "",
+          type: "product",
+          unit: "db",
+          net_price: 0,
+          tax_rate: 27,
+          description: "",
+          currency: "HUF",
+        });
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Hiba történt a mentés során.");
+    }
+  };
+
+  const handleCreatePurchase = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!showNewPurchaseModal) return;
+    try {
+      const selectedSupplier = suppliers.find((s) => s._id === newPurchase.supplier_id);
+      const res = await apiJsonBody(
+        `/api/price-list/${showNewPurchaseModal}/purchase-records`,
+        "POST",
+        {
+          supplier_name: selectedSupplier?.name ?? newPurchase.supplier_id,
+          supplier_item_number: newPurchase.supplier_item_number || null,
+          net_purchase_price: newPurchase.net_purchase_price,
+          notes: newPurchase.notes || null,
+          purchased_at: new Date().toISOString(),
+        },
+      );
+      if (res && typeof res === "object" && "_id" in res) {
+        setPrices((prev) =>
+          prev.map((p) =>
+            p._id === showNewPurchaseModal ? mapPriceListItem(res as PriceListItem) : p,
+          ),
+        );
+        setShowNewPurchaseModal(null);
+        setNewPurchase({
+          supplier_id: "",
+          supplier_item_number: "",
+          net_purchase_price: 0,
+          notes: "",
+        });
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Hiba történt a mentés során.");
+    }
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
       <PageHeader
         title="Árlista"
         subtitle="Szolgáltatások, hardverek és licencek alapárai ajánlatkészítéshez"
         actions={
-          <Button variant="primary">
+          <Button variant="primary" onClick={() => setShowNewItemModal(true)}>
             <Plus size={16} style={{ marginRight: "6px" }} />
             Új tétel
           </Button>
@@ -473,6 +594,7 @@ export default function PriceListPage() {
                       <Button
                         variant="ghost"
                         style={{ fontSize: "0.78rem", padding: "4px 12px" }}
+                        onClick={() => {}}
                       >
                         <ShoppingCart size={13} style={{ marginRight: "5px" }} />
                         Ajánlathoz add
@@ -480,6 +602,7 @@ export default function PriceListPage() {
                       <Button
                         variant="secondary"
                         style={{ fontSize: "0.78rem", padding: "4px 12px" }}
+                        onClick={() => setShowNewPurchaseModal(item._id)}
                       >
                         <Plus size={13} style={{ marginRight: "5px" }} />
                         Új bszerz. rögzítése
@@ -596,12 +719,386 @@ export default function PriceListPage() {
                       ))}
                     </div>
                   )}
+
+                  <div
+                    style={{
+                      marginTop: "24px",
+                      borderTop: "1px solid var(--color-border-subtle)",
+                      paddingTop: "16px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "16px",
+                      }}
+                    >
+                      <h4
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.07em",
+                          color: "var(--color-text-muted)",
+                        }}
+                      >
+                        📄 Felhasználási előzmény
+                      </h4>
+                      {!usageHistory[item._id] && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => loadUsage(item._id)}
+                          disabled={loadingUsage === item._id}
+                        >
+                          {loadingUsage === item._id ? "Betöltés..." : "Hol szerepel?"}
+                        </Button>
+                      )}
+                    </div>
+
+                    {(usageHistory[item._id] ?? []).length === 0 &&
+                      usageHistory[item._id] && (
+                        <p
+                          style={{
+                            fontSize: "0.8rem",
+                            color: "var(--color-text-muted)",
+                            fontStyle: "italic",
+                          }}
+                        >
+                          Ez a tétel még nem szerepel egyetlen elmentett ajánlaton sem.
+                        </p>
+                      )}
+
+                    {usageHistory[item._id] &&
+                      (usageHistory[item._id]?.length ?? 0) > 0 && (
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "10px",
+                          }}
+                        >
+                          {(usageHistory[item._id] ?? []).map((offer: any) => (
+                            <div
+                              key={offer._id}
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                padding: "10px 14px",
+                                background: "var(--color-bg-card)",
+                                borderRadius: "8px",
+                                border: "1px solid var(--color-border-subtle)",
+                                alignItems: "center",
+                              }}
+                            >
+                              <div>
+                                <div style={{ fontWeight: 600, fontSize: "0.85rem" }}>
+                                  <a
+                                    href={`/offers/${offer._id}`}
+                                    style={{
+                                      color: "var(--color-accent)",
+                                      textDecoration: "none",
+                                    }}
+                                  >
+                                    {offer.offer_number}
+                                  </a>
+                                  <span
+                                    style={{
+                                      marginLeft: "8px",
+                                      color: "var(--color-text-primary)",
+                                    }}
+                                  >
+                                    {offer.title}
+                                  </span>
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: "0.75rem",
+                                    color: "var(--color-text-muted)",
+                                    marginTop: "4px",
+                                  }}
+                                >
+                                  Létrehozva:{" "}
+                                  {new Date(offer.created_at).toLocaleDateString("hu-HU")}
+                                </div>
+                              </div>
+                              <Badge
+                                variant={
+                                  offer.status === "accepted"
+                                    ? "success"
+                                    : offer.status === "rejected"
+                                      ? "error"
+                                      : "info"
+                                }
+                              >
+                                {offer.status}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                  </div>
                 </div>
               )}
             </div>
           );
         })}
       </div>
+
+      {/* Modal - Új tétel */}
+      {showNewItemModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.6)",
+            zIndex: 100,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Card style={{ padding: "24px", width: "100%", maxWidth: "500px" }}>
+            <h2 style={{ margin: "0 0 16px 0" }}>Új árlista tétel rögzítése</h2>
+            <form
+              onSubmit={handleCreateItem}
+              style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "14px" }}>Név</label>
+                <Input
+                  value={newItem.name}
+                  onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div
+                style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "14px" }}>Kategória</label>
+                  <select
+                    value={newItem.category}
+                    onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
+                    className="input-base"
+                    required
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "6px",
+                      border: "1px solid var(--color-border-subtle)",
+                      background: "var(--color-bg-input)",
+                      color: "inherit",
+                    }}
+                  >
+                    <option value="">Válassz kategóriát</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({c.prefix})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "14px" }}>Típus</label>
+                  <select
+                    value={newItem.type}
+                    onChange={(e) => setNewItem({ ...newItem, type: e.target.value })}
+                    className="input-base"
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "6px",
+                      border: "1px solid var(--color-border-subtle)",
+                      background: "var(--color-bg-input)",
+                      color: "inherit",
+                    }}
+                  >
+                    <option value="product">Termék (Hardver)</option>
+                    <option value="service">Szolgáltatás</option>
+                    <option value="labor">Munkadíj</option>
+                    <option value="package">Csomag</option>
+                  </select>
+                </div>
+              </div>
+              <div
+                style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "14px" }}>Eladási ár (Nettó)</label>
+                  <Input
+                    type="number"
+                    value={newItem.net_price.toString()}
+                    onChange={(e) =>
+                      setNewItem({ ...newItem, net_price: Number(e.target.value) })
+                    }
+                    required
+                  />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "14px" }}>Mértékegység</label>
+                  <Input
+                    value={newItem.unit}
+                    onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "14px" }}>Leírás (Opcionális)</label>
+                <Input
+                  value={newItem.description}
+                  onChange={(e) =>
+                    setNewItem({ ...newItem, description: e.target.value })
+                  }
+                />
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "8px",
+                  marginTop: "8px",
+                }}
+              >
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setShowNewItemModal(false)}
+                >
+                  Mégse
+                </Button>
+                <Button type="submit" variant="primary">
+                  Mentés
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal - Új beszerzés */}
+      {showNewPurchaseModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.6)",
+            zIndex: 100,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Card style={{ padding: "24px", width: "100%", maxWidth: "500px" }}>
+            <h2 style={{ margin: "0 0 16px 0" }}>Új beszerzés rögzítése</h2>
+            <form
+              onSubmit={handleCreatePurchase}
+              style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+            >
+              <div
+                style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "14px" }}>Beszállító</label>
+                  <select
+                    value={newPurchase.supplier_id}
+                    onChange={(e) =>
+                      setNewPurchase({ ...newPurchase, supplier_id: e.target.value })
+                    }
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--color-border-subtle)",
+                      background: "var(--color-bg-secondary)",
+                      color: "var(--color-text-primary)",
+                      fontSize: "14px",
+                    }}
+                  >
+                    <option value="">— Válassz —</option>
+                    {[...suppliers]
+                      .sort((a, b) => a.name.localeCompare(b.name, "hu"))
+                      .map((s) => (
+                        <option key={s._id} value={s._id}>
+                          {s.name}
+                        </option>
+                      ))}
+                  </select>
+                  {suppliers.length === 0 && (
+                    <span style={{ fontSize: "11px", color: "var(--color-text-muted)" }}>
+                      <a href="/suppliers/new" style={{ color: "var(--color-accent)" }}>
+                        Adj hozzá beszállítót
+                      </a>
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "14px" }}>Beszállítói Cikkszám</label>
+                  <Input
+                    value={newPurchase.supplier_item_number}
+                    onChange={(e) =>
+                      setNewPurchase({
+                        ...newPurchase,
+                        supplier_item_number: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "14px" }}>Nettó beszerzési ár</label>
+                <Input
+                  type="number"
+                  value={newPurchase.net_purchase_price.toString()}
+                  onChange={(e) =>
+                    setNewPurchase({
+                      ...newPurchase,
+                      net_purchase_price: Number(e.target.value),
+                    })
+                  }
+                  required
+                />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "14px" }}>Megjegyzés</label>
+                <Input
+                  value={newPurchase.notes}
+                  onChange={(e) =>
+                    setNewPurchase({ ...newPurchase, notes: e.target.value })
+                  }
+                />
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "8px",
+                  marginTop: "8px",
+                }}
+              >
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setShowNewPurchaseModal(null)}
+                >
+                  Mégse
+                </Button>
+                <Button type="submit" variant="primary">
+                  Rögzítés
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

@@ -41,9 +41,9 @@ export default function PartnerWorklogsPage() {
 
   const filtered = rows.filter(
     (w) =>
-      w.worklog_number.toLowerCase().includes(search.toLowerCase()) ||
-      w.work_category.toLowerCase().includes(search.toLowerCase()) ||
-      w.technician_name.toLowerCase().includes(search.toLowerCase()),
+      (w.worklog_number || "").toLowerCase().includes(search.toLowerCase()) ||
+      (w.work_category || "").toLowerCase().includes(search.toLowerCase()) ||
+      (w.technician_name || "").toLowerCase().includes(search.toLowerCase()),
   );
 
   const counts = {
@@ -120,33 +120,7 @@ export default function PartnerWorklogsPage() {
         </Badge>
       ),
     },
-    {
-      key: "pdf_url",
-      header: "",
-      width: "48px",
-      render: (row) =>
-        row.pdf_url ? (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              window.open(String(row.pdf_url), "_blank");
-            }}
-            style={{
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--color-text-muted, #555)",
-              padding: "4px",
-              borderRadius: "6px",
-              display: "flex",
-              alignItems: "center",
-            }}
-            title="PDF letöltése"
-          >
-            <Download size={14} />
-          </button>
-        ) : null,
-    },
+    // Removed PDF column as it will be generated on the detail view
   ];
 
   return (

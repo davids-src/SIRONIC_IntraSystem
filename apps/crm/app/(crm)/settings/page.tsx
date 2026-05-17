@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, PageHeader, Button } from "@crm/ui";
+import { Card, PageHeader, Button, Badge } from "@crm/ui";
 import {
   Plus,
   ArrowUpDown,
@@ -12,7 +12,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import type { Settings } from "@crm/types";
+import type { Settings, CompanyDetails } from "@crm/types";
+import { apiJsonBody } from "@/lib/api-client";
 
 type Operation = "add" | "rename" | "delete" | "reorder";
 
@@ -63,13 +64,6 @@ const configurableLists: Array<{
     operations: ["add", "rename", "delete", "reorder"],
   },
   {
-    key: "price_list_categories",
-    label_hu: "Árlista kategóriák",
-    description: "Árlista tételek kategóriái a Price List modulhoz.",
-    examples: ["Munkadíjak", "Kiszállás", "Hardver", "Szoftver", "Csomagok"],
-    operations: ["add", "rename", "delete", "reorder"],
-  },
-  {
     key: "worklog_units",
     label_hu: "Mértékegységek",
     description: "Megengedett egységek a Worklog tételekhez (pl. óra, db, hónap).",
@@ -94,16 +88,289 @@ export default function SettingsPage() {
       .then((d) => {
         if (d && typeof d === "object") {
           setSettings(d as Settings);
+          setCompanyData(
+            (d as Settings).company_details || {
+              name: null,
+              headquarters: null,
+              tax_number: null,
+              registration_number: null,
+              email: null,
+              phone: null,
+              bank_account: null,
+              iban: null,
+              website: null,
+            },
+          );
         }
       });
   }, []);
+
+  const [companyData, setCompanyData] = useState<CompanyDetails>({
+    name: null,
+    headquarters: null,
+    tax_number: null,
+    registration_number: null,
+    email: null,
+    phone: null,
+    bank_account: null,
+    iban: null,
+    website: null,
+  });
+  const [editingCompany, setEditingCompany] = useState(false);
+  const [savingCompany, setSavingCompany] = useState(false);
+
+  const saveCompanyDetails = async () => {
+    setSavingCompany(true);
+    try {
+      await apiJsonBody("/api/settings", "PATCH", { company_details: companyData });
+      setEditingCompany(false);
+    } catch (e) {
+      console.error(e);
+      alert("Hiba történt a mentés során.");
+    } finally {
+      setSavingCompany(false);
+    }
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       <PageHeader
         title="Beállítások"
-        subtitle="Konfigurálható listák a rugalmas, operátor-vezérelt működéshez"
+        subtitle="Konfigurálható listák a rugalmas, operátor-vezérelt működéshez és cégadatok"
       />
+
+      {/* Szolgáltatói adatok */}
+      <Card className="p-6">
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "16px",
+          }}
+        >
+          <h2 style={{ fontSize: "1.125rem", fontWeight: 700, margin: 0 }}>
+            Saját Cégadatok (Szolgáltató)
+          </h2>
+          {!editingCompany ? (
+            <Button variant="secondary" onClick={() => setEditingCompany(true)}>
+              Szerkesztés
+            </Button>
+          ) : (
+            <div style={{ display: "flex", gap: "8px" }}>
+              <Button
+                variant="secondary"
+                onClick={() => setEditingCompany(false)}
+                disabled={savingCompany}
+              >
+                Mégse
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => void saveCompanyDetails()}
+                disabled={savingCompany}
+              >
+                {savingCompany ? "Mentés..." : "Mentés"}
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {editingCompany ? (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <label style={{ fontSize: "0.875rem", fontWeight: 600 }}>Cégnév</label>
+              <input
+                className="input-base"
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border-subtle)",
+                  background: "var(--bg-input)",
+                }}
+                value={companyData.name || ""}
+                onChange={(e) => setCompanyData({ ...companyData, name: e.target.value })}
+                placeholder="Pl. SIROTECH Kft."
+              />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <label style={{ fontSize: "0.875rem", fontWeight: 600 }}>Székhely</label>
+              <input
+                className="input-base"
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border-subtle)",
+                  background: "var(--bg-input)",
+                }}
+                value={companyData.headquarters || ""}
+                onChange={(e) =>
+                  setCompanyData({ ...companyData, headquarters: e.target.value })
+                }
+                placeholder="Pl. 1011 Budapest, Fő utca 1."
+              />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <label style={{ fontSize: "0.875rem", fontWeight: 600 }}>Adószám</label>
+              <input
+                className="input-base"
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border-subtle)",
+                  background: "var(--bg-input)",
+                }}
+                value={companyData.tax_number || ""}
+                onChange={(e) =>
+                  setCompanyData({ ...companyData, tax_number: e.target.value })
+                }
+              />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <label style={{ fontSize: "0.875rem", fontWeight: 600 }}>
+                Cégjegyzékszám
+              </label>
+              <input
+                className="input-base"
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border-subtle)",
+                  background: "var(--bg-input)",
+                }}
+                value={companyData.registration_number || ""}
+                onChange={(e) =>
+                  setCompanyData({ ...companyData, registration_number: e.target.value })
+                }
+              />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <label style={{ fontSize: "0.875rem", fontWeight: 600 }}>E-mail cím</label>
+              <input
+                className="input-base"
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border-subtle)",
+                  background: "var(--bg-input)",
+                }}
+                value={companyData.email || ""}
+                onChange={(e) =>
+                  setCompanyData({ ...companyData, email: e.target.value })
+                }
+              />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <label style={{ fontSize: "0.875rem", fontWeight: 600 }}>Telefonszám</label>
+              <input
+                className="input-base"
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border-subtle)",
+                  background: "var(--bg-input)",
+                }}
+                value={companyData.phone || ""}
+                onChange={(e) =>
+                  setCompanyData({ ...companyData, phone: e.target.value })
+                }
+              />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <label style={{ fontSize: "0.875rem", fontWeight: 600 }}>
+                Bankszámlaszám
+              </label>
+              <input
+                className="input-base"
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border-subtle)",
+                  background: "var(--bg-input)",
+                }}
+                value={companyData.bank_account || ""}
+                onChange={(e) =>
+                  setCompanyData({ ...companyData, bank_account: e.target.value })
+                }
+              />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <label style={{ fontSize: "0.875rem", fontWeight: 600 }}>Weboldal</label>
+              <input
+                className="input-base"
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border-subtle)",
+                  background: "var(--bg-input)",
+                }}
+                value={companyData.website || ""}
+                onChange={(e) =>
+                  setCompanyData({ ...companyData, website: e.target.value })
+                }
+              />
+            </div>
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "16px",
+              fontSize: "0.875rem",
+            }}
+          >
+            <div>
+              <span style={{ color: "var(--text-muted)", marginRight: "8px" }}>
+                Cégnév:
+              </span>{" "}
+              {companyData.name || "Nincs megadva"}
+            </div>
+            <div>
+              <span style={{ color: "var(--text-muted)", marginRight: "8px" }}>
+                Székhely:
+              </span>{" "}
+              {companyData.headquarters || "Nincs megadva"}
+            </div>
+            <div>
+              <span style={{ color: "var(--text-muted)", marginRight: "8px" }}>
+                Adószám:
+              </span>{" "}
+              {companyData.tax_number || "Nincs megadva"}
+            </div>
+            <div>
+              <span style={{ color: "var(--text-muted)", marginRight: "8px" }}>
+                Cégj. szám:
+              </span>{" "}
+              {companyData.registration_number || "Nincs megadva"}
+            </div>
+            <div>
+              <span style={{ color: "var(--text-muted)", marginRight: "8px" }}>
+                E-mail:
+              </span>{" "}
+              {companyData.email || "Nincs megadva"}
+            </div>
+            <div>
+              <span style={{ color: "var(--text-muted)", marginRight: "8px" }}>
+                Telefon:
+              </span>{" "}
+              {companyData.phone || "Nincs megadva"}
+            </div>
+            <div>
+              <span style={{ color: "var(--text-muted)", marginRight: "8px" }}>
+                Bankszámlaszám:
+              </span>{" "}
+              {companyData.bank_account || "Nincs megadva"}
+            </div>
+            <div>
+              <span style={{ color: "var(--text-muted)", marginRight: "8px" }}>
+                Weboldal:
+              </span>{" "}
+              {companyData.website || "Nincs megadva"}
+            </div>
+          </div>
+        )}
+      </Card>
 
       {/* Email notifications link */}
       <Link
@@ -354,6 +621,109 @@ export default function SettingsPage() {
           </Card>
         ))}
       </div>
+
+      {/* Árlista Kategóriák szerkesztő */}
+      <Card className="p-6">
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            marginBottom: "16px",
+          }}
+        >
+          <div>
+            <h2 style={{ fontSize: "1.125rem", fontWeight: 700, margin: 0 }}>
+              Árlista Kategóriák (és Cikkszám előtagok)
+            </h2>
+            <p
+              style={{
+                fontSize: "0.875rem",
+                color: "var(--color-text-muted)",
+                margin: "4px 0 0 0",
+              }}
+            >
+              Az árlista tételek rendszerezése. A beállított előtag (prefix) és a sorszám
+              adja ki a generált cikkszámot (pl. HW000001).
+            </p>
+          </div>
+          <Button
+            variant="primary"
+            onClick={() => {
+              const name = prompt("Új kategória neve:");
+              if (!name) return;
+              const prefix = prompt("Előtag (pl. HW, SW, IT):");
+              if (!prefix) return;
+              const newCat = {
+                id: crypto.randomUUID(),
+                name,
+                prefix: prefix.toUpperCase(),
+              };
+              const newCategories = [...(settings.item_categories || []), newCat];
+              setSettings({ ...settings, item_categories: newCategories });
+              apiJsonBody("/api/settings", "PATCH", {
+                item_categories: newCategories,
+              }).catch((e) => console.error(e));
+            }}
+          >
+            <Plus size={16} style={{ marginRight: "6px" }} />
+            Új Kategória
+          </Button>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          {(settings.item_categories || []).length === 0 ? (
+            <div
+              style={{
+                fontSize: "0.875rem",
+                color: "var(--color-text-muted)",
+                fontStyle: "italic",
+              }}
+            >
+              Nincsenek kategóriák rögzítve.
+            </div>
+          ) : (
+            (settings.item_categories || []).map((cat) => (
+              <div
+                key={cat.id}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "12px 16px",
+                  border: "1px solid var(--color-border-subtle)",
+                  borderRadius: "6px",
+                }}
+              >
+                <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+                  <span style={{ fontWeight: 600 }}>{cat.name}</span>
+                  <Badge
+                    variant="default"
+                    style={{ fontFamily: "monospace", letterSpacing: "1px" }}
+                  >
+                    {cat.prefix}
+                  </Badge>
+                </div>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    if (!confirm("Biztosan törlöd ezt a kategóriát?")) return;
+                    const newCategories = (settings.item_categories || []).filter(
+                      (c) => c.id !== cat.id,
+                    );
+                    setSettings({ ...settings, item_categories: newCategories });
+                    apiJsonBody("/api/settings", "PATCH", {
+                      item_categories: newCategories,
+                    }).catch((e) => console.error(e));
+                  }}
+                >
+                  <Trash2 size={16} color="var(--color-danger)" />
+                </Button>
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
     </div>
   );
 }

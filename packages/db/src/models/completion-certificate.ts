@@ -8,6 +8,7 @@ const completionCertificateSchema = defineSchema(
     tenantId: { type: String, required: true, index: true },
     contact_id: { type: String, default: null },
     project_id: { type: String, default: null },
+    offer_id: { type: String, default: null },
     created_by: { type: String, required: true },
     status: {
       type: String,

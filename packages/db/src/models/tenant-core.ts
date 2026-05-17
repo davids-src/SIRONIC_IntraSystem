@@ -16,10 +16,13 @@ const crmUserSchema = defineSchema(
     display_name: { type: String, default: null },
     password_hash: { type: String, required: true },
     roleKeys: [{ type: String, required: true }],
+    invite_token: { type: String, default: null, index: true, sparse: true },
+    invite_token_expires: { type: Date, default: null },
   },
   ts,
 );
 
+// companyDetails inline beépítve a settingsSchema-ba
 const settingsSchema = defineSchema(
   {
     tenantId: { type: String, required: true, unique: true },
@@ -28,8 +31,29 @@ const settingsSchema = defineSchema(
     project_categories: [{ type: String }],
     contract_categories: [{ type: String }],
     price_list_categories: [{ type: String }],
+    item_categories: {
+      type: [
+        {
+          id: { type: String, required: true },
+          name: { type: String, required: true },
+          prefix: { type: String, required: true },
+        },
+      ],
+      default: [],
+    },
     worklog_units: [{ type: String }],
     contact_tags: [{ type: String }],
+    company_details: {
+      name: { type: String, default: null },
+      headquarters: { type: String, default: null },
+      tax_number: { type: String, default: null },
+      registration_number: { type: String, default: null },
+      email: { type: String, default: null },
+      phone: { type: String, default: null },
+      bank_account: { type: String, default: null },
+      iban: { type: String, default: null },
+      website: { type: String, default: null },
+    },
   },
   ts,
 );

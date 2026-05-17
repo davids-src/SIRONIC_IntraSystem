@@ -114,6 +114,15 @@ export default function NewOfferPage() {
     notes: "",
   });
 
+  const [creatingCustom, setCreatingCustom] = useState(false);
+  const [customItem, setCustomItem] = useState({
+    name: "",
+    category: "service" as "hardware" | "software" | "service" | "license",
+    unit: "db",
+    net_price: 0,
+    tax_rate: 27,
+  });
+
   useEffect(() => {
     const ac = new AbortController();
     (async () => {
@@ -158,6 +167,58 @@ export default function NewOfferPage() {
 
   const removeItem = (id: string) => {
     setCart((prev) => prev.filter((c) => c.item._id !== id));
+  };
+
+  const handleCreateCustomItem = async () => {
+    if (!customItem.name) {
+      alert("A megnevezés kötelező!");
+      return;
+    }
+
+    // Simulate what the server would expect for a price list item
+    const payload = {
+      name: customItem.name,
+      type: customItem.category === "hardware" ? "product" : "service",
+      category: customItem.category,
+      unit: customItem.unit,
+      net_price: customItem.net_price,
+      currency: "HUF",
+      tax_rate: customItem.tax_rate,
+      is_active: false, // Archivált
+    };
+
+    try {
+      const res = await fetch("/api/price-list", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("Hiba történt a tétel létrehozásakor");
+
+      const newItem = await res.json();
+      const mapped = mapPriceListItem(newItem);
+
+      // Update local catalog so it shows up if they search it
+      setPriceList((prev) => [mapped, ...prev]);
+
+      // Automatically add to cart
+      setCart((prev) => {
+        const idx = prev.findIndex((c) => c.item._id === mapped._id);
+        if (idx >= 0) return prev;
+        return [...prev, { item: mapped, qty: 1, custom_price: null }];
+      });
+
+      setCreatingCustom(false);
+      setCustomItem({
+        name: "",
+        category: "service",
+        unit: "db",
+        net_price: 0,
+        tax_rate: 27,
+      });
+    } catch (e) {
+      alert((e as Error).message);
+    }
   };
 
   const updateQty = (id: string, delta: number) => {
@@ -411,26 +472,137 @@ export default function NewOfferPage() {
           {/* Bal: Árlista picker */}
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <Card className="p-5">
-              <div style={{ position: "relative" }}>
-                <Search
-                  size={15}
-                  style={{
-                    position: "absolute",
-                    left: "12px",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    color: "var(--color-text-muted, #555)",
-                    pointerEvents: "none",
-                  }}
-                />
-                <Input
-                  label=""
-                  placeholder="Szűrés: megnevezés, cikkszám, kategória..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  style={{ paddingLeft: "36px" }}
-                />
+              <div style={{ position: "relative", display: "flex", gap: "10px" }}>
+                <div style={{ position: "relative", flex: 1 }}>
+                  <Search
+                    size={15}
+                    style={{
+                      position: "absolute",
+                      left: "12px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      color: "var(--color-text-muted, #555)",
+                      pointerEvents: "none",
+                    }}
+                  />
+                  <Input
+                    label=""
+                    placeholder="Szűrés: megnevezés, cikkszám, kategória..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    style={{ paddingLeft: "36px" }}
+                  />
+                </div>
+                <Button
+                  variant="secondary"
+                  onClick={() => setCreatingCustom(!creatingCustom)}
+                  style={{ whiteSpace: "nowrap" }}
+                >
+                  {creatingCustom ? "Mégsem" : "+ Új egyedi tétel"}
+                </Button>
               </div>
+
+              {creatingCustom && (
+                <div
+                  style={{
+                    marginTop: "16px",
+                    padding: "16px",
+                    background: "var(--color-bg-secondary)",
+                    borderRadius: "8px",
+                    border: "1px solid var(--color-border-subtle)",
+                  }}
+                >
+                  <h4 style={{ fontSize: "14px", fontWeight: 600, marginBottom: "12px" }}>
+                    Új egyedi / archivált tétel rögzítése
+                  </h4>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr",
+                      gap: "12px",
+                      marginBottom: "12px",
+                    }}
+                  >
+                    <Input
+                      label="Megnevezés *"
+                      value={customItem.name}
+                      onChange={(e) =>
+                        setCustomItem({ ...customItem, name: e.target.value })
+                      }
+                    />
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: "12px",
+                      }}
+                    >
+                      <div>
+                        <Label>Kategória *</Label>
+                        <Select
+                          value={customItem.category}
+                          onValueChange={(v: any) =>
+                            setCustomItem({ ...customItem, category: v })
+                          }
+                        >
+                          <SelectTrigger className="w-full h-9 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="hardware">Hardver</SelectItem>
+                            <SelectItem value="software">Szoftver</SelectItem>
+                            <SelectItem value="service">Szolgáltatás</SelectItem>
+                            <SelectItem value="license">Licenc</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Input
+                        label="Egység *"
+                        value={customItem.unit}
+                        onChange={(e) =>
+                          setCustomItem({ ...customItem, unit: e.target.value })
+                        }
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: "12px",
+                      }}
+                    >
+                      <Input
+                        type="number"
+                        label="Nettó egységár *"
+                        value={String(customItem.net_price)}
+                        onChange={(e) =>
+                          setCustomItem({
+                            ...customItem,
+                            net_price: Number(e.target.value),
+                          })
+                        }
+                        className="h-9 text-sm"
+                      />
+                      <Input
+                        type="number"
+                        label="ÁFA (%) *"
+                        value={String(customItem.tax_rate)}
+                        onChange={(e) =>
+                          setCustomItem({
+                            ...customItem,
+                            tax_rate: Number(e.target.value),
+                          })
+                        }
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <Button variant="primary" size="sm" onClick={handleCreateCustomItem}>
+                    Tétel mentése és hozzáadása
+                  </Button>
+                </div>
+              )}
             </Card>
 
             {/* Termék kártyák */}

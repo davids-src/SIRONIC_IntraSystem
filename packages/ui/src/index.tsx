@@ -48,6 +48,9 @@ export type { StatCardProps } from "./components/StatCard";
 export { PageHeader } from "./components/PageHeader";
 export type { PageHeaderProps } from "./components/PageHeader";
 
+export { UnifiedPdfTemplate } from "./components/UnifiedPdfTemplate";
+export type { UnifiedPdfTemplateProps } from "./components/UnifiedPdfTemplate";
+
 // Layout
 export { Sidebar } from "./layout/Sidebar";
 export type { SidebarProps, NavItem, SidebarUser } from "./layout/Sidebar";

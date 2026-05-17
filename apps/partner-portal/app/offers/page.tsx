@@ -4,6 +4,7 @@ import { PageHeader, Card, Table, Badge, Button, Input } from "@crm/ui";
 import type { Column } from "@crm/ui";
 import { Search, FileText, CheckCircle, Clock } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Offer } from "@crm/types";
 import { apiJson } from "@/lib/api-client";
 import { parseOffer } from "@/lib/entity-parsers";
@@ -22,6 +23,7 @@ const statusLabel: Record<Offer["status"], string> = {
 };
 
 export default function PartnerOffersPage() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [rows, setRows] = useState<Offer[]>([]);
   const [loadErr, setLoadErr] = useState<string | null>(null);
@@ -224,9 +226,7 @@ export default function PartnerOffersPage() {
           data={filtered}
           columns={columns}
           keyField="_id"
-          onRowClick={() => {
-            /* részletek a CRM-ben */
-          }}
+          onRowClick={(row) => router.push(`/offers/${row._id}`)}
           emptyMessage="Nincs megjeleníthető ajánlat"
         />
       </Card>

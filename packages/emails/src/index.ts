@@ -30,7 +30,7 @@ export const sendEmail = async ({
     });
   } catch (error) {
     console.error("[Emails] Error sending email:", error);
-    // Never throw to avoid breaking main application flow
+    throw error;
   }
 };
 

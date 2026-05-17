@@ -18,4 +18,6 @@ export {
   InventoryItemModel,
   DomainHostingRecordModel,
   PortalUserModel,
+  SupplierModel,
+  PurchaseOrderModel,
 } from "./models";

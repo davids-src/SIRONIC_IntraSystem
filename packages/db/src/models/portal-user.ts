@@ -10,6 +10,8 @@ const portalUserSchema = defineSchema(
     password_hash: { type: String, required: true },
     display_name: { type: String, default: null },
     roleKeys: [{ type: String, required: true }],
+    invite_token: { type: String, default: null, index: true, sparse: true },
+    invite_token_expires: { type: Date, default: null },
   },
   ts,
 );

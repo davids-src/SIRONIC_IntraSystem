@@ -13,10 +13,37 @@ const createSchema = z.object({
   roleKeys: z.array(z.enum(["partner.admin", "partner.viewer"])).optional(),
 });
 
+export async function GET(req: Request) {
+  try {
+    const { actor } = await requireCrmAuth();
+    guard(actor, { module: "contact", action: "view", scope: "global" });
+    const url = new URL(req.url);
+    const contactId = url.searchParams.get("contact_id");
+    if (!contactId) {
+      return NextResponse.json({ error: "Missing contact_id" }, { status: 400 });
+    }
+
+    return await withDb(async () => {
+      const users = await PortalUserModel.find({
+        tenantId: actor.tenantId,
+        contact_id: contactId,
+      }).lean();
+
+      const safeUsers = users.map((u) => {
+        const { password_hash, ...rest } = u as any;
+        return rest;
+      });
+      return NextResponse.json(serializeForJson(safeUsers));
+    });
+  } catch (e) {
+    return handleApiError(e);
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const { actor } = await requireCrmAuth();
-    guard(actor, { module: "contact", action: "admin", scope: "global" });
+    guard(actor, { module: "contact", action: "write", scope: "global" });
     const json: unknown = await req.json();
     const parsed = createSchema.safeParse(json);
     if (!parsed.success) {
@@ -41,9 +68,15 @@ export async function POST(req: Request) {
         display_name: b.display_name ?? null,
         roleKeys,
       });
-      return NextResponse.json(serializeForJson(doc.toObject()), { status: 201 });
+      const obj = doc.toObject();
+      delete (obj as any).password_hash;
+      return NextResponse.json(serializeForJson(obj), { status: 201 });
     });
-  } catch (e) {
-    return handleApiError(e);
+  } catch (e: any) {
+    console.error("PORTAL USER POST ERROR:", e);
+    return NextResponse.json(
+      { error: e.message || "Internal server error" },
+      { status: e.status || 500 },
+    );
   }
 }

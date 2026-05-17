@@ -6,6 +6,7 @@ const offerSchema = defineSchema(
   {
     tenantId: { type: String, required: true, index: true },
     offer_number: { type: String, required: true },
+    public_token: { type: String, default: null, index: true },
     title: { type: String, required: true },
     contact_id: { type: String, required: true },
     total_amount: { type: Number, required: true },

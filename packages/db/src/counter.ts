@@ -11,16 +11,7 @@ const counterSchema = new Schema(
 
 counterSchema.index({ tenantId: 1, name: 1 }, { unique: true });
 
-export type CounterName =
-  | "contact"
-  | "price_list"
-  | "project"
-  | "ticket"
-  | "worklog"
-  | "completion_certificate"
-  | "contract"
-  | "offer"
-  | "invoice";
+export type CounterName = string;
 
 const CounterModel =
   (mongoose.models.Counter as mongoose.Model<{

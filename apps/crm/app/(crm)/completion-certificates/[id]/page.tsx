@@ -58,6 +58,16 @@ export default function CompletionCertificateFormPage({
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Import states
+  const [sourceType, setSourceType] = useState<"offer" | "worklog" | "project" | "none">(
+    "none",
+  );
+  const [sourceId, setSourceId] = useState("");
+  const [sourceList, setSourceList] = useState<
+    { id: string; label: string; data: any }[]
+  >([]);
+  const [loadingSource, setLoadingSource] = useState(false);
+
   useEffect(() => {
     if (isNew) return;
     const ac = new AbortController();
@@ -106,6 +116,9 @@ export default function CompletionCertificateFormPage({
             total_hours: totalHours.trim() === "" ? null : Number.parseFloat(totalHours),
             work_period_start: periodStart ? new Date(periodStart) : null,
             work_period_end: periodEnd ? new Date(periodEnd) : null,
+            offer_id: sourceType === "offer" ? sourceId : null,
+            worklog_ids: sourceType === "worklog" ? [sourceId] : [],
+            project_id: sourceType === "project" ? sourceId : null,
           },
         );
         router.replace(`/completion-certificates/${String(created._id)}`);
@@ -138,6 +151,81 @@ export default function CompletionCertificateFormPage({
       setLoadErr(e instanceof ApiError ? e.message : "Mentés sikertelen.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSourceTypeChange = async (type: string) => {
+    setSourceType(type as any);
+    setSourceId("");
+    if (type === "none") {
+      setSourceList([]);
+      return;
+    }
+    setLoadingSource(true);
+    try {
+      if (type === "offer") {
+        const res = await apiJson<any[]>("/api/offers");
+        setSourceList(
+          res.map((r) => ({
+            id: r._id,
+            label: `${r.offer_number} - ${r.title}`,
+            data: r,
+          })),
+        );
+      } else if (type === "worklog") {
+        const res = await apiJson<any[]>("/api/worklogs");
+        setSourceList(
+          res.map((r) => ({
+            id: r._id,
+            label: `${r.worklog_number} - ${r.work_category}`,
+            data: r,
+          })),
+        );
+      } else if (type === "project") {
+        const res = await apiJson<any[]>("/api/projects");
+        setSourceList(
+          res.map((r) => ({
+            id: r._id,
+            label: `${r.project_number} - ${r.name}`,
+            data: r,
+          })),
+        );
+      }
+    } catch (e) {
+      setLoadErr("Források betöltése sikertelen.");
+    } finally {
+      setLoadingSource(false);
+    }
+  };
+
+  const handleImport = () => {
+    if (!sourceId || sourceType === "none") return;
+    const selected = sourceList.find((s) => s.id === sourceId)?.data;
+    if (!selected) return;
+
+    if (sourceType === "offer") {
+      setTitle(`Teljesítési igazolás - ${selected.offer_number}`);
+      const summary = selected.lines
+        .map((l: any) => `- ${l.description} (${l.quantity} ${l.unit})`)
+        .join("\n");
+      setWorkSummary(`Elvégzett feladatok és tételek az ajánlat alapján:\n\n${summary}`);
+    } else if (sourceType === "worklog") {
+      setTitle(`Teljesítési igazolás - ${selected.worklog_number}`);
+      const summary = selected.items
+        .map((l: any) => `- ${l.description} (${l.quantity} ${l.unit})`)
+        .join("\n");
+      setWorkSummary(
+        `Elvégzett munka (${new Date(selected.work_date).toLocaleDateString()}):\n${selected.work_description}\n\nFelhasznált anyagok:\n${summary}`,
+      );
+      if (selected.contact_id) setClientName(selected.client_name || ""); // Optionally pre-fill
+      if (selected.work_date) setPeriodStart(selected.work_date.substring(0, 10));
+    } else if (sourceType === "project") {
+      setTitle(`Teljesítési igazolás - ${selected.project_number}`);
+      const tasks =
+        selected.tasks?.map((t: any) => `- ${t.title} (${t.status})`).join("\n") || "";
+      setWorkSummary(`Projekt: ${selected.name}\n\nProjekt feladatok:\n${tasks}`);
+      if (selected.start_date) setPeriodStart(selected.start_date.substring(0, 10));
+      if (selected.end_date) setPeriodEnd(selected.end_date.substring(0, 10));
     }
   };
 
@@ -188,6 +276,60 @@ export default function CompletionCertificateFormPage({
           <span className="text-sm text-[var(--color-text-muted)]">Állapot:</span>
           <Badge variant="default">{statusLabel[doc.status]}</Badge>
         </div>
+      )}
+
+      {isNew && (
+        <Card className="p-6 bg-blue-50/50 border-blue-100">
+          <h3 className="text-sm font-bold text-blue-900 mb-4">
+            Adatok importálása meglévő forrásból (Opcionális)
+          </h3>
+          <div className="flex flex-col md:flex-row items-end gap-4">
+            <div className="flex flex-col gap-2 flex-1">
+              <Label>Forrás típusa</Label>
+              <Select value={sourceType} onValueChange={handleSourceTypeChange}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">-- Ne importáljon --</SelectItem>
+                  <SelectItem value="offer">Ajánlat</SelectItem>
+                  <SelectItem value="worklog">Munkalap</SelectItem>
+                  <SelectItem value="project">Projekt</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {sourceType !== "none" && (
+              <div className="flex flex-col gap-2 flex-1">
+                <Label>Válassz dokumentumot</Label>
+                <Select
+                  value={sourceId}
+                  onValueChange={setSourceId}
+                  disabled={loadingSource}
+                >
+                  <SelectTrigger className="bg-white">
+                    <SelectValue
+                      placeholder={loadingSource ? "Betöltés..." : "Válassz..."}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sourceList.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <Button
+              variant="secondary"
+              onClick={handleImport}
+              disabled={sourceType === "none" || !sourceId}
+            >
+              Importálás
+            </Button>
+          </div>
+        </Card>
       )}
 
       <Card className="p-6 space-y-4">

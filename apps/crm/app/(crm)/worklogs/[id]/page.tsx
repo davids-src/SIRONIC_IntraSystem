@@ -14,9 +14,18 @@ import {
   SelectValue,
   InputControl,
 } from "@crm/ui";
+import { UnifiedPdfTemplate } from "@crm/ui";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, use, Suspense, useEffect, useCallback } from "react";
-import type { Contact, CrmUser, Worklog, WorklogItem } from "@crm/types";
+import { useState, use, Suspense, useEffect, useCallback, useRef } from "react";
+import type {
+  Contact,
+  CrmUser,
+  Worklog,
+  WorklogItem,
+  Settings,
+  CompanyDetails,
+  PriceListItem,
+} from "@crm/types";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 import {
   Save,
@@ -26,6 +35,7 @@ import {
   Trash2,
   Download,
   ArrowLeft,
+  Send,
 } from "lucide-react";
 
 const WORK_CATEGORIES = [
@@ -78,10 +88,13 @@ function WorklogFormContent({ id }: { id: string }) {
 
   const [status, setStatus] = useState<Worklog["status"]>("draft");
   const [worklogNumber, setWorklogNumber] = useState<string | null>(null);
-  const [contacts, setContacts] = useState<{ _id: string; name: string }[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [crmUsers, setCrmUsers] = useState<{ value: string; label: string }[]>([]);
+  const [companyDetails, setCompanyDetails] = useState<CompanyDetails | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailSuccess, setEmailSuccess] = useState(false);
 
   const [contactId, setContactId] = useState("");
   const [category, setCategory] = useState("");
@@ -96,22 +109,26 @@ function WorklogFormContent({ id }: { id: string }) {
   const [clientName, setClientName] = useState("");
   const [items, setItems] = useState<WorklogItem[]>([emptyItem()]);
 
+  const [showPricesOnPdf, setShowPricesOnPdf] = useState(true);
+  const [showItemPicker, setShowItemPicker] = useState(false);
+  const [priceList, setPriceList] = useState<PriceListItem[]>([]);
+  const [itemSearch, setItemSearch] = useState("");
+
   const disabled = status !== "draft";
 
   useEffect(() => {
     const ac = new AbortController();
     (async () => {
       try {
-        const [cList, uList] = await Promise.all([
-          apiJson<unknown[]>("/api/contacts", { signal: ac.signal }),
+        const [cList, uList, sList, pList] = await Promise.all([
+          apiJson<Contact[]>("/api/contacts", { signal: ac.signal }),
           apiJson<unknown[]>("/api/crm-users", { signal: ac.signal }),
+          apiJson<Settings>("/api/settings", { signal: ac.signal }),
+          apiJson<PriceListItem[]>("/api/price-list", { signal: ac.signal }),
         ]);
-        setContacts(
-          cList.map((row) => {
-            const c = row as Pick<Contact, "_id" | "name">;
-            return { _id: c._id, name: c.name };
-          }),
-        );
+        setContacts(cList);
+        setCompanyDetails(sList.company_details || null);
+        setPriceList(pList);
         setCrmUsers(
           uList.map((row) => {
             const u = row as CrmUser;
@@ -256,6 +273,54 @@ function WorklogFormContent({ id }: { id: string }) {
     }
   };
 
+  const handleSendEmail = async () => {
+    if (!confirm("Szeretnél e-mail értesítést küldeni a partnernek erről a munkalapról?"))
+      return;
+    setSendingEmail(true);
+    setLoadErr(null);
+    try {
+      await apiJsonBody(`/api/worklogs/${id}/send-email`, "POST", {});
+      setEmailSuccess(true);
+      setTimeout(() => setEmailSuccess(false), 5000);
+    } catch (e) {
+      setLoadErr(
+        e instanceof ApiError ? e.message : "Hiba történt az e-mail küldése során.",
+      );
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  const printRef = useRef<HTMLDivElement>(null);
+  const handleDownloadPdf = async () => {
+    if (!printRef.current) return;
+    const element = printRef.current;
+
+    // Temporarily make it visible for html2pdf (if it's hidden with display:none, html2pdf might render blank)
+    element.style.display = "block";
+
+    try {
+      const html2pdf = (await import("html2pdf.js")).default;
+      const opt = {
+        margin: 0,
+        filename: `Munkalap_${worklogNumber || id}.pdf`,
+        image: { type: "jpeg" as const, quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: {
+          unit: "mm" as const,
+          format: "a4" as const,
+          orientation: "portrait" as const,
+        },
+      };
+      await html2pdf().from(element).set(opt).save();
+    } catch (e) {
+      console.error("PDF generálási hiba:", e);
+      alert("Hiba történt a PDF generálása során.");
+    } finally {
+      element.style.display = "none";
+    }
+  };
+
   const SectionHeader = ({ title }: { title: string }) => (
     <div
       className={sectionHeaderCls}
@@ -301,13 +366,20 @@ function WorklogFormContent({ id }: { id: string }) {
             </Badge>
           )}
           {status === "finalized" && (
-            <Button
-              variant="secondary"
-              onClick={() => window.open(`/worklogs/${id}/print`, "_blank")}
-            >
-              <Download size={15} style={{ marginRight: "6px" }} />
-              PDF
-            </Button>
+            <>
+              <Button variant="secondary" onClick={handleDownloadPdf}>
+                <Download size={15} style={{ marginRight: "6px" }} />
+                PDF letöltése
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleSendEmail}
+                disabled={sendingEmail || !contactId}
+              >
+                <Send size={15} style={{ marginRight: "6px" }} />
+                {sendingEmail ? "Küldés..." : "E-mail küldése"}
+              </Button>
+            </>
           )}
           {status === "draft" && !isNew && (
             <Button variant="primary" disabled={saving} onClick={() => void finalize()}>
@@ -322,6 +394,12 @@ function WorklogFormContent({ id }: { id: string }) {
         <p className="text-sm text-red-400 px-1" role="alert">
           {loadErr}
         </p>
+      )}
+
+      {emailSuccess && (
+        <div className="bg-green-950/30 text-green-400 p-4 rounded-lg border border-green-900/50">
+          Az e-mail sikeresen elküldve a partnernek.
+        </div>
       )}
 
       <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-6">
@@ -724,6 +802,331 @@ function WorklogFormContent({ id }: { id: string }) {
           </div>
         )}
       </form>
+
+      {/* Rejtett PDF sablon */}
+      <div style={{ display: "none" }}>
+        <div ref={printRef}>
+          <UnifiedPdfTemplate
+            documentTitle="Munkalap"
+            documentId={worklogNumber || id}
+            date={workDate ? new Date(workDate) : new Date()}
+            provider={companyDetails}
+            client={contacts.find((c) => c._id === contactId) || null}
+          >
+            <div style={{ marginBottom: "20px" }}>
+              <h3
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  margin: "0 0 10px",
+                  color: "#000",
+                }}
+              >
+                Elvégzett feladatok
+              </h3>
+              <div
+                style={{
+                  padding: "12px",
+                  borderLeft: "3px solid #e53935",
+                  backgroundColor: "#fff5f5",
+                  fontSize: "13px",
+                  lineHeight: 1.6,
+                  color: "#333",
+                  whiteSpace: "pre-wrap",
+                }}
+              >
+                {description}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: "20px" }}>
+              <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 8px 0" }}>
+                Felhasznált anyagok és munkadíjak:
+              </h3>
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  fontSize: "12px",
+                  border: "1px solid #dee2e6",
+                }}
+              >
+                <thead>
+                  <tr
+                    style={{
+                      backgroundColor: "#f8f9fa",
+                      borderBottom: "2px solid #dee2e6",
+                    }}
+                  >
+                    <th
+                      style={{
+                        padding: "8px",
+                        textAlign: "left",
+                        borderRight: "1px solid #dee2e6",
+                      }}
+                    >
+                      Megnevezés
+                    </th>
+                    <th
+                      style={{
+                        padding: "8px",
+                        textAlign: "center",
+                        borderRight: showPricesOnPdf ? "1px solid #dee2e6" : "none",
+                      }}
+                    >
+                      Mennyiség
+                    </th>
+                    {showPricesOnPdf && (
+                      <>
+                        <th
+                          style={{
+                            padding: "8px",
+                            textAlign: "right",
+                            borderRight: "1px solid #dee2e6",
+                          }}
+                        >
+                          Nettó egységár
+                        </th>
+                        <th style={{ padding: "8px", textAlign: "right" }}>
+                          Nettó összesen
+                        </th>
+                      </>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((it, i) => (
+                    <tr key={i} style={{ borderBottom: "1px solid #e9ecef" }}>
+                      <td
+                        style={{ padding: "6px 8px", borderRight: "1px solid #e9ecef" }}
+                      >
+                        {it.description}
+                      </td>
+                      <td
+                        style={{
+                          padding: "6px 8px",
+                          textAlign: "center",
+                          borderRight: showPricesOnPdf ? "1px solid #e9ecef" : "none",
+                        }}
+                      >
+                        {it.quantity} {it.unit}
+                      </td>
+                      {showPricesOnPdf && (
+                        <>
+                          <td
+                            style={{
+                              padding: "6px 8px",
+                              textAlign: "right",
+                              borderRight: "1px solid #e9ecef",
+                            }}
+                          >
+                            {it.unit_price
+                              ? new Intl.NumberFormat("hu-HU", {
+                                  style: "currency",
+                                  currency: "HUF",
+                                  maximumFractionDigits: 0,
+                                }).format(it.unit_price)
+                              : "-"}
+                          </td>
+                          <td style={{ padding: "6px 8px", textAlign: "right" }}>
+                            {it.unit_price
+                              ? new Intl.NumberFormat("hu-HU", {
+                                  style: "currency",
+                                  currency: "HUF",
+                                  maximumFractionDigits: 0,
+                                }).format(it.unit_price * it.quantity)
+                              : "-"}
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  ))}
+                  {travelKm && Number(travelKm) > 0 && (
+                    <tr style={{ borderBottom: "1px solid #e9ecef" }}>
+                      <td
+                        style={{ padding: "6px 8px", borderRight: "1px solid #e9ecef" }}
+                      >
+                        Kiszállás / Útiköltség
+                      </td>
+                      <td
+                        style={{
+                          padding: "6px 8px",
+                          textAlign: "center",
+                          borderRight: showPricesOnPdf ? "1px solid #e9ecef" : "none",
+                        }}
+                      >
+                        {travelKm} km
+                      </td>
+                      {showPricesOnPdf && (
+                        <>
+                          <td
+                            style={{
+                              padding: "6px 8px",
+                              textAlign: "right",
+                              borderRight: "1px solid #e9ecef",
+                            }}
+                          >
+                            -
+                          </td>
+                          <td style={{ padding: "6px 8px", textAlign: "right" }}>-</td>
+                        </>
+                      )}
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+
+              {showPricesOnPdf && (
+                <div
+                  style={{
+                    marginTop: "12px",
+                    textAlign: "right",
+                    fontSize: "13px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  Nettó végösszeg:{" "}
+                  {new Intl.NumberFormat("hu-HU", {
+                    style: "currency",
+                    currency: "HUF",
+                    maximumFractionDigits: 0,
+                  }).format(
+                    items.reduce(
+                      (sum, it) =>
+                        sum + (it.unit_price ? it.unit_price * it.quantity : 0),
+                      0,
+                    ),
+                  )}
+                </div>
+              )}
+            </div>
+          </UnifiedPdfTemplate>
+        </div>
+      </div>
+
+      {showItemPicker && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.6)",
+            zIndex: 100,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Card
+            style={{
+              padding: "24px",
+              width: "100%",
+              maxWidth: "600px",
+              maxHeight: "80vh",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "16px",
+              }}
+            >
+              <h2 style={{ margin: 0 }}>Hozzáadás árlistából</h2>
+              <Button variant="ghost" onClick={() => setShowItemPicker(false)}>
+                Bezár
+              </Button>
+            </div>
+
+            <Input
+              placeholder="Keresés..."
+              value={itemSearch}
+              onChange={(e) => setItemSearch(e.target.value)}
+            />
+
+            <div
+              style={{
+                marginTop: "16px",
+                overflowY: "auto",
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+              }}
+            >
+              {priceList
+                .filter(
+                  (p) =>
+                    p.name.toLowerCase().includes(itemSearch.toLowerCase()) ||
+                    p.item_number.toLowerCase().includes(itemSearch.toLowerCase()),
+                )
+                .map((p) => (
+                  <div
+                    key={p._id}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "12px",
+                      border: "1px solid var(--color-border-subtle)",
+                      borderRadius: "8px",
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 600 }}>{p.name}</div>
+                      <div style={{ fontSize: "12px", color: "var(--color-text-muted)" }}>
+                        {p.item_number} •{" "}
+                        {new Intl.NumberFormat("hu-HU", {
+                          style: "currency",
+                          currency: "HUF",
+                          maximumFractionDigits: 0,
+                        }).format(p.net_price)}{" "}
+                        / {p.unit}
+                      </div>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        const newItem = {
+                          description: p.name,
+                          quantity: 1,
+                          unit: p.unit,
+                          unit_price: p.net_price,
+                          price_list_item_id: p._id,
+                        };
+                        if (items.length === 1 && items[0]?.description === "") {
+                          setItems([newItem]);
+                        } else {
+                          setItems((prev) => [...prev, newItem]);
+                        }
+                        setShowItemPicker(false);
+                        setItemSearch("");
+                      }}
+                    >
+                      Kiválaszt
+                    </Button>
+                  </div>
+                ))}
+              {priceList.length === 0 && (
+                <div
+                  style={{
+                    color: "var(--color-text-muted)",
+                    textAlign: "center",
+                    padding: "20px",
+                  }}
+                >
+                  Nincs találat.
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

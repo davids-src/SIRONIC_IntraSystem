@@ -27,6 +27,8 @@ export type PermissionModule =
   | "portal_permissions"
   | "project"
   | "contract"
+  | "supplier"
+  | "purchase_order"
   | "settings";
 
 /** CRM app login roles only (subset of RoleKey). */
@@ -50,6 +52,18 @@ export interface CrmUser {
   updated_at: Date;
 }
 
+/** Portal user (no password in API responses). */
+export interface PortalUser {
+  _id: string;
+  tenantId: string;
+  contact_id: string;
+  email: string;
+  display_name: string | null;
+  roleKeys: RoleKey[];
+  created_at: Date;
+  updated_at: Date;
+}
+
 export type OfferStatus = "draft" | "sent" | "accepted" | "rejected";
 
 export interface OfferLine {
@@ -65,6 +79,7 @@ export interface Offer {
   _id: string;
   tenantId: string;
   offer_number: string;
+  public_token?: string | null;
   title: string;
   contact_id: string;
   total_amount: number;
@@ -400,6 +415,7 @@ export type ContactContractType = "project" | "ongoing" | "mixed" | "one_time" |
 export interface Contact {
   _id: string;
   contact_number: string;
+  partner_id: string | null;
   tenantId: string;
   type: ContactType;
   name: string;
@@ -421,14 +437,34 @@ export interface Contact {
   updated_at: Date;
 }
 
+export interface CompanyDetails {
+  name: string | null;
+  headquarters: string | null;
+  tax_number: string | null;
+  registration_number: string | null;
+  email: string | null;
+  phone: string | null;
+  bank_account: string | null;
+  iban: string | null;
+  website: string | null;
+}
+
+export interface ItemCategory {
+  id: string;
+  name: string;
+  prefix: string;
+}
+
 export interface Settings {
   ticket_categories: string[];
   worklog_categories: string[];
   project_categories: string[];
   contract_categories: string[];
-  price_list_categories: string[];
+  price_list_categories: string[]; // Deprecated, to be removed.
+  item_categories: ItemCategory[];
   worklog_units: string[];
   contact_tags: string[];
+  company_details: CompanyDetails;
 }
 
 // Backwards compatibility for older UI code during incremental refactor.
@@ -495,6 +531,47 @@ export interface Contract {
   valid_from: Date | null;
   /** null means indefinite */
   valid_until: Date | null;
+  notes: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+export interface Supplier {
+  _id: string;
+  tenantId: string;
+  partner_id: string; // SU + 6 digits
+  name: string;
+  tax_number: string | null;
+  registration_number: string | null;
+  headquarters: string | null;
+  email: string | null;
+  phone: string | null;
+  bank_account: string | null;
+  notes: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type PurchaseOrderStatus = "draft" | "sent" | "fulfilled" | "cancelled";
+
+export interface PurchaseOrderLine {
+  price_list_item_id: string | null;
+  description: string;
+  quantity: number;
+  unit: string;
+  net_unit_price: number;
+  tax_rate: number;
+}
+
+export interface PurchaseOrder {
+  _id: string;
+  tenantId: string;
+  order_number: string; // PO-YYYY-0001
+  supplier_id: string;
+  status: PurchaseOrderStatus;
+  expected_delivery_date: Date | null;
+  total_amount: number;
+  currency: string;
+  lines: PurchaseOrderLine[];
   notes: string | null;
   created_at: Date;
   updated_at: Date;

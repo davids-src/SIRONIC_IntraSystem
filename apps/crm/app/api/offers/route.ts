@@ -83,11 +83,14 @@ export async function POST(req: Request) {
     }
 
     return await withDb(async () => {
-      const n = await nextCounterValue(actor.tenantId, "offer");
-      const offer_number = formatNumber("OFF", n);
+      const year = new Date().getFullYear();
+      const n = await nextCounterValue(actor.tenantId, `offer_${year}`);
+      const offer_number = `OFF-${year}-${String(n).padStart(4, "0")}`;
+      const public_token = crypto.randomUUID();
       const doc = await OfferModel.create({
         tenantId: actor.tenantId,
         offer_number,
+        public_token,
         title: b.title,
         contact_id: b.contact_id,
         total_amount,

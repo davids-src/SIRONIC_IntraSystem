@@ -87,9 +87,11 @@ export async function POST(req: Request) {
     return await withDb(async () => {
       const n = await nextCounterValue(actor.tenantId, "contact");
       const contact_number = formatNumber("CT", n);
+      const partner_id = "VE" + String(Math.floor(100000 + Math.random() * 900000));
       const doc = await ContactModel.create({
         tenantId: actor.tenantId,
         contact_number,
+        partner_id,
         type: b.type,
         name: b.name,
         short_name: b.short_name ?? null,

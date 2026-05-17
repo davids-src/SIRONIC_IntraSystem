@@ -41,6 +41,8 @@ export async function PATCH(req: Request) {
       "price_list_categories",
       "worklog_units",
       "contact_tags",
+      "company_details",
+      "item_categories",
     ] as const;
     const $set: Record<string, unknown> = {};
     for (const k of allowed) {

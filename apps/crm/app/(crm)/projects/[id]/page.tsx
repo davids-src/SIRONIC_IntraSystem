@@ -135,6 +135,57 @@ export default function ProjectDetailPage({
     }
   };
 
+  const toggleChecklistItem = async (itemId: string, currentCompleted: boolean) => {
+    if (!project) return;
+    const newChecklist = project.checklist.map((item) => {
+      if (item._id === itemId) {
+        return {
+          ...item,
+          completed: !currentCompleted,
+          completed_at: !currentCompleted ? new Date() : null,
+        };
+      }
+      return item;
+    });
+
+    try {
+      await apiJsonBody(`/api/projects/${id}`, "PATCH", {
+        checklist: newChecklist,
+      });
+      setProject({ ...project, checklist: newChecklist });
+    } catch {
+      alert("Nem sikerült módosítani az elemet.");
+    }
+  };
+
+  const addChecklistItem = async () => {
+    if (!project) return;
+    const label = window.prompt("Új elem neve:");
+    if (!label?.trim()) return;
+
+    const newItem = {
+      _id: crypto.randomUUID(),
+      label: label.trim(),
+      category: "other" as const,
+      required: false,
+      completed: false,
+      completed_at: null,
+      uploaded_file_url: null,
+      note: null,
+    };
+
+    const newChecklist = [...project.checklist, newItem];
+
+    try {
+      await apiJsonBody(`/api/projects/${id}`, "PATCH", {
+        checklist: newChecklist,
+      });
+      setProject({ ...project, checklist: newChecklist });
+    } catch {
+      alert("Nem sikerült hozzáadni az elemet.");
+    }
+  };
+
   if (loadError || !project) {
     return (
       <div className="flex flex-col gap-4 p-6">
@@ -601,10 +652,11 @@ export default function ProjectDetailPage({
                   Anyaggyűjtés
                 </h3>
                 <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
-                  1 / 3 kötelező elem feltöltve
+                  {project.checklist.filter((i) => i.completed).length} /{" "}
+                  {project.checklist.length} elem kész
                 </p>
               </div>
-              <Button variant="secondary">
+              <Button variant="secondary" onClick={() => void addChecklistItem()}>
                 <Plus size={15} style={{ marginRight: "6px" }} /> Új elem
               </Button>
             </div>
@@ -624,6 +676,7 @@ export default function ProjectDetailPage({
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <button
+                        onClick={() => void toggleChecklistItem(item._id, item.completed)}
                         style={{
                           background: "none",
                           border: "none",

@@ -119,6 +119,7 @@ export function PartnerShell({ children }: { children: React.ReactNode }) {
   const [contact, setContact] = React.useState<Contact | null>(null);
 
   React.useEffect(() => {
+    if (pathname.startsWith("/public") || pathname.startsWith("/set-password")) return;
     if (status === "unauthenticated" && pathname !== "/login") {
       router.replace("/login");
     }
@@ -145,7 +146,11 @@ export function PartnerShell({ children }: { children: React.ReactNode }) {
     return <div style={{ minHeight: "100vh", backgroundColor: "#fff" }}>{children}</div>;
   }
 
-  if (pathname === "/login") {
+  if (
+    pathname === "/login" ||
+    pathname.startsWith("/public") ||
+    pathname.startsWith("/set-password")
+  ) {
     return <>{children}</>;
   }
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   PriceListItemModel,
+  SettingsModel,
   formatNumber,
   nextCounterValue,
   serializeForJson,
@@ -60,8 +61,25 @@ export async function POST(req: Request) {
     return await withDb(async () => {
       let item_number = b.item_number;
       if (!item_number) {
-        const n = await nextCounterValue(actor.tenantId, "price_list");
-        item_number = formatNumber("PL", n);
+        // Fetch settings to find the selected category's prefix
+        const settings = await SettingsModel.findOne({ tenantId: actor.tenantId }).lean();
+        // Fallback prefix if category not found or no item_categories array
+        let prefix = "PL";
+
+        if ((settings as any)?.item_categories) {
+          // category parameter will be the category ID
+          const cat = (settings as any).item_categories.find(
+            (c: any) => c.id === b.category,
+          );
+          if (cat && cat.prefix) {
+            prefix = cat.prefix;
+          }
+        }
+
+        // Counter is tracked per prefix to ensure sequences like HW000001, SW000001
+        const n = await nextCounterValue(actor.tenantId, `price_list_${prefix}`);
+        // Ensure 6 digit padding
+        item_number = `${prefix}${String(n).padStart(6, "0")}`;
       }
       const doc = await PriceListItemModel.create({
         tenantId: actor.tenantId,

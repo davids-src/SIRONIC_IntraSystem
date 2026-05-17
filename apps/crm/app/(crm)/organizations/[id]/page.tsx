@@ -23,6 +23,7 @@ import type {
   DomainHostingRecord,
   InventoryItem,
   PortalPermissions,
+  PortalUser,
 } from "@crm/types";
 import {
   Building2,
@@ -37,6 +38,8 @@ import {
   AlertTriangle,
   Server,
   FileSignature,
+  UserPlus,
+  User,
 } from "lucide-react";
 import { ContactContractsTab } from "../../contacts/[id]/ContactContractsTab";
 
@@ -130,6 +133,12 @@ export default function OrganizationDetailPage({
 
   const [portalPerms, setPortalPerms] = useState<PortalPermissions | null>(null);
 
+  const [portalUsers, setPortalUsers] = useState<PortalUser[]>([]);
+  const [inviting, setInviting] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
+  const [invitePassword, setInvitePassword] = useState("");
+
   useEffect(() => {
     const ac = new AbortController();
     (async () => {
@@ -148,6 +157,17 @@ export default function OrganizationDetailPage({
         setServiceNotes(c.notes ?? "");
         setPortalPerms({ ...c.portal_permissions });
         setLoadErr(null);
+
+        if (id !== "new") {
+          try {
+            const puRaw = await apiJson<unknown[]>(`/api/portal-users?contact_id=${id}`, {
+              signal: ac.signal,
+            });
+            setPortalUsers(puRaw as PortalUser[]);
+          } catch (e) {
+            console.error("Failed to load portal users", e);
+          }
+        }
       } catch {
         if (!ac.signal.aborted) {
           setLoadErr("Nem sikerült betölteni a kapcsolatot.");
@@ -230,6 +250,32 @@ export default function OrganizationDetailPage({
       setLoadErr(e instanceof ApiError ? e.message : "Mentés sikertelen.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const invitePortalUser = async () => {
+    if (!inviteEmail.trim() || !invitePassword.trim()) {
+      alert("Email és jelszó kötelező!");
+      return;
+    }
+    setInviting(true);
+    try {
+      const raw = await apiJsonBody("/api/portal-users", "POST", {
+        contact_id: id,
+        email: inviteEmail.trim(),
+        password: invitePassword,
+        display_name: inviteName.trim() || undefined,
+        roleKeys: ["partner.admin"],
+      });
+      setPortalUsers((prev) => [...prev, raw as PortalUser]);
+      setInviteEmail("");
+      setInviteName("");
+      setInvitePassword("");
+      alert("Felhasználó sikeresen létrehozva!");
+    } catch (e) {
+      alert(e instanceof ApiError ? e.message : "Hiba történt a meghívás során.");
+    } finally {
+      setInviting(false);
     }
   };
 
@@ -658,50 +704,122 @@ export default function OrganizationDetailPage({
         )}
 
         {activeTab === "portal_permissions" && (
-          <Card className="p-6 space-y-6 max-w-2xl">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2">
-              Partner Portál Láthatóság
-            </h3>
-            <p className="text-sm text-[var(--color-text-secondary)]">
-              Kapcsold be azokat a menüpontokat, amelyeket a szervezet felhasználói
-              láthatnak a Partner Portálon.
-            </p>
+          <>
+            <Card className="p-6 space-y-6 max-w-2xl">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2">
+                Partner Portál Láthatóság
+              </h3>
+              <p className="text-sm text-[var(--color-text-secondary)]">
+                Kapcsold be azokat a menüpontokat, amelyeket a szervezet felhasználói
+                láthatnak a Partner Portálon.
+              </p>
 
-            <div className="space-y-4">
-              {portalPerms &&
-                (Object.keys(PORTAL_PERM_LABELS) as (keyof PortalPermissions)[]).map(
-                  (key) => (
+              <div className="space-y-4">
+                {portalPerms &&
+                  (Object.keys(PORTAL_PERM_LABELS) as (keyof PortalPermissions)[]).map(
+                    (key) => (
+                      <div
+                        key={key}
+                        className="flex items-center justify-between p-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border-subtle)] rounded-md"
+                      >
+                        <span className="text-sm font-medium">
+                          {PORTAL_PERM_LABELS[key]}
+                        </span>
+                        <Checkbox
+                          checked={portalPerms[key]}
+                          onCheckedChange={(v) => {
+                            setPortalPerms((prev) =>
+                              prev ? { ...prev, [key]: v === true } : prev,
+                            );
+                          }}
+                          aria-label={key}
+                        />
+                      </div>
+                    ),
+                  )}
+              </div>
+
+              <div className="pt-4 flex justify-end">
+                <Button
+                  variant="primary"
+                  disabled={saving || !portalPerms}
+                  onClick={() => void savePortal()}
+                >
+                  {saving ? "Mentés…" : "Jogosultságok mentése"}
+                </Button>
+              </div>
+            </Card>
+
+            <Card className="p-6 space-y-6 max-w-2xl mt-6">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2">
+                Hozzáférések / Felhasználók
+              </h3>
+
+              {portalUsers.length > 0 ? (
+                <div className="space-y-3">
+                  {portalUsers.map((pu) => (
                     <div
-                      key={key}
-                      className="flex items-center justify-between p-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border-subtle)] rounded-md"
+                      key={pu._id}
+                      className="flex items-center gap-3 p-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border-subtle)] rounded-md"
                     >
-                      <span className="text-sm font-medium">
-                        {PORTAL_PERM_LABELS[key]}
-                      </span>
-                      <Checkbox
-                        checked={portalPerms[key]}
-                        onCheckedChange={(v) => {
-                          setPortalPerms((prev) =>
-                            prev ? { ...prev, [key]: v === true } : prev,
-                          );
-                        }}
-                        aria-label={key}
-                      />
+                      <div className="w-8 h-8 rounded-full bg-[var(--color-accent-badgeBg)] text-[var(--color-accent-primary)] flex items-center justify-center flex-shrink-0">
+                        <User size={16} />
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-sm font-bold text-white truncate">
+                          {pu.display_name || "Névtelen felhasználó"}
+                        </span>
+                        <span className="text-xs text-[var(--color-text-muted)] truncate">
+                          {pu.email}
+                        </span>
+                      </div>
                     </div>
-                  ),
-                )}
-            </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-[var(--color-text-muted)] italic">
+                  Nincsenek portál felhasználók ehhez a partnerhez.
+                </p>
+              )}
 
-            <div className="pt-4 flex justify-end">
-              <Button
-                variant="primary"
-                disabled={saving || !portalPerms}
-                onClick={() => void savePortal()}
-              >
-                {saving ? "Mentés…" : "Jogosultságok mentése"}
-              </Button>
-            </div>
-          </Card>
+              <div className="pt-4 border-t border-[var(--color-border-subtle)] space-y-4">
+                <h4 className="text-sm font-medium text-white flex items-center gap-2">
+                  <UserPlus size={16} /> Új felhasználó meghívása
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    label="Név"
+                    placeholder="Kovács János"
+                    value={inviteName}
+                    onChange={(e) => setInviteName(e.target.value)}
+                  />
+                  <Input
+                    label="E-mail cím *"
+                    type="email"
+                    placeholder="janos@ceg.hu"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                  />
+                  <Input
+                    label="Kezdeti jelszó *"
+                    type="text"
+                    placeholder="legalább 8 karakter"
+                    value={invitePassword}
+                    onChange={(e) => setInvitePassword(e.target.value)}
+                  />
+                </div>
+                <div className="flex justify-end pt-2">
+                  <Button
+                    variant="primary"
+                    disabled={inviting || !inviteEmail || !invitePassword}
+                    onClick={() => void invitePortalUser()}
+                  >
+                    {inviting ? "Létrehozás…" : "Hozzáférés létrehozása"}
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </>
         )}
 
         {activeTab === "contracts" && (

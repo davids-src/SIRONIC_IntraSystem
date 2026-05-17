@@ -10,6 +10,7 @@ import { ts } from "./timestamps";
 const contactSchema = defineSchema(
   {
     contact_number: { type: String, required: true },
+    partner_id: { type: String, default: null }, // VE + 6 random digits
     tenantId: { type: String, required: true, index: true },
     type: { type: String, enum: ["company", "individual", "one_time"], required: true },
     name: { type: String, required: true },

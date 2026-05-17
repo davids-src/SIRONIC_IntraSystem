@@ -19,6 +19,7 @@
     "@crm/ui": "workspace:*",
     "@next/env": "^15.5.18",
     "bcryptjs": "^3.0.2",
+    "html2pdf.js": "^0.14.0",
     "lucide-react": "^0.511.0",
     "next": "^15.0.0",
     "next-auth": "5.0.0-beta.28",

@@ -8,7 +8,7 @@ import { usePathname } from "next/navigation";
 
 import {
   LayoutDashboard,
-  Users,
+  Handshake,
   Tag,
   FileText,
   Settings,
@@ -19,6 +19,9 @@ import {
   FolderKanban,
   FileSignature,
   Receipt,
+  Truck,
+  ShoppingCart,
+  Users,
 } from "lucide-react";
 
 const crmNavItems: NavItem[] = [
@@ -29,10 +32,10 @@ const crmNavItems: NavItem[] = [
     icon: <LayoutDashboard size={16} />,
   },
   {
-    key: "contacts",
-    label: "Kontaktok",
-    href: "/contacts",
-    icon: <Users size={16} />,
+    key: "partners",
+    label: "Partnerek",
+    href: "/partners",
+    icon: <Handshake size={16} />,
   },
   {
     key: "projects",
@@ -67,6 +70,19 @@ const crmNavItems: NavItem[] = [
     icon: <BadgeCheck size={16} />,
   },
   { key: "price-list", label: "Árlista", href: "/price-list", icon: <Tag size={16} /> },
+  {
+    key: "suppliers",
+    label: "Beszállítók",
+    href: "/suppliers",
+    icon: <Truck size={16} />,
+  },
+  {
+    key: "purchase-orders",
+    label: "Megrendelőlapok",
+    href: "/purchase-orders",
+    icon: <ShoppingCart size={16} />,
+  },
+  { key: "team", label: "Munkatársak", href: "/team", icon: <Users size={16} /> },
   {
     key: "settings",
     label: "Beállítások",

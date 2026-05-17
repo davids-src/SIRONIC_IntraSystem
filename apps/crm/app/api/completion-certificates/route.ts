@@ -19,6 +19,7 @@ const createSchema = z.object({
   work_period_start: z.coerce.date().nullable().optional(),
   work_period_end: z.coerce.date().nullable().optional(),
   total_hours: z.number().nullable().optional(),
+  offer_id: z.string().nullable().optional(),
 });
 
 export async function GET(req: Request) {
@@ -82,6 +83,7 @@ export async function POST(req: Request) {
         work_period_start: b.work_period_start ?? null,
         work_period_end: b.work_period_end ?? null,
         total_hours: b.total_hours ?? null,
+        offer_id: b.offer_id ?? null,
         client_name: null,
         client_title: null,
         client_signature: null,
