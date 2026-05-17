@@ -58,7 +58,8 @@ export async function POST(req: Request) {
         user = await CrmUserModel.findById(user._id).lean();
       }
 
-      const crmUrl = process.env.AUTH_URL || "http://localhost:3000";
+      const crmUrl =
+        process.env.CRM_URL || process.env.AUTH_URL || "https://crm.src.co.hu";
 
       await sendEmail({
         to: user.email,

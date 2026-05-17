@@ -51,7 +51,7 @@ export async function POST(_req: Request, ctx: RouteCtx) {
         );
       }
 
-      const portalUrl = process.env.PORTAL_URL || "http://localhost:3003";
+      const portalUrl = process.env.NEXT_PUBLIC_PORTAL_URL || "https://portal.sironic.eu";
 
       await sendEmail({
         to: contact.email,
