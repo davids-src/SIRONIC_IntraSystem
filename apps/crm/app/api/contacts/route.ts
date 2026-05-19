@@ -55,6 +55,7 @@ const createSchema = z.object({
 export async function GET(req: Request) {
   try {
     const { actor } = await requireCrmAuth();
+    console.log("ACTOR IN GET /api/contacts:", actor);
     guard(actor, { module: "contact", action: "view", scope: "global" });
     const { searchParams } = new URL(req.url);
     const q = searchParams.get("q")?.trim();
@@ -77,6 +78,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const { actor } = await requireCrmAuth();
+    console.log("ACTOR IN POST /api/contacts:", actor);
     guard(actor, { module: "contact", action: "write", scope: "global" });
     const json: unknown = await req.json();
     const parsed = createSchema.safeParse(json);

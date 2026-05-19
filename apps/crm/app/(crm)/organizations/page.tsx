@@ -180,7 +180,7 @@ export default function ContactsPage() {
         title="Kontaktok"
         subtitle="Ügyfelek és partnerszervezetek kezelése"
         actions={
-          <Button variant="primary" onClick={() => router.push("/contacts/new")}>
+          <Button variant="primary" onClick={() => router.push("/organizations/new")}>
             <Plus size={16} style={{ marginRight: "6px" }} />
             Új kontakt
           </Button>
@@ -286,7 +286,7 @@ export default function ContactsPage() {
           data={filtered}
           columns={columns}
           keyField="_id"
-          onRowClick={(row) => router.push(`/contacts/${row._id}`)}
+          onRowClick={(row) => router.push(`/organizations/${row._id}`)}
           emptyMessage="Nincs találat a keresési feltételekre"
         />
       </Card>

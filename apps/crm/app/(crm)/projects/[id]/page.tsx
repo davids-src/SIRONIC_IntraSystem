@@ -135,6 +135,32 @@ export default function ProjectDetailPage({
     }
   };
 
+  const togglePhase = async (phaseIdx: number) => {
+    if (!project) return;
+    const cycle: Record<string, string> = {
+      pending: "in_progress",
+      in_progress: "completed",
+      completed: "pending",
+    };
+    const newPhases = project.phases.map((ph, i) => {
+      if (i !== phaseIdx) return ph;
+      const nextStatus = cycle[ph.status] ?? "pending";
+      return {
+        ...ph,
+        status: nextStatus as "pending" | "in_progress" | "completed",
+        completed_at: nextStatus === "completed" ? new Date() : null,
+      };
+    });
+    const optimistic = { ...project, phases: newPhases };
+    setProject(optimistic);
+    try {
+      await apiJsonBody(`/api/projects/${id}`, "PATCH", { phases: newPhases });
+    } catch {
+      alert("Nem sikerült menteni a fázis állapotát.");
+      void reload();
+    }
+  };
+
   const toggleChecklistItem = async (itemId: string, currentCompleted: boolean) => {
     if (!project) return;
     const newChecklist = project.checklist.map((item) => {
@@ -465,9 +491,20 @@ export default function ProjectDetailPage({
                     <div key={idx} className="flex items-start gap-4">
                       {/* Icon + connector */}
                       <div className="flex flex-col items-center flex-shrink-0 w-6">
-                        <div className="flex-shrink-0">
+                        <button
+                          onClick={() => void togglePhase(idx)}
+                          title="Kattints az állapot váltásához"
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            padding: 0,
+                            flexShrink: 0,
+                            borderRadius: "50%",
+                          }}
+                        >
                           {phaseIcon[phase.status as keyof typeof phaseIcon]}
-                        </div>
+                        </button>
                         {idx < project.phases.length - 1 && (
                           <div
                             className="w-0.5 flex-1 min-h-[24px]"

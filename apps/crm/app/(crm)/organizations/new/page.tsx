@@ -80,7 +80,11 @@ export default function NewOrganizationPage() {
       setCreatedId(newContact._id);
       setShowInviteDialog(true);
     } catch (e) {
-      setLoadErr(e instanceof ApiError ? e.message : "Mentés sikertelen.");
+      setLoadErr(
+        e instanceof ApiError
+          ? `${e.message} ${JSON.stringify(e.body)}`
+          : `Mentés sikertelen: ${String(e)}`,
+      );
     } finally {
       setSaving(false);
     }
@@ -104,7 +108,7 @@ export default function NewOrganizationPage() {
         setInviting(false);
         return;
       }
-      router.push(`/contacts/${createdId}`);
+      router.push(`/organizations/${createdId}`);
     } catch {
       setInviteError("Hálózati hiba. A partner létrejött, de a meghívó nem ment el.");
       setInviting(false);
@@ -112,7 +116,8 @@ export default function NewOrganizationPage() {
   };
 
   const handleInviteNo = () => {
-    if (createdId) router.push(`/contacts/${createdId}`);
+    if (createdId) router.push(`/organizations/${createdId}`);
+    else router.push("/partners");
   };
 
   return (

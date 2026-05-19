@@ -258,7 +258,7 @@ export default function ContractDetailPage({
                   "Kontakt",
                   <span
                     style={{ color: "var(--accent-primary, #e53935)", cursor: "pointer" }}
-                    onClick={() => router.push(`/contacts/${contract.contact_id}`)}
+                    onClick={() => router.push(`/organizations/${contract.contact_id}`)}
                   >
                     {contract.contact_name}{" "}
                     <ExternalLink size={12} style={{ display: "inline" }} />

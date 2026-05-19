@@ -175,7 +175,7 @@ export default function PartnersPage() {
         title="Partnerek"
         subtitle="Ügyfelek és partnerszervezetek kezelése"
         actions={
-          <Button variant="primary" onClick={() => router.push("/contacts/new")}>
+          <Button variant="primary" onClick={() => router.push("/organizations/new")}>
             <Plus size={16} style={{ marginRight: "6px" }} />
             Új partner
           </Button>
@@ -281,7 +281,7 @@ export default function PartnersPage() {
           data={filtered}
           columns={columns}
           keyField="_id"
-          onRowClick={(row) => router.push(`/contacts/${row._id}`)}
+          onRowClick={(row) => router.push(`/organizations/${row._id}`)}
           emptyMessage={loading ? "Betöltés…" : "Nincs találat a keresési feltételekre"}
         />
       </Card>

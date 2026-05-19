@@ -332,7 +332,7 @@ export default function ContractsListPage() {
                         }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          router.push(`/contacts/${contract.contact_id}`);
+                          router.push(`/organizations/${contract.contact_id}`);
                         }}
                       >
                         {contract.contact_name}

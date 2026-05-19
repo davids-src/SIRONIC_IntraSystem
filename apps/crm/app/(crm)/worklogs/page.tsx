@@ -301,7 +301,7 @@ export default function WorklogsPage() {
                             style={{ color: "var(--color-accent-primary)" }}
                             onClick={(e) => {
                               e.stopPropagation();
-                              router.push(`/contacts/${w.contact_id}`);
+                              router.push(`/organizations/${w.contact_id}`);
                             }}
                           >
                             {w.contact_name}
