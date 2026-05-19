@@ -92,6 +92,7 @@ export default function PriceListPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [categories, setCategories] = useState<ItemCategory[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [stock, setStock] = useState<Record<string, number>>({});
 
   // Modal states
   const [showNewItemModal, setShowNewItemModal] = useState(false);
@@ -160,6 +161,17 @@ export default function PriceListPage() {
         if (rSup.ok) {
           const supData = (await rSup.json()) as Supplier[];
           setSuppliers(supData);
+        }
+
+        // Fetch stock data
+        const rStock = await fetch("/api/warehouse/stock", { signal: ac.signal });
+        if (rStock.ok) {
+          const stockData = await rStock.json();
+          const stockMap: Record<string, number> = {};
+          for (const s of stockData) {
+            stockMap[s.price_list_item_id] = s.quantity_in_stock;
+          }
+          setStock(stockMap);
         }
       } catch {
         if (!ac.signal.aborted) {
@@ -373,7 +385,7 @@ export default function PriceListPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "120px 1fr 130px 110px 120px 120px 40px",
+            gridTemplateColumns: "120px 1fr 130px 110px 120px 120px 80px 40px",
             gap: "0 16px",
             padding: "10px 20px",
             background: "var(--color-bg-secondary, #111)",
@@ -389,6 +401,7 @@ export default function PriceListPage() {
             "Mértékegység",
             "Eladási ár (nettó)",
             "Bszerz. ár (nettó)",
+            "Készlet",
             "",
           ].map((h) => (
             <span
@@ -427,7 +440,7 @@ export default function PriceListPage() {
                 onClick={() => toggleExpand(item._id)}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "120px 1fr 130px 110px 120px 120px 40px",
+                  gridTemplateColumns: "120px 1fr 130px 110px 120px 120px 80px 40px",
                   gap: "0 16px",
                   padding: "18px 20px",
                   background: isExpanded
@@ -547,6 +560,24 @@ export default function PriceListPage() {
                     </span>
                   )}
                 </div>
+
+                {/* Készlet */}
+                <span
+                  style={{
+                    fontSize: "0.85rem",
+                    fontWeight: 700,
+                    color:
+                      stock[item._id] === undefined
+                        ? "var(--color-text-muted, #555)"
+                        : stock[item._id] > 0
+                          ? "#22c55e"
+                          : "#e53935",
+                  }}
+                >
+                  {stock[item._id] !== undefined
+                    ? `${stock[item._id]} ${item.unit}`
+                    : "—"}
+                </span>
 
                 {/* Expand ikon */}
                 <div

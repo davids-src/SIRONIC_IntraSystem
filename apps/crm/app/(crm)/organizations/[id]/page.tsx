@@ -40,8 +40,11 @@ import {
   FileSignature,
   UserPlus,
   User,
+  Mail,
 } from "lucide-react";
 import { ContactContractsTab } from "../../contacts/[id]/ContactContractsTab";
+import { ContactWorklogsTab } from "../../contacts/[id]/ContactWorklogsTab";
+import { ContactCertificatesTab } from "../../contacts/[id]/ContactCertificatesTab";
 
 const SERVICE_OPTIONS = [
   "IT üzemeltetés",
@@ -276,6 +279,21 @@ export default function OrganizationDetailPage({
       alert(e instanceof ApiError ? e.message : "Hiba történt a meghívás során.");
     } finally {
       setInviting(false);
+    }
+  };
+
+  const handleResetPortalUserPassword = async (userId: string) => {
+    if (
+      !confirm(
+        "Biztosan jelszó visszaállító e-mailt szeretnél küldeni ennek a felhasználónak?",
+      )
+    )
+      return;
+    try {
+      await apiJsonBody(`/api/portal-users/${userId}/reset-password`, "POST", {});
+      alert("A jelszó visszaállító e-mail sikeresen elküldve!");
+    } catch (e) {
+      alert(e instanceof ApiError ? e.message : "Hiba történt az e-mail küldése során.");
     }
   };
 
@@ -773,6 +791,16 @@ export default function OrganizationDetailPage({
                           {pu.email}
                         </span>
                       </div>
+                      <div className="ml-auto">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => void handleResetPortalUserPassword(pu._id)}
+                        >
+                          <Mail size={14} className="mr-1" />
+                          Jelszó visszaállító
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -828,10 +856,19 @@ export default function OrganizationDetailPage({
           </div>
         )}
 
-        {(activeTab === "projects" ||
-          activeTab === "tickets" ||
-          activeTab === "worklogs" ||
-          activeTab === "certificates") && (
+        {activeTab === "worklogs" && (
+          <div className="py-2">
+            <ContactWorklogsTab contactId={contact._id} />
+          </div>
+        )}
+
+        {activeTab === "certificates" && (
+          <div className="py-2">
+            <ContactCertificatesTab contactId={contact._id} />
+          </div>
+        )}
+
+        {(activeTab === "projects" || activeTab === "tickets") && (
           <Card className="p-6 min-h-[300px] flex flex-col items-center justify-center text-[var(--color-text-muted)]">
             <div className="mb-4 opacity-50">
               {activeTab === "projects" && <FolderKanban size={48} />}
@@ -840,14 +877,7 @@ export default function OrganizationDetailPage({
               {activeTab === "certificates" && <BadgeCheck size={48} />}
             </div>
             <h2 className="text-lg font-medium text-[var(--color-text-primary)]">
-              Szervezethez tartozó{" "}
-              {activeTab === "projects"
-                ? "Projektek"
-                : activeTab === "tickets"
-                  ? "Ticketek"
-                  : activeTab === "worklogs"
-                    ? "Munkalapok"
-                    : "Igazolások"}
+              Szervezethez tartozó {activeTab === "projects" ? "Projektek" : "Ticketek"}
             </h2>
             <p className="text-sm mt-2 text-center max-w-md">
               A {contact.name} számára létrehozott és látható bejegyzések.
@@ -856,10 +886,7 @@ export default function OrganizationDetailPage({
               variant="secondary"
               className="mt-6"
               onClick={() => {
-                const listPath =
-                  activeTab === "certificates"
-                    ? `/completion-certificates?contact_id=${contact._id}`
-                    : `/${activeTab}?contact_id=${contact._id}`;
+                const listPath = `/${activeTab}?contact_id=${contact._id}`;
                 router.push(listPath);
               }}
             >

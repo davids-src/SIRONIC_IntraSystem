@@ -71,6 +71,12 @@ const crmNavItems: NavItem[] = [
   },
   { key: "price-list", label: "Árlista", href: "/price-list", icon: <Tag size={16} /> },
   {
+    key: "inventory",
+    label: "Raktár",
+    href: "/inventory",
+    icon: <ShoppingCart size={16} />,
+  },
+  {
     key: "suppliers",
     label: "Beszállítók",
     href: "/suppliers",

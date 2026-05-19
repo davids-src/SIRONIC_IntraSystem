@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@crm/ui";
 import { apiJson, apiJsonBody } from "@/lib/api-client";
+import { Mail } from "lucide-react";
 
 export default function TeamPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -61,6 +62,21 @@ export default function TeamPage() {
       setInviteError(err.message || "Hiba történt a meghívó küldésekor.");
     } finally {
       setInviting(false);
+    }
+  };
+
+  const handleResetPassword = async (userId: string) => {
+    if (
+      !confirm(
+        "Biztosan jelszó visszaállító e-mailt szeretnél küldeni ennek a munkatársnak?",
+      )
+    )
+      return;
+    try {
+      await apiJsonBody(`/api/users/${userId}/reset-password`, "POST", {});
+      alert("A jelszó visszaállító e-mail sikeresen elküldve!");
+    } catch (err: any) {
+      alert(err.message || "Hiba történt az e-mail küldése során.");
     }
   };
 
@@ -145,6 +161,9 @@ export default function TeamPage() {
                     <th className="py-2 px-3 text-sm font-semibold text-gray-700">
                       Státusz
                     </th>
+                    <th className="py-2 px-3 text-sm font-semibold text-gray-700 text-right">
+                      Műveletek
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -175,6 +194,16 @@ export default function TeamPage() {
                             Aktív
                           </span>
                         )}
+                      </td>
+                      <td className="py-3 px-3 text-sm text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => void handleResetPassword(u._id)}
+                          title="Jelszó visszaállító küldése"
+                        >
+                          <Mail size={16} className="text-gray-500 hover:text-blue-600" />
+                        </Button>
                       </td>
                     </tr>
                   ))}

@@ -20,4 +20,7 @@ export {
   PortalUserModel,
   SupplierModel,
   PurchaseOrderModel,
+  StockItemModel,
+  WarehouseLocationModel,
+  StockTransactionModel,
 } from "./models";

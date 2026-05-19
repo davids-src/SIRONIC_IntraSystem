@@ -265,7 +265,21 @@ function WorklogFormContent({ id }: { id: string }) {
       await apiJsonBody(`/api/worklogs/${id}`, "PATCH", buildPayload());
       const raw = await apiJsonBody<unknown>(`/api/worklogs/${id}/finalize`, "POST", {});
       const w = parseWorklog(raw);
+      // Reload all fields from server response so contact and other data stay visible
       setStatus(w.status);
+      setWorklogNumber(w.worklog_number);
+      setContactId(w.contact_id ?? "");
+      setCategory(w.work_category);
+      setTechnicianName(w.technician_name);
+      setWorkDate(w.work_date.toISOString().split("T")[0]);
+      setWorkStart(w.work_start ?? "08:00");
+      setWorkEnd(w.work_end ?? "16:00");
+      setSiteAddress(w.site_address ?? "");
+      setDescription(w.work_description);
+      setTravelKm(w.travel_km != null ? String(w.travel_km) : "");
+      setNotes(w.notes ?? "");
+      setClientName(w.client_name ?? "");
+      setItems(w.items.length ? w.items : [emptyItem()]);
     } catch (err) {
       setLoadErr(err instanceof ApiError ? err.message : "Véglegesítés sikertelen.");
     } finally {

@@ -540,7 +540,25 @@ export default function SettingsPage() {
                 </p>
               </div>
               <div style={{ display: "flex", gap: "8px" }}>
-                <Button variant="secondary" style={{ height: "36px" }}>
+                <Button
+                  variant="secondary"
+                  style={{ height: "36px" }}
+                  onClick={() => {
+                    const newItem = prompt(`Új érték a(z) ${list.label_hu} listába:`);
+                    if (!newItem?.trim()) return;
+                    const val = newItem.trim();
+                    const arr = (settings[list.key as keyof Settings] as string[]) || [];
+                    if (arr.includes(val)) {
+                      alert("Ez az érték már szerepel a listában.");
+                      return;
+                    }
+                    const updated = [...arr, val];
+                    setSettings({ ...settings, [list.key]: updated });
+                    apiJsonBody("/api/settings", "PATCH", {
+                      [list.key]: updated,
+                    }).catch((e) => console.error(e));
+                  }}
+                >
                   <Plus size={16} style={{ marginRight: "8px" }} />
                   Új
                 </Button>
@@ -557,65 +575,92 @@ export default function SettingsPage() {
                   color: "var(--text-muted)",
                 }}
               >
-                Példák
+                Jelenlegi értékek
               </div>
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                 {((settings[list.key as keyof Settings] as string[] | undefined)?.length
                   ? (settings[list.key as keyof Settings] as string[])
-                  : list.examples
+                  : []
                 ).map((ex) => (
-                  <span
+                  <div
                     key={ex}
                     style={{
-                      padding: "4px 12px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      padding: "4px 8px 4px 12px",
                       borderRadius: "6px",
                       border: "1px solid var(--border-subtle)",
+                      background: "var(--bg-secondary)",
                       fontSize: "0.875rem",
                     }}
                   >
-                    {ex}
-                  </span>
+                    <span>{ex}</span>
+                    {list.operations.includes("rename") && (
+                      <button
+                        onClick={() => {
+                          const val = prompt("Új név:", ex);
+                          if (!val?.trim() || val.trim() === ex) return;
+                          const arr =
+                            (settings[list.key as keyof Settings] as string[]) || [];
+                          const updated = arr.map((item) =>
+                            item === ex ? val.trim() : item,
+                          );
+                          setSettings({ ...settings, [list.key]: updated });
+                          apiJsonBody("/api/settings", "PATCH", {
+                            [list.key]: updated,
+                          }).catch((e) => console.error(e));
+                        }}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "var(--text-muted)",
+                          cursor: "pointer",
+                          padding: "4px",
+                        }}
+                        title="Szerkesztés"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                    )}
+                    {list.operations.includes("delete") && (
+                      <button
+                        onClick={() => {
+                          if (!confirm(`Biztosan törlöd: ${ex}?`)) return;
+                          const arr =
+                            (settings[list.key as keyof Settings] as string[]) || [];
+                          const updated = arr.filter((item) => item !== ex);
+                          setSettings({ ...settings, [list.key]: updated });
+                          apiJsonBody("/api/settings", "PATCH", {
+                            [list.key]: updated,
+                          }).catch((e) => console.error(e));
+                        }}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "var(--color-danger, #e53935)",
+                          cursor: "pointer",
+                          padding: "4px",
+                        }}
+                        title="Törlés"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 ))}
-              </div>
-            </div>
-
-            <div
-              style={{ paddingTop: "8px", borderTop: "1px solid var(--border-subtle)" }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: "12px",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: "0.75rem",
-                    textTransform: "uppercase",
-                    fontWeight: 700,
-                    letterSpacing: "0.05em",
-                    color: "var(--text-muted)",
-                  }}
-                >
-                  Műveletek
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  {list.operations.includes("add") && <Plus size={16} />}
-                  {list.operations.includes("rename") && <Pencil size={16} />}
-                  {list.operations.includes("delete") && <Trash2 size={16} />}
-                  {list.operations.includes("reorder") && <ArrowUpDown size={16} />}
-                </div>
-              </div>
-              <div
-                style={{
-                  fontSize: "0.875rem",
-                  color: "var(--text-muted)",
-                  marginTop: "8px",
-                }}
-              >
-                (UI demo) A tényleges szerkesztés itt majd API/DB-val kerül be.
+                {(!settings[list.key as keyof Settings] ||
+                  (settings[list.key as keyof Settings] as string[]).length === 0) && (
+                  <span
+                    style={{
+                      color: "var(--text-muted)",
+                      fontStyle: "italic",
+                      fontSize: "0.875rem",
+                    }}
+                  >
+                    Üres lista (Példák: {list.examples.join(", ")})
+                  </span>
+                )}
               </div>
             </div>
           </Card>

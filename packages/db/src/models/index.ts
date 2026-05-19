@@ -13,3 +13,6 @@ export { DomainHostingRecordModel } from "./domain-hosting";
 export { PortalUserModel } from "./portal-user";
 export { SupplierModel } from "./supplier";
 export { PurchaseOrderModel } from "./purchase-order";
+export { StockItemModel } from "./stock-item";
+export { WarehouseLocationModel } from "./warehouse-location";
+export { StockTransactionModel } from "./stock-transaction";

@@ -576,3 +576,59 @@ export interface PurchaseOrder {
   created_at: Date;
   updated_at: Date;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WAREHOUSE / RAKTÁR MODULE
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Raktáron lévő készlet – árlistaelem alapján */
+export interface StockItem {
+  _id: string;
+  tenantId: string;
+  price_list_item_id: string;
+  quantity_in_stock: number;
+  low_stock_threshold: number | null;
+  warehouse_location: string | null;
+  notes: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/** Raktárkilétel adataival együtt (API válasz) */
+export interface StockItemWithProduct extends StockItem {
+  product: PriceListItem;
+}
+
+/** Fizikai raktárhely (polc, terület, stb.) */
+export interface WarehouseLocation {
+  _id: string;
+  tenantId: string;
+  code: string;
+  name: string;
+  description: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type StockTransactionType = "in" | "out" | "adjustment";
+export type StockTransactionRef =
+  | "worklog"
+  | "offer"
+  | "invoice"
+  | "purchase_order"
+  | "manual";
+
+/** Raktármozgás napló bejegyzés */
+export interface StockTransaction {
+  _id: string;
+  tenantId: string;
+  price_list_item_id: string;
+  type: StockTransactionType;
+  quantity: number;
+  reference_type: StockTransactionRef;
+  reference_id: string | null;
+  notes: string | null;
+  created_by: string;
+  created_at: Date;
+  updated_at: Date;
+}

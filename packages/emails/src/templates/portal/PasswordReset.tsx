@@ -6,13 +6,13 @@ import { Text } from "@react-email/components";
 interface PasswordResetProps {
   lang?: Language;
   contact_name: string;
-  token: string;
+  reset_url: string;
 }
 
 export const PasswordReset = ({
   lang = "hu",
   contact_name,
-  token,
+  reset_url,
 }: PasswordResetProps) => {
   const t = useEmailTranslations(lang);
 
@@ -33,7 +33,7 @@ export const PasswordReset = ({
       <CtaGroup
         primary={{
           label: lang === "hu" ? "Új jelszó beállítása" : "Set New Password",
-          url: `https://portal.sironic.eu/reset-password?token=${token}`,
+          url: reset_url,
         }}
       />
 
