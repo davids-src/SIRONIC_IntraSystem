@@ -190,7 +190,7 @@ export default function InventoryPage() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         {isLow ? (
-                          <Badge variant="danger">Alacsony készlet</Badge>
+                          <Badge variant="error">Alacsony készlet</Badge>
                         ) : (
                           <Badge variant="success">Rendben</Badge>
                         )}

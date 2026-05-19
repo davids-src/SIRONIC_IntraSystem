@@ -28,21 +28,21 @@ export async function POST(req: Request, ctx: RouteCtx) {
     const { new_quantity, notes } = parsed.data;
 
     return await withDb(async () => {
-      const existing = await StockItemModel.findOne({
+      const existing = (await StockItemModel.findOne({
         tenantId: actor.tenantId,
         price_list_item_id,
-      }).lean();
+      }).lean()) as any;
       if (!existing) {
         return NextResponse.json({ error: "Nem található." }, { status: 404 });
       }
 
       const diff = new_quantity - existing.quantity_in_stock;
 
-      const doc = await StockItemModel.findOneAndUpdate(
+      const doc = (await StockItemModel.findOneAndUpdate(
         { tenantId: actor.tenantId, price_list_item_id },
         { $set: { quantity_in_stock: new_quantity } },
         { new: true },
-      ).lean();
+      ).lean()) as any;
 
       // Log adjustment transaction
       await StockTransactionModel.create({

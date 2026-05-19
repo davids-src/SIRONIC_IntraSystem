@@ -15,11 +15,11 @@ export async function POST(_req: Request, ctx: RouteCtx) {
     const { actor } = await requireCrmAuth();
     guard(actor, { module: "worklog", action: "finalize", scope: "global" });
     return await withDb(async () => {
-      const doc = await WorklogModel.findOneAndUpdate(
+      const doc = (await WorklogModel.findOneAndUpdate(
         { _id: id, tenantId: actor.tenantId, status: "draft" },
         { $set: { status: "finalized" } },
         { new: true },
-      ).lean();
+      ).lean()) as any;
       if (!doc) {
         return NextResponse.json(
           { error: "Not found or already finalized" },
@@ -31,14 +31,14 @@ export async function POST(_req: Request, ctx: RouteCtx) {
       // Minden tételnél ahol price_list_item_id van, levonjuk a készletből.
       // Hiány esetén NEM blokkoljuk a véglegesítést, csak logoljuk.
       const linkedItems = doc.items.filter(
-        (it) => it.price_list_item_id && it.quantity > 0,
+        (it: any) => it.price_list_item_id && it.quantity > 0,
       );
       for (const item of linkedItems) {
         try {
-          const stockItem = await StockItemModel.findOne({
+          const stockItem = (await StockItemModel.findOne({
             tenantId: actor.tenantId,
             price_list_item_id: item.price_list_item_id,
-          }).lean();
+          }).lean()) as any;
 
           if (!stockItem) continue; // Nincs raktáron nyilvántartva, kihagyjuk
 

@@ -49,21 +49,21 @@ export async function PATCH(
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
     return await withDb(async () => {
-      const existing = await PurchaseOrderModel.findOne({
+      const existing = (await PurchaseOrderModel.findOne({
         _id: id,
         tenantId: actor.tenantId,
-      }).lean();
+      }).lean()) as any;
       if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
       const update: Record<string, unknown> = { ...parsed.data };
       if (parsed.data.expected_delivery_date) {
         update.expected_delivery_date = new Date(parsed.data.expected_delivery_date);
       }
-      const doc = await PurchaseOrderModel.findOneAndUpdate(
+      const doc = (await PurchaseOrderModel.findOneAndUpdate(
         { _id: id, tenantId: actor.tenantId },
         { $set: update },
         { new: true },
-      ).lean();
+      ).lean()) as any;
       if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
       // ── Raktár bevételezés ────────────────────────────────────────────────

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireCrmAuth, withDb, handleApiError, guard } from "@/lib/api-helpers";
 import { CrmUserModel } from "@crm/db";
 import crypto from "crypto";
-import { sendEmail, PasswordReset } from "@crm/emails";
+import { sendEmail, PasswordReset } from "@sironic/emails";
 import * as React from "react";
 
 export async function POST(

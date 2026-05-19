@@ -569,7 +569,7 @@ export default function PriceListPage() {
                     color:
                       stock[item._id] === undefined
                         ? "var(--color-text-muted, #555)"
-                        : stock[item._id] > 0
+                        : stock[item._id]! > 0
                           ? "#22c55e"
                           : "#e53935",
                   }}

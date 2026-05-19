@@ -873,8 +873,6 @@ export default function OrganizationDetailPage({
             <div className="mb-4 opacity-50">
               {activeTab === "projects" && <FolderKanban size={48} />}
               {activeTab === "tickets" && <Ticket size={48} />}
-              {activeTab === "worklogs" && <ClipboardList size={48} />}
-              {activeTab === "certificates" && <BadgeCheck size={48} />}
             </div>
             <h2 className="text-lg font-medium text-[var(--color-text-primary)]">
               Szervezethez tartozó {activeTab === "projects" ? "Projektek" : "Ticketek"}
