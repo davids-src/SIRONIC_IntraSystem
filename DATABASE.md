@@ -24,6 +24,9 @@ erDiagram
     Tenant ||--o{ Contact : "tartalmaz"
     Tenant ||--o{ CrmUser : "tartalmaz"
     PriceListItem ||--o{ WorklogItem : "felhasználva"
+    PriceListItem ||--o{ StockItem : "készleten"
+    PriceListItem ||--o{ StockTransaction : "naplózva"
+    WarehouseLocation ||--o{ StockItem : "elhelyezve"
 
     Contact {
         string _id PK
@@ -86,6 +89,36 @@ erDiagram
         string type
         string name
         number net_price
+    }
+
+    WarehouseLocation {
+        string _id PK
+        string tenantId
+        string code
+        string name
+        string description
+    }
+
+    StockItem {
+        string _id PK
+        string tenantId
+        string price_list_item_id FK
+        number quantity_in_stock
+        number low_stock_threshold
+        string warehouse_location
+        string notes
+    }
+
+    StockTransaction {
+        string _id PK
+        string tenantId
+        string price_list_item_id FK
+        string type "in, out, adjustment"
+        number quantity
+        string reference_type "worklog, offer, invoice, purchase_order, manual"
+        string reference_id
+        string notes
+        string created_by
     }
 
     Tenant {
@@ -205,6 +238,38 @@ Bejelentkezéshez: `email` (egyedi), `password_hash`, `tenantId`, `roleKeys` (`c
 ### 11. Invoice (Számla)
 
 Ügyfélhez kötött számla rekord (CRM nézet), státusz: `draft` \| `sent` \| `paid` \| `overdue` \| `cancelled`; opcionális `issued_at` / `due_at`.
+
+### 12. WarehouseLocation (Raktárhely)
+
+A fizikai raktárban található tárhelyek (polcok, szekciók) nyilvántartása.
+
+- **Legfontosabb mezők:**
+  - `code`: Egyedi helykód (pl. "A-1-3").
+  - `name`: Barátságos név (pl. "Központi polc, legfelső sor").
+  - `description`: Opcionális leírás a helyről.
+
+### 13. StockItem (Készlet tétel)
+
+Az árlistában szereplő termékek (`PriceListItem`) aktuális raktári készletének és elhelyezkedésének nyilvántartása.
+
+- **Legfontosabb mezők:**
+  - `price_list_item_id`: Csatolás az árlista tételhez.
+  - `quantity_in_stock`: Jelenleg raktáron lévő fizikai mennyiség.
+  - `low_stock_threshold`: Alacsony készlet figyelmeztetési küszöbérték.
+  - `warehouse_location`: Hivatkozás a raktárhely (`WarehouseLocation`) kódjára.
+
+### 14. StockTransaction (Raktári tranzakció)
+
+A raktárkészlet változásait (bevételezés, kivételezés, leltárkorrekció) naplózó kollekció.
+
+- **Legfontosabb mezők:**
+  - `price_list_item_id`: Érintett termék árlistás azonosítója.
+  - `type`: Tranzakció jellege (`in` = bevételezés, `out` = kiadás/kivétel, `adjustment` = korrekció).
+  - `quantity`: Mozgatott mennyiség.
+  - `reference_type`: Bizonylat / forrás típusa (`worklog`, `offer`, `invoice`, `purchase_order`, `manual`).
+  - `reference_id`: Kapcsolódó bizonylat azonosítója.
+  - `notes`: Megjegyzés (pl. megrendelő száma, szállítólevél száma).
+  - `created_by`: Tranzakciót végrehajtó felhasználó azonosítója.
 
 ## Biztonság és Jogosultság (RBAC)
 

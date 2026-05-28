@@ -4,9 +4,10 @@ import { PageHeader, Card, Button, InputControl, Label } from "@crm/ui";
 import { Save, ChevronLeft, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Supplier } from "@crm/types";
+import type { Supplier, PriceListItem } from "@crm/types";
 
 interface Line {
+  price_list_item_id: string | null;
   description: string;
   quantity: number;
   unit: string;
@@ -15,6 +16,7 @@ interface Line {
 }
 
 const emptyLine = (): Line => ({
+  price_list_item_id: null,
   description: "",
   quantity: 1,
   unit: "db",
@@ -32,6 +34,7 @@ const fmt = (n: number) =>
 export default function NewPurchaseOrderPage() {
   const router = useRouter();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [priceListItems, setPriceListItems] = useState<PriceListItem[]>([]);
   const [supplierId, setSupplierId] = useState("");
   const [expectedDate, setExpectedDate] = useState("");
   const [notes, setNotes] = useState("");
@@ -47,9 +50,16 @@ export default function NewPurchaseOrderPage() {
         if (data.length > 0) setSupplierId(data[0]?._id ?? "");
       })
       .catch(() => {});
+
+    fetch("/api/price-list")
+      .then((r) => r.json())
+      .then((data: PriceListItem[]) => {
+        setPriceListItems(data.filter((item) => item.is_active));
+      })
+      .catch(() => {});
   }, []);
 
-  const updateLine = (idx: number, key: keyof Line, value: string | number) =>
+  const updateLine = (idx: number, key: keyof Line, value: any) =>
     setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, [key]: value } : l)));
 
   const totalNet = lines.reduce((s, l) => s + l.net_unit_price * l.quantity, 0);
@@ -239,7 +249,51 @@ export default function NewPurchaseOrderPage() {
                   key={idx}
                   style={{ borderBottom: "1px solid var(--color-border-subtle)" }}
                 >
-                  <td style={{ padding: "8px" }}>
+                  <td style={{ padding: "8px", minWidth: "220px" }}>
+                    <select
+                      value={l.price_list_item_id ?? ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (!val) {
+                          updateLine(idx, "price_list_item_id", null);
+                        } else {
+                          const selected = priceListItems.find((p) => p._id === val);
+                          if (selected) {
+                            setLines((prev) =>
+                              prev.map((line, i) =>
+                                i === idx
+                                  ? {
+                                      ...line,
+                                      price_list_item_id: selected._id,
+                                      description: selected.name,
+                                      unit: selected.unit,
+                                      net_unit_price: selected.last_purchase_price ?? 0,
+                                      tax_rate: selected.tax_rate,
+                                    }
+                                  : line,
+                              ),
+                            );
+                          }
+                        }
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "6px 10px",
+                        borderRadius: "8px",
+                        border: "1px solid var(--color-border-subtle)",
+                        background: "var(--color-bg-secondary)",
+                        color: "var(--color-text-primary)",
+                        fontSize: "13px",
+                        marginBottom: "6px",
+                      }}
+                    >
+                      <option value="">— Egyedi tétel —</option>
+                      {priceListItems.map((p) => (
+                        <option key={p._id} value={p._id}>
+                          {p.name} ({p.item_number})
+                        </option>
+                      ))}
+                    </select>
                     <InputControl
                       value={l.description}
                       onChange={(e) => updateLine(idx, "description", e.target.value)}

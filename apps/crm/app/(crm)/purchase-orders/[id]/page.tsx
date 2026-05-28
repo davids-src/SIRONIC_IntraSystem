@@ -36,6 +36,7 @@ export default function PurchaseOrderDetailPage() {
   const [supplier, setSupplier] = useState<Supplier | null>(null);
   const [provider, setProvider] = useState<CompanyDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -90,6 +91,33 @@ export default function PurchaseOrderDetailPage() {
     }
   };
 
+  const handleStatusChange = async (newStatus: "fulfilled" | "cancelled" | "sent") => {
+    if (
+      newStatus === "fulfilled" &&
+      !confirm(
+        "Biztosan teljesítettnek jelölöd a megrendelőlapot? A tételek automatikusan bevételezésre kerülnek a raktárba.",
+      )
+    ) {
+      return;
+    }
+    setUpdating(true);
+    try {
+      const res = await fetch(`/api/purchase-orders/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error();
+      const updated = await res.json();
+      setOrder(updated);
+      alert("Státusz sikeresen frissítve!");
+    } catch {
+      alert("Hiba történt a státusz frissítése során.");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   // Build a Contact-compatible client object from supplier for UnifiedPdfTemplate
   const supplierAsClient = supplier
     ? {
@@ -137,6 +165,34 @@ export default function PurchaseOrderDetailPage() {
             <Button variant="ghost" onClick={() => router.push("/purchase-orders")}>
               <ChevronLeft size={16} /> Vissza
             </Button>
+            {order.status === "draft" && (
+              <Button
+                variant="secondary"
+                onClick={() => handleStatusChange("sent")}
+                disabled={updating}
+              >
+                Elküldés
+              </Button>
+            )}
+            {(order.status === "sent" || order.status === "draft") && (
+              <Button
+                variant="primary"
+                onClick={() => handleStatusChange("fulfilled")}
+                disabled={updating}
+              >
+                Beérkezett (Teljesítve)
+              </Button>
+            )}
+            {order.status !== "fulfilled" && order.status !== "cancelled" && (
+              <Button
+                variant="ghost"
+                onClick={() => handleStatusChange("cancelled")}
+                disabled={updating}
+                style={{ color: "#f87171" }}
+              >
+                Lemondás
+              </Button>
+            )}
             <Button variant="secondary" onClick={handleDownloadPdf}>
               <Download size={16} className="mr-2" /> PDF Letöltés
             </Button>
