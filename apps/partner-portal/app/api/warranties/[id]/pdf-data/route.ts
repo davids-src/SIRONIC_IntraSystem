@@ -72,7 +72,7 @@ export async function GET(
 
       const [contact, settings] = await Promise.all([
         ContactModel.findById(contactId).lean(),
-        SettingsModel.findOne({ tenantId }).lean(),
+        SettingsModel.findOne({ tenantId }).lean() as Promise<any>,
       ]);
 
       return NextResponse.json(

@@ -23,8 +23,11 @@ export async function GET(
 
     return await withDb(async () => {
       const [warranty, settings] = await Promise.all([
-        WarrantyCardModel.findOne({ _id: id, tenantId: actor.tenantId }).lean(),
-        SettingsModel.findOne({ tenantId: actor.tenantId }).lean(),
+        WarrantyCardModel.findOne({
+          _id: id,
+          tenantId: actor.tenantId,
+        }).lean() as Promise<any>,
+        SettingsModel.findOne({ tenantId: actor.tenantId }).lean() as Promise<any>,
       ]);
 
       if (!warranty) {
