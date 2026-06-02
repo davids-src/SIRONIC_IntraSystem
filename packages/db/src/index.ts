@@ -25,4 +25,5 @@ export {
   StockTransactionModel,
   DeliveryNoteModel,
   SecretModel,
+  WarrantyCardModel,
 } from "./models";

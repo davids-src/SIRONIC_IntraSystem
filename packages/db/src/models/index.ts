@@ -18,3 +18,4 @@ export { WarehouseLocationModel } from "./warehouse-location";
 export { StockTransactionModel } from "./stock-transaction";
 export { DeliveryNoteModel } from "./delivery-note";
 export { SecretModel } from "./secret";
+export { WarrantyCardModel } from "./warranty-card";

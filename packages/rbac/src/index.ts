@@ -16,6 +16,7 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     { module: "settings", action: "admin", scope: "global" },
     { module: "delivery_note", action: "admin", scope: "global" },
     { module: "secret", action: "admin", scope: "global" },
+    { module: "warranty", action: "admin", scope: "global" },
   ],
   "crm.staff": [
     { module: "dashboard", action: "view", scope: "global" },
@@ -41,6 +42,8 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     { module: "project", action: "close", scope: "global" },
     { module: "delivery_note", action: "write", scope: "global" },
     { module: "secret", action: "write", scope: "global" },
+    { module: "warranty", action: "write", scope: "global" },
+    { module: "warranty", action: "generate_pdf", scope: "global" },
     { module: "settings", action: "view", scope: "global" },
   ],
 
@@ -58,6 +61,7 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     { module: "project", action: "view", scope: "contact" },
     { module: "project", action: "manage_checklist", scope: "contact" },
     { module: "project", action: "sign", scope: "contact" }, // reusing 'sign' for approval
+    { module: "warranty", action: "view", scope: "contact" },
   ],
   "partner.viewer": [
     { module: "dashboard", action: "view", scope: "contact" },
@@ -68,6 +72,7 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     { module: "completion_certificate", action: "view", scope: "contact" },
     { module: "contract", action: "view", scope: "contact" },
     { module: "project", action: "view", scope: "contact" },
+    { module: "warranty", action: "view", scope: "contact" },
   ],
 };
 

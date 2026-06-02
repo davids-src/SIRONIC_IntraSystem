@@ -70,6 +70,12 @@ const allPartnerNavItems: NavItem[] = [
     icon: <BadgeCheck size={16} />,
   },
   {
+    key: "warranties",
+    label: "Jótállási jegyek",
+    href: "/warranties",
+    icon: <ShieldCheck size={16} />,
+  },
+  {
     key: "company-profile",
     label: "Cégprofil",
     href: "/company-profile",

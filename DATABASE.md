@@ -27,6 +27,7 @@ erDiagram
     PriceListItem ||--o{ StockItem : "készleten"
     PriceListItem ||--o{ StockTransaction : "naplózva"
     WarehouseLocation ||--o{ StockItem : "elhelyezve"
+    Contact ||--o{ WarrantyCard : "rendelkezik"
 
     Contact {
         string _id PK
@@ -304,3 +305,21 @@ Projekt- és/vagy partner-alapú bizalmas adat tároló. Jelszavak, API kulcsok,
   - `visibility`: `shared` (csapatnak látható) | `private` (csak létrehozónak).
   - `project_id` / `contact_id`: Legalább egy kötelező.
 - **Konfiguráció:** `SECRETS_ENCRYPTION_KEY` env var (64 hex karakter = 32 byte) szükséges az `apps/crm/.env`-ben.
+
+### 17. WarrantyCard (Jótállási Jegy)
+
+Önálló, manuálisan kiállítható jótállási jegy modul. Nem kötött munkalaphoz vagy szállítólevélhez – a CRM-felhasználó szabadon dönti el, kinek és milyen termékre állít ki jótállást.
+
+- **Sorszám:** Auto-generált, `JJY-XXXXXX` formátumban (Counter kollekció, `warranty_card` kulcs).
+- **Tételek (`lines`):** Minden tétel tartalmaz:
+  - `price_list_item_id`: opcionális árlistatétel-hivatkozás (csak `product` típusú tételek)
+  - `name`: termék neve (auto-kitölt, szerkeszthető)
+  - `serial_number`: gyártási/sorozatszám
+  - `warranty_years`: jótállás évben
+  - `warranty_start` / `warranty_end`: kezdeti és lejárati dátum (utóbbi auto-számolt)
+- **Státuszok:** `active` | `expired` | `claimed` | `void`
+- **PDF generálás:** 2 oldalas PDF kliens oldalon (html2pdf.js):
+  - 1. oldal: Jótállási jegy (partner adatok, terméktáblázat)
+  - 2. oldal: Jogi tájékoztató (szerkeszthető szöveg a Settings kollekcióban)
+- **Szerkeszthető jogi szöveg:** `Settings.warranty_legal_notice` mező – változás esetén nem kell kódot módosítani.
+- **RBAC:** `crm.admin` – teljes hozzáférés, `crm.staff` – létrehozás + PDF, `partner.admin` / `partner.viewer` – saját jótállások megtekintése + letöltése a Partner Portálon.

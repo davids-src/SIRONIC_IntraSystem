@@ -43,6 +43,7 @@ export async function PATCH(req: Request) {
       "contact_tags",
       "company_details",
       "item_categories",
+      "warranty_legal_notice",
     ] as const;
     const $set: Record<string, unknown> = {};
     for (const k of allowed) {

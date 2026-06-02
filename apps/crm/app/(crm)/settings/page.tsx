@@ -769,6 +769,146 @@ export default function SettingsPage() {
           )}
         </div>
       </Card>
+
+      {/* Jótállási jegy – jogi tájékoztató szöveg */}
+      <WarrantyLegalNoticeEditor
+        initialValue={
+          (settings as Settings & { warranty_legal_notice?: string })
+            .warranty_legal_notice ?? ""
+        }
+        onSaved={(val) => setSettings({ ...settings, warranty_legal_notice: val })}
+      />
     </div>
+  );
+}
+
+// ─── Jogi szöveg szerkesztő komponens ───────────────────────────────────────
+
+function WarrantyLegalNoticeEditor({
+  initialValue,
+  onSaved,
+}: {
+  initialValue: string;
+  onSaved: (val: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(initialValue);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setText(initialValue);
+  }, [initialValue]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await apiJsonBody("/api/settings", "PATCH", { warranty_legal_notice: text });
+      onSaved(text);
+      setEditing(false);
+    } catch (e) {
+      console.error(e);
+      alert("Hiba történt a mentés során.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card className="p-6">
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          marginBottom: "16px",
+        }}
+      >
+        <div>
+          <h2 style={{ fontSize: "1.125rem", fontWeight: 700, margin: 0 }}>
+            Jótállási jegy – Jogi tájékoztató szövege
+          </h2>
+          <p
+            style={{
+              fontSize: "0.875rem",
+              color: "var(--color-text-muted)",
+              margin: "4px 0 0 0",
+            }}
+          >
+            Ez a szöveg jelenik meg a generált jótállási jegy 2. oldalán.
+            Jogszabályváltozás esetén itt módosítható kódmódosítás nélkül.
+          </p>
+        </div>
+        <div style={{ display: "flex", gap: "8px" }}>
+          {!editing ? (
+            <Button variant="secondary" onClick={() => setEditing(true)}>
+              Szerkesztés
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setEditing(false);
+                  setText(initialValue);
+                }}
+                disabled={saving}
+              >
+                Mégse
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => void handleSave()}
+                disabled={saving}
+              >
+                {saving ? "Mentés…" : "Mentés"}
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {editing ? (
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={20}
+          style={{
+            width: "100%",
+            fontFamily: "monospace",
+            fontSize: "0.8125rem",
+            lineHeight: "1.6",
+            padding: "12px",
+            borderRadius: "6px",
+            border: "1px solid var(--color-border-subtle)",
+            background: "var(--color-bg-secondary)",
+            color: "var(--color-text-primary)",
+            resize: "vertical",
+            outline: "none",
+          }}
+        />
+      ) : (
+        <div
+          style={{
+            padding: "12px",
+            borderRadius: "6px",
+            border: "1px solid var(--color-border-subtle)",
+            background: "var(--color-bg-secondary)",
+            fontSize: "0.8125rem",
+            fontFamily: "monospace",
+            whiteSpace: "pre-wrap",
+            lineHeight: "1.6",
+            color: "var(--color-text-secondary)",
+            maxHeight: "200px",
+            overflowY: "auto",
+          }}
+        >
+          {text || (
+            <span style={{ color: "var(--color-text-muted)", fontStyle: "italic" }}>
+              Nincs mentett szöveg – az alapértelmezett jogi szöveg kerül a PDF-be.
+            </span>
+          )}
+        </div>
+      )}
+    </Card>
   );
 }

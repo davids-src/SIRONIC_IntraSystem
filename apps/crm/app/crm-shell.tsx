@@ -84,6 +84,12 @@ const crmNavItems: NavItem[] = [
     icon: <FileOutput size={16} />,
   },
   {
+    key: "warranties",
+    label: "Jótállási jegyek",
+    href: "/warranties",
+    icon: <ShieldCheck size={16} />,
+  },
+  {
     key: "suppliers",
     label: "Beszállítók",
     href: "/suppliers",

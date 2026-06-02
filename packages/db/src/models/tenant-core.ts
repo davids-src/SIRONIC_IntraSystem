@@ -54,6 +54,8 @@ const settingsSchema = defineSchema(
       iban: { type: String, default: null },
       website: { type: String, default: null },
     },
+    /** Jótállási tájékoztató szövege – szerkeszthető a Beállításokban */
+    warranty_legal_notice: { type: String, default: null },
   },
   ts,
 );

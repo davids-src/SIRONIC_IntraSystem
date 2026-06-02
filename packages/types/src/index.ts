@@ -31,6 +31,7 @@ export type PermissionModule =
   | "purchase_order"
   | "delivery_note"
   | "secret"
+  | "warranty"
   | "settings";
 
 /** CRM app login roles only (subset of RoleKey). */
@@ -467,6 +468,8 @@ export interface Settings {
   worklog_units: string[];
   contact_tags: string[];
   company_details: CompanyDetails;
+  /** Jótállási tájékoztató szövege (Markdown), szerkeszthető a CRM beállításokban */
+  warranty_legal_notice: string;
 }
 
 // Backwards compatibility for older UI code during incremental refactor.
@@ -677,6 +680,50 @@ export interface Secret {
   key: string;
   encrypted_value: string; // base64 ciphertext:iv:tag
   visibility: SecretVisibility;
+  created_by: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WARRANTY CARD / JÓTÁLLÁSI JEGY MODULE
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type WarrantyStatus = "active" | "expired" | "claimed" | "void";
+
+export interface WarrantyLine {
+  /** null = szabadon beírt terméksor (nem árlistás) */
+  price_list_item_id: string | null;
+  /** Termék neve – auto-kitölt árlistából, de szerkeszthető */
+  name: string;
+  /** Gyártási / sorozatszám */
+  serial_number: string | null;
+  /** Jótállás időtartama évben */
+  warranty_years: number;
+  /** Jótállás kezdő dátuma */
+  warranty_start: Date;
+  /** Auto-számolt lejárati dátum */
+  warranty_end: Date;
+}
+
+export interface WarrantyCard {
+  _id: string;
+  tenantId: string;
+  /** Auto-generált sorszám: JJY-000001 */
+  warranty_number: string;
+  /** Melyik partnernek szól a jótállás */
+  contact_id: string;
+  /** Opcionális számla sorszáma (szabadon beírt szöveg) */
+  invoice_number: string | null;
+  /** Kiállítás dátuma */
+  issue_date: Date;
+  /** Jótálló tételek listája */
+  lines: WarrantyLine[];
+  notes: string | null;
+  /** Jótállás állapota */
+  status: WarrantyStatus;
+  /** Generált PDF URL */
+  pdf_url: string | null;
   created_by: string;
   created_at: Date;
   updated_at: Date;
