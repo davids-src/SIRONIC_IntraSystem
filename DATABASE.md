@@ -277,3 +277,30 @@ A rendszer szintén tartalmaz egy szigorú hozzáférés-szabályzást (`ActorCo
 
 - Szerepkörök (`RoleKey`): `crm.admin`, `crm.staff`, `partner.admin`, `partner.viewer`.
 - A jogosultságokat modulokra bontva (`dashboard`, `ticket`, `worklog`, `price_list` stb.), akciókhoz rendelve (`view`, `write`, `manage`, `sign`, `add_staging_link`) és hatókörrel (`global`, `contact`, `resource`) tárolják.
+
+### 15. DeliveryNote (Szállítólevél)
+
+Nem-számlás kiadási bizonylat, amely rögzíti, hogy milyen termékek kerültek ki a raktárból egy adott partnerhez vagy projekthez kapcsoltan.
+
+- **Státuszok:** `draft` (piszkozat), `issued` (kiadva – készlet levon), `cancelled` (sztornó – készlet visszakerül).
+- **Legfontosabb mezők:**
+  - `delivery_number`: Auto-generált sorszám (`SZL-000001` formátum).
+  - `contact_id`: Kötelező partner hivatkozás.
+  - `project_id`: Opcionális projekt hivatkozás.
+  - `lines`: Kiadott tételek listája (`price_list_item_id`, `name`, `quantity`, `unit`).
+  - `issue_date`: Kiadás dátuma.
+- **Raktár-integráció:** `draft → issued` státuszváltáskor automatikusan `out` típusú `StockTransaction` jön létre minden tételsorra és csökkenti a `StockItem.quantity_in_stock`-ot. `issued → cancelled` esetén visszafordítja a mozgást.
+
+### 16. Secret (Titoktár)
+
+Projekt- és/vagy partner-alapú bizalmas adat tároló. Jelszavak, API kulcsok, deployment titkok kezelésére.
+
+- **Titkosítás:** `AES-256-GCM` — a plaintext érték **soha nem kerül el nem titkosítva** a MongoDB-be. A `encrypted_value` mező az `iv:authTag:ciphertext` hex-konkatenációt tárolja.
+- **Visszafejtés:** Kizárólag szerveren, kérésre (`POST /api/secrets/:id/reveal`). A válasz egy egyszeri plaintext — nem naplózódik, nem cache-elődik.
+- **Lista API:** Soha nem adja vissza az `encrypted_value` mezőt — csak metadatát (key, visibility, dátum).
+- **Legfontosabb mezők:**
+  - `key`: Emberi olvasható kulcsnév (pl. `DB_PASSWORD`, `API_KEY`).
+  - `encrypted_value`: Titkosított érték (szerver-only).
+  - `visibility`: `shared` (csapatnak látható) | `private` (csak létrehozónak).
+  - `project_id` / `contact_id`: Legalább egy kötelező.
+- **Konfiguráció:** `SECRETS_ENCRYPTION_KEY` env var (64 hex karakter = 32 byte) szükséges az `apps/crm/.env`-ben.

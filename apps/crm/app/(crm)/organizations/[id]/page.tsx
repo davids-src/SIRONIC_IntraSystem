@@ -41,10 +41,12 @@ import {
   UserPlus,
   User,
   Mail,
+  KeyRound,
 } from "lucide-react";
 import { ContactContractsTab } from "../../contacts/[id]/ContactContractsTab";
 import { ContactWorklogsTab } from "../../contacts/[id]/ContactWorklogsTab";
 import { ContactCertificatesTab } from "../../contacts/[id]/ContactCertificatesTab";
+import { ContactSecretsTab } from "../../contacts/[id]/ContactSecretsTab";
 
 const SERVICE_OPTIONS = [
   "IT üzemeltetés",
@@ -368,6 +370,7 @@ export default function OrganizationDetailPage({
     { id: "contracts", label: "Szerződések", icon: <FileSignature size={16} /> },
     { id: "domain_hosting", label: "Domain & Tárhely", icon: <Globe size={16} /> },
     { id: "inventory", label: "Rendszerelemek", icon: <Server size={16} /> },
+    { id: "secrets", label: "Titoktár", icon: <KeyRound size={16} /> },
     {
       id: "portal_permissions",
       label: "Portál jogosultságok",
@@ -848,6 +851,12 @@ export default function OrganizationDetailPage({
               </div>
             </Card>
           </>
+        )}
+
+        {activeTab === "secrets" && (
+          <div className="py-2">
+            <ContactSecretsTab contactId={contact._id} />
+          </div>
         )}
 
         {activeTab === "contracts" && (

@@ -22,6 +22,7 @@ import {
   Truck,
   ShoppingCart,
   Users,
+  FileOutput,
 } from "lucide-react";
 
 const crmNavItems: NavItem[] = [
@@ -75,6 +76,12 @@ const crmNavItems: NavItem[] = [
     label: "Raktár",
     href: "/inventory",
     icon: <ShoppingCart size={16} />,
+  },
+  {
+    key: "delivery-notes",
+    label: "Szállítólevelek",
+    href: "/delivery-notes",
+    icon: <FileOutput size={16} />,
   },
   {
     key: "suppliers",

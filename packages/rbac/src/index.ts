@@ -14,6 +14,8 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     { module: "portal_permissions", action: "manage", scope: "global" },
     { module: "project", action: "admin", scope: "global" },
     { module: "settings", action: "admin", scope: "global" },
+    { module: "delivery_note", action: "admin", scope: "global" },
+    { module: "secret", action: "admin", scope: "global" },
   ],
   "crm.staff": [
     { module: "dashboard", action: "view", scope: "global" },
@@ -37,8 +39,11 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     { module: "project", action: "manage_checklist", scope: "global" },
     { module: "project", action: "add_staging_link", scope: "global" },
     { module: "project", action: "close", scope: "global" },
+    { module: "delivery_note", action: "write", scope: "global" },
+    { module: "secret", action: "write", scope: "global" },
     { module: "settings", action: "view", scope: "global" },
   ],
+
   "partner.admin": [
     { module: "dashboard", action: "view", scope: "contact" },
     { module: "price_list", action: "view", scope: "contact" },

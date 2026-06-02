@@ -16,3 +16,5 @@ export { PurchaseOrderModel } from "./purchase-order";
 export { StockItemModel } from "./stock-item";
 export { WarehouseLocationModel } from "./warehouse-location";
 export { StockTransactionModel } from "./stock-transaction";
+export { DeliveryNoteModel } from "./delivery-note";
+export { SecretModel } from "./secret";

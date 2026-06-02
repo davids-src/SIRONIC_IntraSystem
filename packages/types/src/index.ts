@@ -29,6 +29,8 @@ export type PermissionModule =
   | "contract"
   | "supplier"
   | "purchase_order"
+  | "delivery_note"
+  | "secret"
   | "settings";
 
 /** CRM app login roles only (subset of RoleKey). */
@@ -628,6 +630,53 @@ export interface StockTransaction {
   reference_type: StockTransactionRef;
   reference_id: string | null;
   notes: string | null;
+  created_by: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DELIVERY NOTE / SZÁLLÍTÓLEVÉL MODULE
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type DeliveryNoteStatus = "draft" | "issued" | "cancelled";
+
+export interface DeliveryNoteLine {
+  price_list_item_id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+}
+
+export interface DeliveryNote {
+  _id: string;
+  tenantId: string;
+  delivery_number: string;
+  contact_id: string;
+  project_id: string | null;
+  status: DeliveryNoteStatus;
+  issue_date: Date;
+  lines: DeliveryNoteLine[];
+  notes: string | null;
+  created_by: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECRET STORAGE / TITOKTÁR MODULE
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type SecretVisibility = "shared" | "private";
+
+export interface Secret {
+  _id: string;
+  tenantId: string;
+  project_id: string | null;
+  contact_id: string | null;
+  key: string;
+  encrypted_value: string; // base64 ciphertext:iv:tag
+  visibility: SecretVisibility;
   created_by: string;
   created_at: Date;
   updated_at: Date;

@@ -23,4 +23,6 @@ export {
   StockItemModel,
   WarehouseLocationModel,
   StockTransactionModel,
+  DeliveryNoteModel,
+  SecretModel,
 } from "./models";
