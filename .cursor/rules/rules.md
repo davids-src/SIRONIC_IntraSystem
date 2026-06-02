@@ -161,3 +161,10 @@ Strict product shape (conceptual TypeScript):
 Every change should respect these principles—especially **modularity**, **RBAC readiness**, **TypeScript strictness**, **testing**, and **layering**. If a shortcut would violate them, **stop and refactor** (or split the work) instead of shipping debt.
 
 This is a long-lived product (**5+ years** mindset): build for clarity, testability, and safe evolution.
+
+---
+
+## 9. Documentation Enforcement
+
+- **SIRONIC_SYSTEM_MANUAL.md:** The root directory contains a highly detailed functional and technical manual (`SIRONIC_SYSTEM_MANUAL.md`).
+- **Mandatory Updates:** Every time a new feature, database entity, UI page, or workflow is added or modified, you **MUST** update the `SIRONIC_SYSTEM_MANUAL.md` file to reflect these changes with microscopic technical and UI/UX detail. Failure to do so will result in an out-of-sync architecture.
