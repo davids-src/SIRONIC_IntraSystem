@@ -120,9 +120,18 @@ export default function PartnerOfferDetailsPage() {
   if (loadErr) return <div className="p-8 text-red-500">{loadErr}</div>;
   if (!offer) return <div className="p-8">Betöltés...</div>;
 
-  const totalNet = offer.lines.reduce((sum, l) => sum + l.net_unit_price * l.quantity, 0);
+  const totalNet = offer.lines.reduce(
+    (sum, l) =>
+      sum + l.net_unit_price * (1 - (l.discount_percent ?? 0) / 100) * l.quantity,
+    0,
+  );
   const totalVat = offer.lines.reduce(
-    (sum, l) => sum + l.net_unit_price * l.quantity * (l.tax_rate / 100),
+    (sum, l) =>
+      sum +
+      l.net_unit_price *
+        (1 - (l.discount_percent ?? 0) / 100) *
+        l.quantity *
+        (l.tax_rate / 100),
     0,
   );
 
@@ -180,22 +189,37 @@ export default function PartnerOfferDetailsPage() {
           </div>
 
           <div className="flex flex-col gap-4">
-            {offer.lines.map((l, i) => (
-              <div
-                key={i}
-                className="flex justify-between items-start border-b border-[#222] pb-4"
-              >
-                <div>
-                  <div className="font-semibold text-sm">{l.description}</div>
-                  <div className="text-xs text-gray-400 mt-1">
-                    {l.quantity} {l.unit} x {fmt(l.net_unit_price)}
+            {offer.lines.map((l, i) => {
+              const discountedPrice =
+                l.net_unit_price * (1 - (l.discount_percent ?? 0) / 100);
+              return (
+                <div
+                  key={i}
+                  className="flex justify-between items-start border-b border-[#222] pb-4"
+                >
+                  <div>
+                    <div
+                      className="font-semibold text-sm"
+                      style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                    >
+                      {l.description}
+                      {l.discount_percent ? (
+                        <Badge variant="success">-{l.discount_percent}%</Badge>
+                      ) : null}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      {l.quantity} {l.unit} x {fmt(l.net_unit_price)}
+                      {l.discount_percent
+                        ? ` (Kedvezményes: ${fmt(discountedPrice)} / ${l.unit})`
+                        : ""}
+                    </div>
+                  </div>
+                  <div className="font-bold text-sm">
+                    {fmt(l.quantity * discountedPrice)}
                   </div>
                 </div>
-                <div className="font-bold text-sm">
-                  {fmt(l.quantity * l.net_unit_price)}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="mt-6 flex flex-col gap-2 text-sm border-t border-[#333] pt-4">
@@ -293,20 +317,37 @@ export default function PartnerOfferDetailsPage() {
               </tr>
             </thead>
             <tbody>
-              {offer.lines.map((l, i) => (
-                <tr key={i} style={{ borderBottom: "1px solid #eee" }}>
-                  <td style={{ padding: "8px", fontWeight: 600 }}>{l.description}</td>
-                  <td style={{ textAlign: "right", padding: "8px" }}>
-                    {l.quantity} {l.unit}
-                  </td>
-                  <td style={{ textAlign: "right", padding: "8px" }}>
-                    {fmt(l.net_unit_price)}
-                  </td>
-                  <td style={{ textAlign: "right", padding: "8px" }}>
-                    {fmt(l.quantity * l.net_unit_price)}
-                  </td>
-                </tr>
-              ))}
+              {offer.lines.map((l, i) => {
+                const discountedPrice =
+                  l.net_unit_price * (1 - (l.discount_percent ?? 0) / 100);
+                return (
+                  <tr key={i} style={{ borderBottom: "1px solid #eee" }}>
+                    <td style={{ padding: "8px", fontWeight: 600 }}>
+                      {l.description}
+                      {l.discount_percent ? (
+                        <span
+                          style={{
+                            marginLeft: "6px",
+                            color: "#22c55e",
+                            fontSize: "10px",
+                          }}
+                        >
+                          (-{l.discount_percent}%)
+                        </span>
+                      ) : null}
+                    </td>
+                    <td style={{ textAlign: "right", padding: "8px" }}>
+                      {l.quantity} {l.unit}
+                    </td>
+                    <td style={{ textAlign: "right", padding: "8px" }}>
+                      {fmt(discountedPrice)}
+                    </td>
+                    <td style={{ textAlign: "right", padding: "8px" }}>
+                      {fmt(l.quantity * discountedPrice)}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
 

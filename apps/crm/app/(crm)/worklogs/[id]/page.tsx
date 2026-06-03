@@ -25,6 +25,7 @@ import type {
   Settings,
   CompanyDetails,
   PriceListItem,
+  StockItemWithProduct,
 } from "@crm/types";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 import {
@@ -112,6 +113,7 @@ function WorklogFormContent({ id }: { id: string }) {
   const [showPricesOnPdf, setShowPricesOnPdf] = useState(true);
   const [showItemPicker, setShowItemPicker] = useState(false);
   const [priceList, setPriceList] = useState<PriceListItem[]>([]);
+  const [stockItems, setStockItems] = useState<StockItemWithProduct[]>([]);
   const [itemSearch, setItemSearch] = useState("");
 
   const disabled = status !== "draft";
@@ -120,15 +122,19 @@ function WorklogFormContent({ id }: { id: string }) {
     const ac = new AbortController();
     (async () => {
       try {
-        const [cList, uList, sList, pList] = await Promise.all([
+        const [cList, uList, sList, pList, stList] = await Promise.all([
           apiJson<Contact[]>("/api/contacts", { signal: ac.signal }),
           apiJson<unknown[]>("/api/crm-users", { signal: ac.signal }),
           apiJson<Settings>("/api/settings", { signal: ac.signal }),
           apiJson<PriceListItem[]>("/api/price-list", { signal: ac.signal }),
+          apiJson<StockItemWithProduct[]>("/api/warehouse/stock", {
+            signal: ac.signal,
+          }).catch(() => []),
         ]);
         setContacts(cList);
         setCompanyDetails(sList.company_details || null);
         setPriceList(pList);
+        setStockItems(stList);
         setCrmUsers(
           uList.map((row) => {
             const u = row as CrmUser;
@@ -590,22 +596,37 @@ function WorklogFormContent({ id }: { id: string }) {
                 borderColor: "var(--color-border-subtle)",
               }}
             >
-              Tételek
+              Felhasznált segédanyagok
             </div>
             {!disabled && (
-              <button
-                type="button"
-                className="text-xs flex items-center gap-1 px-2 py-1 rounded-md ml-3"
-                style={{
-                  background: "var(--color-bg-secondary)",
-                  color: "var(--color-accent-primary)",
-                  border: "none",
-                  cursor: "pointer",
-                }}
-                onClick={() => setItems((prev) => [...prev, emptyItem()])}
-              >
-                <Plus size={13} /> Új tétel
-              </button>
+              <div style={{ display: "flex", gap: "8px", marginLeft: "12px" }}>
+                <button
+                  type="button"
+                  className="text-xs flex items-center gap-1 px-3 py-1.5 rounded-md"
+                  style={{
+                    background: "var(--color-bg-secondary)",
+                    color: "var(--color-accent-primary)",
+                    border: "1px solid var(--color-border-default)",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setShowItemPicker(true)}
+                >
+                  <Plus size={13} /> + Anyag hozzáadása árlistából
+                </button>
+                <button
+                  type="button"
+                  className="text-xs flex items-center gap-1 px-3 py-1.5 rounded-md"
+                  style={{
+                    background: "var(--color-bg-secondary)",
+                    color: "var(--color-accent-primary)",
+                    border: "1px solid var(--color-border-default)",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setItems((prev) => [...prev, emptyItem()])}
+                >
+                  <Plus size={13} /> + Egyedi anyag
+                </button>
+              </div>
             )}
           </div>
           <div
@@ -620,7 +641,7 @@ function WorklogFormContent({ id }: { id: string }) {
                     borderBottom: "1px solid var(--color-border-subtle)",
                   }}
                 >
-                  {["Megnevezés", "Mennyiség", "Egység", "Egységár (opcionális)", ""].map(
+                  {["Anyag neve", "Mennyiség", "Egység", "Egységár (opcionális)", ""].map(
                     (h) => (
                       <th
                         key={h}
@@ -1079,53 +1100,82 @@ function WorklogFormContent({ id }: { id: string }) {
                     p.name.toLowerCase().includes(itemSearch.toLowerCase()) ||
                     p.item_number.toLowerCase().includes(itemSearch.toLowerCase()),
                 )
-                .map((p) => (
-                  <div
-                    key={p._id}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "12px",
-                      border: "1px solid var(--color-border-subtle)",
-                      borderRadius: "8px",
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 600 }}>{p.name}</div>
-                      <div style={{ fontSize: "12px", color: "var(--color-text-muted)" }}>
-                        {p.item_number} •{" "}
-                        {new Intl.NumberFormat("hu-HU", {
-                          style: "currency",
-                          currency: "HUF",
-                          maximumFractionDigits: 0,
-                        }).format(p.net_price)}{" "}
-                        / {p.unit}
-                      </div>
-                    </div>
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        const newItem = {
-                          description: p.name,
-                          quantity: 1,
-                          unit: p.unit,
-                          unit_price: p.net_price,
-                          price_list_item_id: p._id,
-                        };
-                        if (items.length === 1 && items[0]?.description === "") {
-                          setItems([newItem]);
-                        } else {
-                          setItems((prev) => [...prev, newItem]);
-                        }
-                        setShowItemPicker(false);
-                        setItemSearch("");
+                .map((p) => {
+                  const stockItem = stockItems.find(
+                    (s) => s.price_list_item_id === p._id,
+                  );
+                  const stockQty = stockItem ? stockItem.quantity_in_stock : 0;
+                  const location = stockItem?.warehouse_location;
+                  return (
+                    <div
+                      key={p._id}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "12px",
+                        border: "1px solid var(--color-border-subtle)",
+                        borderRadius: "8px",
                       }}
                     >
-                      Kiválaszt
-                    </Button>
-                  </div>
-                ))}
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{p.name}</div>
+                        <div
+                          style={{
+                            fontSize: "12px",
+                            color: "var(--color-text-muted)",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "2px",
+                            marginTop: "4px",
+                          }}
+                        >
+                          <div>
+                            {p.item_number} •{" "}
+                            {new Intl.NumberFormat("hu-HU", {
+                              style: "currency",
+                              currency: "HUF",
+                              maximumFractionDigits: 0,
+                            }).format(p.net_price)}{" "}
+                            / {p.unit}
+                          </div>
+                          {p.type === "product" && (
+                            <div
+                              style={{
+                                fontWeight: 700,
+                                color: stockQty > 0 ? "#22c55e" : "#ef4444",
+                              }}
+                            >
+                              Készleten: {stockQty} {p.unit}
+                              {location ? ` (${location})` : ""}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          const newItem = {
+                            description: p.name,
+                            quantity: 1,
+                            unit: p.unit,
+                            unit_price: p.net_price,
+                            price_list_item_id: p._id,
+                          };
+                          if (items.length === 1 && items[0]?.description === "") {
+                            setItems([newItem]);
+                          } else {
+                            setItems((prev) => [...prev, newItem]);
+                          }
+                          setShowItemPicker(false);
+                          setItemSearch("");
+                        }}
+                      >
+                        Kiválaszt
+                      </Button>
+                    </div>
+                  );
+                })}
               {priceList.length === 0 && (
                 <div
                   style={{

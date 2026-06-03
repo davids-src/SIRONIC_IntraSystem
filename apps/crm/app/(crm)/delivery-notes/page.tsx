@@ -13,6 +13,8 @@ import {
   CheckCircle,
   XCircle,
   Clock,
+  Archive,
+  RotateCcw,
 } from "lucide-react";
 import { apiJson } from "@/lib/api-client";
 import type { DeliveryNote, Contact } from "@crm/types";
@@ -61,25 +63,71 @@ export default function DeliveryNotesPage() {
   const [contacts, setContacts] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
+  const [includeArchived, setIncludeArchived] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState<DeliveryNoteWithContact | null>(
+    null,
+  );
+  const [archiveReason, setArchiveReason] = useState("");
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [ns, cs] = await Promise.all([
+        apiJson<DeliveryNoteWithContact[]>(
+          `/api/delivery-notes?include_archived=${includeArchived}`,
+        ),
+        apiJson<Contact[]>("/api/contacts"),
+      ]);
+      const map: Record<string, string> = {};
+      cs.forEach((c) => {
+        map[c._id] = c.name;
+      });
+      setContacts(map);
+      setNotes(ns.map((n) => ({ ...n, contactName: map[n.contact_id] })));
+    } catch {
+      // silent
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const ac = new AbortController();
-    Promise.all([
-      apiJson<DeliveryNoteWithContact[]>("/api/delivery-notes", { signal: ac.signal }),
-      apiJson<Contact[]>("/api/contacts", { signal: ac.signal }),
-    ])
-      .then(([ns, cs]) => {
-        const map: Record<string, string> = {};
-        cs.forEach((c) => {
-          map[c._id] = c.name;
-        });
-        setContacts(map);
-        setNotes(ns.map((n) => ({ ...n, contactName: map[n.contact_id] })));
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-    return () => ac.abort();
-  }, []);
+    loadData();
+  }, [includeArchived]);
+
+  const handleArchive = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!archiveTarget) return;
+    const res = await fetch(`/api/delivery-notes/${archiveTarget._id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        is_archived: true,
+        archived_at: new Date(),
+        archive_reason: archiveReason.trim(),
+      }),
+    });
+    if (res.ok) {
+      setArchiveTarget(null);
+      setArchiveReason("");
+      loadData();
+    } else alert("Sikertelen archiválás.");
+  };
+
+  const handleRestore = async (id: string) => {
+    if (!confirm("Vissza szeretnéd állítani ezt a szállítólevelet?")) return;
+    const res = await fetch(`/api/delivery-notes/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        is_archived: false,
+        archived_at: null,
+        archive_reason: null,
+      }),
+    });
+    if (res.ok) loadData();
+    else alert("Sikertelen visszaállítás.");
+  };
 
   const filtered = notes.filter((n) => {
     if (!q.trim()) return true;
@@ -111,17 +159,44 @@ export default function DeliveryNotesPage() {
 
       {/* Filters */}
       <Card className="p-4">
-        <div className="relative max-w-sm">
-          <Search
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
-          />
-          <input
-            className="w-full pl-9 pr-3 py-2 text-sm bg-[var(--color-bg-secondary)] border border-[var(--color-border-subtle)] rounded-md focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-primary)] text-[var(--color-text-primary)]"
-            placeholder="Keresés száma, partner alapján…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
+        <div className="flex flex-wrap gap-3 items-center">
+          <div className="relative max-w-sm flex-1">
+            <Search
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
+            />
+            <input
+              className="w-full pl-9 pr-3 py-2 text-sm bg-[var(--color-bg-secondary)] border border-[var(--color-border-subtle)] rounded-md focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-primary)] text-[var(--color-text-primary)]"
+              placeholder="Keresés száma, partner alapján…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <input
+              type="checkbox"
+              id="dn-include-archived"
+              checked={includeArchived}
+              onChange={(e) => setIncludeArchived(e.target.checked)}
+              style={{
+                width: "16px",
+                height: "16px",
+                cursor: "pointer",
+                accentColor: "var(--color-accent-primary)",
+              }}
+            />
+            <label
+              htmlFor="dn-include-archived"
+              style={{
+                fontSize: "0.875rem",
+                color: "var(--color-text-muted)",
+                cursor: "pointer",
+                userSelect: "none",
+              }}
+            >
+              Archivált elemek megjelenítése
+            </label>
+          </div>
         </div>
       </Card>
 
@@ -181,17 +256,60 @@ export default function DeliveryNotesPage() {
                       </span>
                     </td>
                     <td className="px-5 py-4 text-center">{statusBadge(note.status)}</td>
-                    <td className="px-5 py-4 text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(`/delivery-notes/${note._id}`);
+                    <td
+                      className="px-5 py-4 text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "6px",
+                          justifyContent: "flex-end",
+                          alignItems: "center",
                         }}
                       >
-                        <Eye size={14} className="mr-1" /> Megnyitás
-                      </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => router.push(`/delivery-notes/${note._id}`)}
+                        >
+                          <Eye size={14} className="mr-1" /> Megnyitás
+                        </Button>
+                        {note.is_archived ? (
+                          <button
+                            onClick={() => handleRestore(note._id)}
+                            style={{
+                              background: "transparent",
+                              border: "none",
+                              cursor: "pointer",
+                              color: "var(--color-text-secondary)",
+                              padding: "4px",
+                              borderRadius: "6px",
+                            }}
+                            title="Visszaállítás"
+                          >
+                            <RotateCcw size={14} />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setArchiveTarget(note);
+                              setArchiveReason("");
+                            }}
+                            style={{
+                              background: "transparent",
+                              border: "none",
+                              cursor: "pointer",
+                              color: "var(--color-status-error, #f87171)",
+                              padding: "4px",
+                              borderRadius: "6px",
+                            }}
+                            title="Archiválás"
+                          >
+                            <Archive size={14} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -200,6 +318,86 @@ export default function DeliveryNotesPage() {
           </div>
         )}
       </Card>
+
+      {archiveTarget && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => setArchiveTarget(null)}
+        >
+          <div
+            className="rounded-xl border p-6"
+            style={{
+              background: "var(--color-bg-card)",
+              borderColor: "var(--color-border-subtle)",
+              width: "100%",
+              maxWidth: "450px",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ margin: "0 0 12px 0", color: "#fff" }}>
+              Szállítólevél archiválása
+            </h2>
+            <p
+              style={{
+                fontSize: "14px",
+                color: "var(--color-text-muted)",
+                marginBottom: "16px",
+              }}
+            >
+              Biztosan archiválni szeretnéd:{" "}
+              <strong>{archiveTarget.delivery_number}</strong>?<br />
+              Kérjük, add meg az archiválás indokát.
+            </p>
+            <form
+              onSubmit={handleArchive}
+              style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "14px", color: "var(--color-text-secondary)" }}>
+                  Archiválás oka *
+                </label>
+                <input
+                  className="w-full px-3 py-2 text-sm bg-[var(--color-bg-secondary)] border border-[var(--color-border-subtle)] rounded-md text-[var(--color-text-primary)] focus:outline-none"
+                  value={archiveReason}
+                  onChange={(e) => setArchiveReason(e.target.value)}
+                  placeholder="Pl. Sztornózva, duplikátum..."
+                  required
+                />
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setArchiveTarget(null)}
+                >
+                  Mégse
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  style={{
+                    backgroundColor: "var(--color-status-error, #f87171)",
+                    borderColor: "var(--color-status-error, #f87171)",
+                  }}
+                >
+                  Archiválás
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

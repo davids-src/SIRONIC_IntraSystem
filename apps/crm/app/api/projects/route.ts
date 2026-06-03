@@ -46,8 +46,12 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const q = searchParams.get("q")?.trim();
     const contactId = searchParams.get("contact_id")?.trim();
+    const includeArchived = searchParams.get("include_archived") === "true";
     return await withDb(async () => {
       const filter: Record<string, unknown> = { tenantId: actor.tenantId };
+      if (!includeArchived) {
+        filter.is_archived = { $ne: true };
+      }
       if (contactId) {
         filter.contact_id = contactId;
       }

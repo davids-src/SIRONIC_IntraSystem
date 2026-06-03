@@ -11,6 +11,8 @@ import {
   Clock,
   CheckCircle,
   AlertTriangle,
+  Archive,
+  RotateCcw,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -57,26 +59,61 @@ export default function TicketsPage() {
   const [search, setSearch] = useState("");
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [includeArchived, setIncludeArchived] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState<Ticket | null>(null);
+  const [archiveReason, setArchiveReason] = useState("");
+
+  const loadData = async () => {
+    try {
+      const r = await fetch(`/api/tickets?include_archived=${includeArchived}`);
+      if (!r.ok) {
+        setLoadError("A ticket lista nem elérhető.");
+        return;
+      }
+      const data = (await r.json()) as unknown[];
+      setTickets(data.map((row) => parseTicket(row)));
+    } catch {
+      setLoadError("A ticket lista nem elérhető.");
+    }
+  };
 
   useEffect(() => {
-    const ac = new AbortController();
-    (async () => {
-      try {
-        const r = await fetch("/api/tickets", { signal: ac.signal });
-        if (!r.ok) {
-          setLoadError("A ticket lista nem elérhető.");
-          return;
-        }
-        const data = (await r.json()) as unknown[];
-        setTickets(data.map((row) => parseTicket(row)));
-      } catch {
-        if (!ac.signal.aborted) {
-          setLoadError("A ticket lista nem elérhető.");
-        }
-      }
-    })();
-    return () => ac.abort();
-  }, []);
+    loadData();
+  }, [includeArchived]);
+
+  const handleArchive = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!archiveTarget) return;
+    const res = await fetch(`/api/tickets/${archiveTarget._id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        is_archived: true,
+        archived_at: new Date(),
+        archive_reason: archiveReason.trim(),
+      }),
+    });
+    if (res.ok) {
+      setArchiveTarget(null);
+      setArchiveReason("");
+      loadData();
+    } else alert("Sikertelen archiválás.");
+  };
+
+  const handleRestore = async (id: string) => {
+    if (!confirm("Vissza szeretnéd állítani ezt a ticketet?")) return;
+    const res = await fetch(`/api/tickets/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        is_archived: false,
+        archived_at: null,
+        archive_reason: null,
+      }),
+    });
+    if (res.ok) loadData();
+    else alert("Sikertelen visszaállítás.");
+  };
 
   const filtered = tickets.filter(
     (t) =>
@@ -172,6 +209,49 @@ export default function TicketsPage() {
         <span style={{ fontSize: "0.8rem", color: "var(--color-text-muted, #555)" }}>
           {new Date(row.created_at).toLocaleDateString("hu-HU")}
         </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      width: "72px",
+      render: (row) => (
+        <div style={{ display: "flex", gap: "4px" }} onClick={(e) => e.stopPropagation()}>
+          {row.is_archived ? (
+            <button
+              onClick={() => handleRestore(row._id)}
+              style={{
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--color-text-secondary)",
+                padding: "4px",
+                borderRadius: "6px",
+              }}
+              title="Visszaállítás"
+            >
+              <RotateCcw size={14} />
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setArchiveTarget(row);
+                setArchiveReason("");
+              }}
+              style={{
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--color-status-error, #f87171)",
+                padding: "4px",
+                borderRadius: "6px",
+              }}
+              title="Archiválás"
+            >
+              <Archive size={14} />
+            </button>
+          )}
+        </div>
       ),
     },
   ];
@@ -282,6 +362,31 @@ export default function TicketsPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
           />
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <input
+              type="checkbox"
+              id="tk-include-archived"
+              checked={includeArchived}
+              onChange={(e) => setIncludeArchived(e.target.checked)}
+              style={{
+                width: "16px",
+                height: "16px",
+                cursor: "pointer",
+                accentColor: "var(--color-accent-primary)",
+              }}
+            />
+            <label
+              htmlFor="tk-include-archived"
+              style={{
+                fontSize: "0.875rem",
+                color: "var(--color-text-muted)",
+                cursor: "pointer",
+                userSelect: "none",
+              }}
+            >
+              Archivált elemek megjelenítése
+            </label>
+          </div>
         </div>
       </div>
 
@@ -300,6 +405,84 @@ export default function TicketsPage() {
           />
         </div>
       </div>
+
+      {archiveTarget && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => setArchiveTarget(null)}
+        >
+          <div
+            className="rounded-xl border p-6"
+            style={{
+              background: "var(--color-bg-card)",
+              borderColor: "var(--color-border-subtle)",
+              width: "100%",
+              maxWidth: "450px",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ margin: "0 0 12px 0", color: "#fff" }}>Ticket archiválása</h2>
+            <p
+              style={{
+                fontSize: "14px",
+                color: "var(--color-text-muted)",
+                marginBottom: "16px",
+              }}
+            >
+              Biztosan archiválni szeretnéd:{" "}
+              <strong>{archiveTarget.ticket_number}</strong>?<br />
+              Kérjük, add meg az archiválás indokát.
+            </p>
+            <form
+              onSubmit={handleArchive}
+              style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "14px", color: "var(--color-text-secondary)" }}>
+                  Archiválás oka *
+                </label>
+                <Input
+                  id="tk-archive-reason"
+                  value={archiveReason}
+                  onChange={(e) => setArchiveReason(e.target.value)}
+                  placeholder="Pl. Lezárt, duplikátum..."
+                  required
+                />
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setArchiveTarget(null)}
+                >
+                  Mégse
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  style={{
+                    backgroundColor: "var(--color-status-error, #f87171)",
+                    borderColor: "var(--color-status-error, #f87171)",
+                  }}
+                >
+                  Archiválás
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

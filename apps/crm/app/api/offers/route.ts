@@ -10,6 +10,7 @@ const offerLineSchema = z.object({
   unit: z.string().min(1),
   net_unit_price: z.number(),
   tax_rate: z.number(),
+  discount_percent: z.number().min(0).max(100).optional().default(0),
 });
 
 const createSchema = z.object({
@@ -24,12 +25,17 @@ const createSchema = z.object({
 });
 
 function grossTotalFromLines(
-  lines: { quantity: number; net_unit_price: number; tax_rate: number }[],
+  lines: {
+    quantity: number;
+    net_unit_price: number;
+    tax_rate: number;
+    discount_percent?: number;
+  }[],
 ): number {
-  return lines.reduce(
-    (sum, l) => sum + l.quantity * l.net_unit_price * (1 + l.tax_rate / 100),
-    0,
-  );
+  return lines.reduce((sum, l) => {
+    const discountedNet = l.net_unit_price * (1 - (l.discount_percent ?? 0) / 100);
+    return sum + l.quantity * discountedNet * (1 + l.tax_rate / 100);
+  }, 0);
 }
 
 export async function GET(req: Request) {
@@ -38,8 +44,12 @@ export async function GET(req: Request) {
     guard(actor, { module: "offer", action: "view", scope: "global" });
     const { searchParams } = new URL(req.url);
     const q = searchParams.get("q")?.trim();
+    const includeArchived = searchParams.get("include_archived") === "true";
     return await withDb(async () => {
       const filter: Record<string, unknown> = { tenantId: actor.tenantId };
+      if (!includeArchived) {
+        filter.is_archived = { $ne: true };
+      }
       if (q) {
         filter.$or = [
           { title: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") },
@@ -71,6 +81,7 @@ export async function POST(req: Request) {
       unit: l.unit,
       net_unit_price: l.net_unit_price,
       tax_rate: l.tax_rate,
+      discount_percent: l.discount_percent ?? 0,
     }));
     const totalFromLines = lines.length > 0 ? grossTotalFromLines(lines) : null;
     const total_amount =

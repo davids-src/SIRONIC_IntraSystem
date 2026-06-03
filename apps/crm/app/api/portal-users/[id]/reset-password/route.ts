@@ -29,7 +29,7 @@ export async function POST(
       await user.save();
 
       const portalUrl = process.env.NEXT_PUBLIC_PORTAL_URL || "https://portal.sironic.eu";
-      const resetUrl = `${portalUrl}/reset-password?token=${token}`;
+      const resetUrl = `${portalUrl}/set-password?token=${token}`;
 
       await sendEmail({
         to: user.email,

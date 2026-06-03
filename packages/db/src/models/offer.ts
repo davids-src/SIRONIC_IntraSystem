@@ -18,6 +18,9 @@ const offerSchema = defineSchema(
     },
     valid_until: { type: Date, default: null },
     created_by: { type: String, required: true },
+    is_archived: { type: Boolean, default: false },
+    archived_at: { type: Date, default: null },
+    archive_reason: { type: String, default: null },
   },
   ts,
 );
@@ -32,6 +35,8 @@ const offerLineSchema = defineSchema(
     unit: { type: String, required: true },
     net_unit_price: { type: Number, required: true },
     tax_rate: { type: Number, required: true },
+    /** Tételenkénti kedvezmény százalékban (0-100), default: 0 */
+    discount_percent: { type: Number, default: 0 },
   },
   { _id: false },
 );

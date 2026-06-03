@@ -3,6 +3,7 @@ import {
   DeliveryNoteModel,
   StockItemModel,
   StockTransactionModel,
+  PriceListItemModel,
   serializeForJson,
 } from "@crm/db";
 import { guard, handleApiError, requireCrmAuth, withDb } from "@/lib/api-helpers";
@@ -49,7 +50,11 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
       if (!existing) {
         return NextResponse.json({ error: "Not found" }, { status: 404 });
       }
-      if ((existing as any).status === "cancelled") {
+      if (
+        (existing as any).status === "cancelled" &&
+        !patch.is_archived &&
+        patch.is_archived !== false
+      ) {
         return NextResponse.json(
           { error: "Már törölt szállítólevél nem módosítható." },
           { status: 400 },
@@ -75,6 +80,14 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
       ) {
         for (const line of docAny.lines ?? []) {
           try {
+            const item = await PriceListItemModel.findOne({
+              _id: line.price_list_item_id,
+              tenantId: actor.tenantId,
+            }).lean();
+            if (item && item.type !== "product") {
+              continue;
+            }
+
             await StockItemModel.findOneAndUpdate(
               { tenantId: actor.tenantId, price_list_item_id: line.price_list_item_id },
               { $inc: { quantity_in_stock: -line.quantity } },
@@ -102,6 +115,14 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
       ) {
         for (const line of docAny.lines ?? []) {
           try {
+            const item = await PriceListItemModel.findOne({
+              _id: line.price_list_item_id,
+              tenantId: actor.tenantId,
+            }).lean();
+            if (item && item.type !== "product") {
+              continue;
+            }
+
             await StockItemModel.findOneAndUpdate(
               { tenantId: actor.tenantId, price_list_item_id: line.price_list_item_id },
               { $inc: { quantity_in_stock: line.quantity } },
@@ -129,11 +150,13 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
   }
 }
 
-export async function DELETE(_req: Request, ctx: RouteCtx) {
+export async function DELETE(req: Request, ctx: RouteCtx) {
   try {
     const { id } = await ctx.params;
     const { actor } = await requireCrmAuth();
     guard(actor, { module: "delivery_note", action: "admin", scope: "global" });
+    const url = new URL(req.url);
+    const reason = url.searchParams.get("reason") || "Törölve";
     return await withDb(async () => {
       const existing = await DeliveryNoteModel.findOne({
         _id: id,
@@ -148,7 +171,10 @@ export async function DELETE(_req: Request, ctx: RouteCtx) {
           { status: 400 },
         );
       }
-      await DeliveryNoteModel.deleteOne({ _id: id, tenantId: actor.tenantId });
+      await DeliveryNoteModel.findOneAndUpdate(
+        { _id: id, tenantId: actor.tenantId },
+        { $set: { is_archived: true, archived_at: new Date(), archive_reason: reason } },
+      );
       return NextResponse.json({ ok: true });
     });
   } catch (e) {

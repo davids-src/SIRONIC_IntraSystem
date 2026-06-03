@@ -12,6 +12,8 @@ import {
   Clock,
   FileText,
   CheckCircle,
+  Archive,
+  RotateCcw,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -51,38 +53,87 @@ export default function CompletionCertificatesPage() {
   const [search, setSearch] = useState("");
   const [rows, setRows] = useState<CertificateRow[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [includeArchived, setIncludeArchived] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState<CertificateRow | null>(null);
+  const [archiveReason, setArchiveReason] = useState("");
+
+  const loadData = async () => {
+    try {
+      const rc = await fetch("/api/contacts");
+      const rcc = await fetch(
+        `/api/completion-certificates?include_archived=${includeArchived}`,
+      );
+      if (!rc.ok || !rcc.ok) {
+        setLoadError("Az igazolás lista nem elérhető.");
+        return;
+      }
+      const contacts = (await rc.json()) as Contact[];
+      const certsRaw = (await rcc.json()) as unknown[];
+      const nameById = new Map(contacts.map((c) => [c._id, c.name]));
+      setRows(
+        certsRaw.map((raw) => {
+          const c = raw as CompletionCertificate;
+          const cid = c.contact_id ?? "";
+          const nm = cid ? (nameById.get(cid) ?? cid) : "—";
+          return parseCertificate(raw, nm);
+        }),
+      );
+    } catch {
+      setLoadError("Az igazolás lista nem elérhető.");
+    }
+  };
 
   useEffect(() => {
-    const ac = new AbortController();
-    (async () => {
-      try {
-        const [rc, rcc] = await Promise.all([
-          fetch("/api/contacts", { signal: ac.signal }),
-          fetch("/api/completion-certificates", { signal: ac.signal }),
-        ]);
-        if (!rc.ok || !rcc.ok) {
-          setLoadError("Az igazolás lista nem elérhető.");
-          return;
-        }
-        const contacts = (await rc.json()) as Contact[];
-        const certsRaw = (await rcc.json()) as unknown[];
-        const nameById = new Map(contacts.map((c) => [c._id, c.name]));
-        setRows(
-          certsRaw.map((raw) => {
-            const c = raw as CompletionCertificate;
-            const cid = c.contact_id ?? "";
-            const nm = cid ? (nameById.get(cid) ?? cid) : "—";
-            return parseCertificate(raw, nm);
-          }),
-        );
-      } catch {
-        if (!ac.signal.aborted) {
-          setLoadError("Az igazolás lista nem elérhető.");
-        }
+    loadData();
+  }, [includeArchived]);
+
+  const handleArchive = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!archiveTarget) return;
+    try {
+      const res = await fetch(`/api/completion-certificates/${archiveTarget._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          is_archived: true,
+          archived_at: new Date(),
+          archive_reason: archiveReason.trim(),
+        }),
+      });
+      if (res.ok) {
+        setArchiveTarget(null);
+        setArchiveReason("");
+        loadData();
+      } else {
+        alert("Sikertelen archiválás.");
       }
-    })();
-    return () => ac.abort();
-  }, []);
+    } catch {
+      alert("Sikertelen archiválás.");
+    }
+  };
+
+  const handleRestore = async (id: string) => {
+    if (!confirm("Biztosan vissza szeretnéd állítani ezt az elemet az archívumból?"))
+      return;
+    try {
+      const res = await fetch(`/api/completion-certificates/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          is_archived: false,
+          archived_at: null,
+          archive_reason: null,
+        }),
+      });
+      if (res.ok) {
+        loadData();
+      } else {
+        alert("Sikertelen visszaállítás.");
+      }
+    } catch {
+      alert("Sikertelen visszaállítás.");
+    }
+  };
 
   const filtered = rows.filter(
     (c) =>
@@ -101,17 +152,24 @@ export default function CompletionCertificatesPage() {
     {
       key: "certificate_number",
       header: "Igazolás",
-      width: "120px",
+      width: "140px",
       render: (row) => (
-        <span
-          style={{
-            fontFamily: "monospace",
-            fontSize: "0.8rem",
-            color: "var(--color-text-muted, #555)",
-          }}
-        >
-          {row.certificate_number}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <span
+            style={{
+              fontFamily: "monospace",
+              fontSize: "0.8rem",
+              color: "var(--color-text-muted, #555)",
+            }}
+          >
+            {row.certificate_number}
+          </span>
+          {row.is_archived && (
+            <Badge variant="error" style={{ fontSize: "10px", padding: "1px 4px" }}>
+              Archivált
+            </Badge>
+          )}
+        </div>
       ),
     },
     {
@@ -163,31 +221,75 @@ export default function CompletionCertificatesPage() {
       ),
     },
     {
-      key: "pdf_url",
-      header: "",
-      width: "48px",
-      render: (row) =>
-        row.pdf_url ? (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              window.open(String(row.pdf_url), "_blank");
-            }}
-            style={{
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--color-text-muted, #555)",
-              padding: "4px",
-              borderRadius: "6px",
-              display: "flex",
-              alignItems: "center",
-            }}
-            title="PDF letöltése"
-          >
-            <Download size={14} />
-          </button>
-        ) : null,
+      key: "actions",
+      header: "Műveletek",
+      width: "100px",
+      render: (row) => (
+        <div
+          style={{ display: "flex", gap: "8px", alignItems: "center" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {row.pdf_url && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(String(row.pdf_url), "_blank");
+              }}
+              style={{
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--color-text-muted, #555)",
+                padding: "4px",
+                borderRadius: "6px",
+                display: "flex",
+                alignItems: "center",
+              }}
+              title="PDF letöltése"
+            >
+              <Download size={14} />
+            </button>
+          )}
+          {row.is_archived ? (
+            <button
+              onClick={() => handleRestore(row._id)}
+              style={{
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--color-text-secondary, #a0a0a0)",
+                padding: "4px",
+                borderRadius: "6px",
+                display: "flex",
+                alignItems: "center",
+              }}
+              title="Visszaállítás"
+            >
+              <RotateCcw size={14} />
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setArchiveTarget(row);
+                setArchiveReason("");
+              }}
+              style={{
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--color-status-error, #f87171)",
+                padding: "4px",
+                borderRadius: "6px",
+                display: "flex",
+                alignItems: "center",
+              }}
+              title="Archiválás"
+            >
+              <Archive size={14} />
+            </button>
+          )}
+        </div>
+      ),
     },
   ];
 
@@ -277,7 +379,9 @@ export default function CompletionCertificatesPage() {
       ) : null}
 
       <Card className="p-4">
-        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+        <div
+          style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}
+        >
           <div style={{ flex: 1, minWidth: "200px", position: "relative" }}>
             <Search
               size={15}
@@ -298,6 +402,40 @@ export default function CompletionCertificatesPage() {
               style={{ paddingLeft: "36px" }}
             />
           </div>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              marginRight: "12px",
+            }}
+          >
+            <input
+              type="checkbox"
+              id="include-archived"
+              checked={includeArchived}
+              onChange={(e) => setIncludeArchived(e.target.checked)}
+              style={{
+                width: "16px",
+                height: "16px",
+                cursor: "pointer",
+                accentColor: "var(--color-accent-primary, #3b82f6)",
+              }}
+            />
+            <label
+              htmlFor="include-archived"
+              style={{
+                fontSize: "0.875rem",
+                color: "var(--color-text-secondary, #a0a0a0)",
+                cursor: "pointer",
+                userSelect: "none",
+              }}
+            >
+              Archivált elemek megjelenítése
+            </label>
+          </div>
+
           <Button variant="secondary">
             <Filter size={15} style={{ marginRight: "6px" }} />
             Szűrők
@@ -314,6 +452,84 @@ export default function CompletionCertificatesPage() {
           emptyMessage="Nincs találat a keresési feltételekre"
         />
       </Card>
+
+      {archiveTarget && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => setArchiveTarget(null)}
+        >
+          <Card
+            style={{ padding: "24px", width: "100%", maxWidth: "450px" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ margin: "0 0 16px 0", color: "#fff" }}>Bizonylat archiválása</h2>
+            <p
+              style={{
+                fontSize: "14px",
+                color: "var(--color-text-muted)",
+                marginBottom: "16px",
+              }}
+            >
+              Biztosan archiválni szeretnéd a következő bizonylatot:{" "}
+              <strong>{archiveTarget.certificate_number}</strong>?<br />
+              Kérjük, add meg az archiválás indokát.
+            </p>
+            <form
+              onSubmit={handleArchive}
+              style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "14px", color: "var(--color-text-secondary)" }}>
+                  Archiválás oka *
+                </label>
+                <Input
+                  value={archiveReason}
+                  onChange={(e) => setArchiveReason(e.target.value)}
+                  placeholder="Pl. Elavult, hibás bejegyzés..."
+                  required
+                />
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "8px",
+                  marginTop: "8px",
+                }}
+              >
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setArchiveTarget(null)}
+                >
+                  Mégse
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  style={{
+                    backgroundColor: "var(--color-status-error, #f87171)",
+                    borderColor: "var(--color-status-error, #f87171)",
+                  }}
+                >
+                  Archiválás
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

@@ -48,7 +48,8 @@ export async function POST(
       const pdf_url = `${portalUrl}/public/offers/${offer._id}/pdf?token=${offer.public_token}`;
 
       const totalNet = offer.lines.reduce(
-        (sum: number, l: any) => sum + l.net_unit_price * l.quantity,
+        (sum: number, l: any) =>
+          sum + l.net_unit_price * (1 - (l.discount_percent ?? 0) / 100) * l.quantity,
         0,
       );
 

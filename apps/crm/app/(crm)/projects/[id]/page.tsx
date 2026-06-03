@@ -231,6 +231,11 @@ export default function ProjectDetailPage({
       ? Math.min(100, Math.round((totalLoggedHours / budgetHours) * 100))
       : 0;
 
+  const totalPhases = project.phases.length;
+  const completedPhases = project.phases.filter((p) => p.status === "completed").length;
+  const phasesProgressPct =
+    totalPhases > 0 ? Math.round((completedPhases / totalPhases) * 100) : 0;
+
   const tabs = [
     { id: "overview", label: "Áttekintés", icon: <FolderKanban size={15} /> },
     { id: "checklist", label: "Anyaggyűjtés", icon: <CheckCircle2 size={15} /> },
@@ -441,34 +446,59 @@ export default function ProjectDetailPage({
                   </p>
                 </div>
 
-                <div
-                  className="flex flex-col gap-3 pt-4 border-t"
-                  style={{ borderColor: "var(--color-border-subtle)" }}
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-sm font-medium text-white">
-                      Haladás (Időkeret)
-                    </span>
-                    <span className="text-sm font-bold text-white flex items-center gap-1">
-                      <Clock size={13} style={{ color: "var(--color-text-muted)" }} />
-                      {totalLoggedHours}h / {project.budget_hours ?? 0}h
-                    </span>
-                  </div>
-                  <div
-                    className="h-2 rounded-full overflow-hidden"
-                    style={{ background: "var(--color-bg-secondary)" }}
-                  >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-sm font-medium text-white">
+                        Haladás (Időkeret)
+                      </span>
+                      <span className="text-sm font-bold text-white flex items-center gap-1">
+                        <Clock size={13} style={{ color: "var(--color-text-muted)" }} />
+                        {totalLoggedHours}h / {project.budget_hours ?? 0}h
+                      </span>
+                    </div>
                     <div
-                      className="h-full rounded-full transition-all"
-                      style={{
-                        width: `${progressPct}%`,
-                        background: "var(--color-accent-primary)",
-                      }}
-                    />
+                      className="h-2 rounded-full overflow-hidden"
+                      style={{ background: "var(--color-bg-secondary)" }}
+                    >
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${progressPct}%`,
+                          background: "var(--color-accent-primary)",
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                      {progressPct}% teljesítve
+                    </p>
                   </div>
-                  <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-                    {progressPct}% teljesítve
-                  </p>
+
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-sm font-medium text-white">
+                        Haladás (Fázisok)
+                      </span>
+                      <span className="text-sm font-bold text-white">
+                        {completedPhases} / {totalPhases} kész
+                      </span>
+                    </div>
+                    <div
+                      className="h-2 rounded-full overflow-hidden"
+                      style={{ background: "var(--color-bg-secondary)" }}
+                    >
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${phasesProgressPct}%`,
+                          background: "#22c55e",
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+                      {phasesProgressPct}% teljesítve
+                    </p>
+                  </div>
                 </div>
               </div>
 

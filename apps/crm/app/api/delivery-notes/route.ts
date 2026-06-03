@@ -4,6 +4,7 @@ import {
   DeliveryNoteModel,
   StockItemModel,
   StockTransactionModel,
+  PriceListItemModel,
   formatNumber,
   nextCounterValue,
   serializeForJson,
@@ -41,9 +42,13 @@ export async function GET(req: Request) {
     const contact_id = searchParams.get("contact_id");
     const project_id = searchParams.get("project_id");
     const status = searchParams.get("status");
+    const includeArchived = searchParams.get("include_archived") === "true";
 
     return await withDb(async () => {
       const query: Record<string, any> = { tenantId: actor.tenantId };
+      if (!includeArchived) {
+        query.is_archived = { $ne: true };
+      }
       if (contact_id) query.contact_id = contact_id;
       if (project_id) query.project_id = project_id;
       if (status) query.status = status;
@@ -94,6 +99,14 @@ export async function POST(req: Request) {
       if (b.status === "issued") {
         for (const line of b.lines) {
           try {
+            const item = await PriceListItemModel.findOne({
+              _id: line.price_list_item_id,
+              tenantId: actor.tenantId,
+            }).lean();
+            if (item && item.type !== "product") {
+              continue; // Only deduct stock for product type items
+            }
+
             await StockItemModel.findOneAndUpdate(
               { tenantId: actor.tenantId, price_list_item_id: line.price_list_item_id },
               { $inc: { quantity_in_stock: -line.quantity } },

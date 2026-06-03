@@ -11,6 +11,8 @@ import {
   Clock,
   CheckCircle,
   PauseCircle,
+  Archive,
+  RotateCcw,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -41,22 +43,59 @@ export default function ProjectsPage() {
   const [search, setSearch] = useState("");
   const [projects, setProjects] = useState<Project[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [includeArchived, setIncludeArchived] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState<Project | null>(null);
+  const [archiveReason, setArchiveReason] = useState("");
+
+  const loadData = async () => {
+    try {
+      const data = await apiJson<unknown[]>(
+        `/api/projects?include_archived=${includeArchived}`,
+      );
+      setProjects(data.map((row) => parseProject(row)));
+      setLoadError(null);
+    } catch {
+      setLoadError("A projekt lista nem elérhető.");
+    }
+  };
 
   useEffect(() => {
-    const ac = new AbortController();
-    (async () => {
-      try {
-        const data = await apiJson<unknown[]>("/api/projects", { signal: ac.signal });
-        setProjects(data.map((row) => parseProject(row)));
-        setLoadError(null);
-      } catch {
-        if (!ac.signal.aborted) {
-          setLoadError("A projekt lista nem elérhető.");
-        }
-      }
-    })();
-    return () => ac.abort();
-  }, []);
+    loadData();
+  }, [includeArchived]);
+
+  const handleArchive = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!archiveTarget) return;
+    const res = await fetch(`/api/projects/${archiveTarget._id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        is_archived: true,
+        archived_at: new Date(),
+        archive_reason: archiveReason.trim(),
+      }),
+    });
+    if (res.ok) {
+      setArchiveTarget(null);
+      setArchiveReason("");
+      loadData();
+    } else alert("Sikertelen archiválás.");
+  };
+
+  const handleRestore = async (id: string) => {
+    if (!confirm("Vissza szeretnéd állítani ezt a projektet?")) return;
+    const res = await fetch(`/api/projects/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        is_archived: false,
+        archived_at: null,
+        archive_reason: null,
+      }),
+    });
+    if (res.ok) loadData();
+    else alert("Sikertelen visszaállítás.");
+  };
 
   const filtered = projects.filter(
     (p) =>
@@ -167,6 +206,49 @@ export default function ProjectsPage() {
         </span>
       ),
     },
+    {
+      key: "actions",
+      header: "",
+      width: "72px",
+      render: (row) => (
+        <div style={{ display: "flex", gap: "4px" }} onClick={(e) => e.stopPropagation()}>
+          {row.is_archived ? (
+            <button
+              onClick={() => handleRestore(row._id)}
+              style={{
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--color-text-secondary)",
+                padding: "4px",
+                borderRadius: "6px",
+              }}
+              title="Visszaállítás"
+            >
+              <RotateCcw size={14} />
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setArchiveTarget(row);
+                setArchiveReason("");
+              }}
+              style={{
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--color-status-error, #f87171)",
+                padding: "4px",
+                borderRadius: "6px",
+              }}
+              title="Archiválás"
+            >
+              <Archive size={14} />
+            </button>
+          )}
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -267,6 +349,31 @@ export default function ProjectsPage() {
             className="pl-9"
           />
         </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <input
+            type="checkbox"
+            id="pr-include-archived"
+            checked={includeArchived}
+            onChange={(e) => setIncludeArchived(e.target.checked)}
+            style={{
+              width: "16px",
+              height: "16px",
+              cursor: "pointer",
+              accentColor: "var(--color-accent-primary)",
+            }}
+          />
+          <label
+            htmlFor="pr-include-archived"
+            style={{
+              fontSize: "0.875rem",
+              color: "var(--color-text-muted)",
+              cursor: "pointer",
+              userSelect: "none",
+            }}
+          >
+            Archivált elemek megjelenítése
+          </label>
+        </div>
       </div>
 
       <div
@@ -283,6 +390,83 @@ export default function ProjectsPage() {
           />
         </div>
       </div>
+
+      {archiveTarget && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => setArchiveTarget(null)}
+        >
+          <div
+            className="rounded-xl border p-6"
+            style={{
+              background: "var(--color-bg-card)",
+              borderColor: "var(--color-border-subtle)",
+              width: "100%",
+              maxWidth: "450px",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ margin: "0 0 12px 0", color: "#fff" }}>Projekt archiválása</h2>
+            <p
+              style={{
+                fontSize: "14px",
+                color: "var(--color-text-muted)",
+                marginBottom: "16px",
+              }}
+            >
+              Biztosan archiválni szeretnéd: <strong>{archiveTarget.name}</strong>?<br />
+              Kérjük, add meg az archiválás indokát.
+            </p>
+            <form
+              onSubmit={handleArchive}
+              style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "14px", color: "var(--color-text-secondary)" }}>
+                  Archiválás oka *
+                </label>
+                <Input
+                  id="pr-archive-reason"
+                  value={archiveReason}
+                  onChange={(e) => setArchiveReason(e.target.value)}
+                  placeholder="Pl. Lezárt, ügyfél lemondta..."
+                  required
+                />
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setArchiveTarget(null)}
+                >
+                  Mégse
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  style={{
+                    backgroundColor: "var(--color-status-error, #f87171)",
+                    borderColor: "var(--color-status-error, #f87171)",
+                  }}
+                >
+                  Archiválás
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

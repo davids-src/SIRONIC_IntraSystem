@@ -12,6 +12,8 @@ import {
   SelectValue,
   TextareaControl,
   CheckboxField,
+  Input,
+  Textarea,
 } from "@crm/ui";
 import { useRouter } from "next/navigation";
 import type { Ticket, TicketStatus, TicketPriority } from "@crm/types";
@@ -90,6 +92,8 @@ export default function TicketDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const isNew = id === "new";
+
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [contactName, setContactName] = useState("—");
@@ -105,7 +109,29 @@ export default function TicketDetailPage({
   const [savingProps, setSavingProps] = useState(false);
   const [sendingComment, setSendingComment] = useState(false);
 
+  // New ticket creation states
+  const [newTitle, setNewTitle] = useState("");
+  const [newCategory, setNewCategory] = useState("incident");
+  const [newPriority, setNewPriority] = useState<TicketPriority>("medium");
+  const [newAffectedItems, setNewAffectedItems] = useState("");
+  const [newLocation, setNewLocation] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newContactId, setNewContactId] = useState("__none__");
+  const [newOneTimeName, setNewOneTimeName] = useState("");
+  const [newOneTimePhone, setNewOneTimePhone] = useState("");
+  const [newAssignedTo, setNewAssignedTo] = useState("__none__");
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [creating, setCreating] = useState(false);
+
+  const CATEGORY_BY_KEY: Record<string, string> = {
+    incident: "Hibabejelentés",
+    service_request: "Szervizigény",
+    maintenance: "Karbantartás",
+    security: "Biztonságtechnika",
+  };
+
   const reload = useCallback(async () => {
+    if (isNew) return;
     const t = parseTicket(await apiJson<unknown>(`/api/tickets/${id}`));
     setTicket(t);
     setStatus(t.status);
@@ -121,7 +147,7 @@ export default function TicketDetailPage({
     } else {
       setContactName(t.one_time_contact_name ?? "—");
     }
-  }, [id]);
+  }, [id, isNew]);
 
   useEffect(() => {
     (async () => {
@@ -134,15 +160,59 @@ export default function TicketDetailPage({
       } catch {
         setCrmUsers([]);
       }
-      try {
-        await reload();
-        setLoadErr(null);
-      } catch {
-        setLoadErr("A ticket nem tölthető be.");
-        setTicket(null);
+      if (isNew) {
+        try {
+          const cs = await apiJson<any[]>("/api/contacts");
+          setContacts(cs);
+        } catch {
+          setContacts([]);
+        }
+      } else {
+        try {
+          await reload();
+          setLoadErr(null);
+        } catch {
+          setLoadErr("A ticket nem tölthető be.");
+          setTicket(null);
+        }
       }
     })();
-  }, [reload]);
+  }, [reload, isNew]);
+
+  const handleCreateTicket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTitle.trim() || !newDescription.trim() || !newAffectedItems.trim()) {
+      setLoadErr("Tárgy, érintett rendszer és leírás kötelező.");
+      return;
+    }
+    setCreating(true);
+    setLoadErr(null);
+    try {
+      const payload = {
+        title: newTitle.trim(),
+        description: newDescription.trim(),
+        category: CATEGORY_BY_KEY[newCategory] ?? newCategory,
+        priority: newPriority,
+        location: newLocation.trim() || null,
+        affected_items: newAffectedItems.trim(),
+        contact_id: newContactId === "__none__" ? null : newContactId,
+        one_time_contact_name:
+          newContactId === "__none__" ? newOneTimeName.trim() || null : null,
+        one_time_contact_phone:
+          newContactId === "__none__" ? newOneTimePhone.trim() || null : null,
+        assigned_to: newAssignedTo === "__none__" ? null : newAssignedTo,
+        source: "crm" as const,
+        status: "new" as const,
+      };
+
+      const res = await apiJsonBody<{ _id: string }>("/api/tickets", "POST", payload);
+      router.push(`/tickets/${res._id}`);
+    } catch (err) {
+      setLoadErr(err instanceof ApiError ? err.message : "Hiba a létrehozás során.");
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const saveProps = async () => {
     if (!ticket) return;
@@ -186,6 +256,237 @@ export default function TicketDetailPage({
       hour: "2-digit",
       minute: "2-digit",
     });
+
+  if (isNew) {
+    return (
+      <div className="flex flex-col gap-6 max-w-4xl">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.push("/tickets")}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--color-text-muted)",
+              padding: 0,
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "0.875rem",
+              width: "fit-content",
+            }}
+          >
+            <ArrowLeft size={14} /> Vissza a ticketekhez
+          </button>
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-white">Új ticket rögzítése</h1>
+          <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+            Ügyfél bejelentés vagy belső feladat rögzítése a CRM-be
+          </p>
+        </div>
+
+        {loadErr && (
+          <p
+            className="text-sm px-4 py-2 rounded-md"
+            style={{
+              color: "var(--color-status-error)",
+              backgroundColor: "rgba(239, 68, 68, 0.1)",
+              border: "1px solid rgba(239, 68, 68, 0.3)",
+            }}
+            role="alert"
+          >
+            {loadErr}
+          </p>
+        )}
+
+        <form onSubmit={(e) => void handleCreateTicket(e)} className="space-y-6">
+          <div className="p-6 space-y-6" style={card}>
+            <div className="space-y-4">
+              <h3
+                className="text-sm font-bold uppercase tracking-wider pb-2"
+                style={{
+                  color: "var(--color-text-muted)",
+                  borderBottom: "1px solid var(--color-border-subtle)",
+                }}
+              >
+                Alapadatok
+              </h3>
+
+              <Input
+                label="Tárgy / Rövid megnevezés *"
+                placeholder="Pl. Szerver elérhetetlen a központi irodában"
+                required
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+              />
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="ticket-type">Típus *</Label>
+                  <Select value={newCategory} onValueChange={setNewCategory}>
+                    <SelectTrigger id="ticket-type" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="incident">Hibabejelentés</SelectItem>
+                      <SelectItem value="service_request">Szervizigény</SelectItem>
+                      <SelectItem value="maintenance">Karbantartás</SelectItem>
+                      <SelectItem value="security">Biztonságtechnika</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="ticket-priority">Prioritás *</Label>
+                  <Select
+                    value={newPriority}
+                    onValueChange={(v) => setNewPriority(v as TicketPriority)}
+                  >
+                    <SelectTrigger id="ticket-priority" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Alacsony</SelectItem>
+                      <SelectItem value="medium">Közepes</SelectItem>
+                      <SelectItem value="high">Magas</SelectItem>
+                      <SelectItem value="critical">Kritikus</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="ticket-assignee-new">Felelős</Label>
+                  <Select value={newAssignedTo} onValueChange={setNewAssignedTo}>
+                    <SelectTrigger id="ticket-assignee-new" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Nincs kiosztva</SelectItem>
+                      {crmUsers.map((u) => {
+                        const label = u.display_name?.trim() || u.email;
+                        return (
+                          <SelectItem key={u._id} value={label}>
+                            {label}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3
+                className="text-sm font-bold uppercase tracking-wider pb-2"
+                style={{
+                  color: "var(--color-text-muted)",
+                  borderBottom: "1px solid var(--color-border-subtle)",
+                }}
+              >
+                Partner / Ügyfél kapcsolódás
+              </h3>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="ticket-contact">Partner / Cég</Label>
+                <Select value={newContactId} onValueChange={setNewContactId}>
+                  <SelectTrigger id="ticket-contact" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">
+                      Egyszeri / Nem regisztrált partner
+                    </SelectItem>
+                    {contacts.map((c) => (
+                      <SelectItem key={c._id} value={c._id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {newContactId === "__none__" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border-subtle)]">
+                  <Input
+                    label="Ügyfél neve (egyszeri)"
+                    placeholder="Pl. Gipsz Jakab"
+                    value={newOneTimeName}
+                    onChange={(e) => setNewOneTimeName(e.target.value)}
+                  />
+                  <Input
+                    label="Ügyfél telefonszáma (egyszeri)"
+                    placeholder="Pl. +36 30 123 4567"
+                    value={newOneTimePhone}
+                    onChange={(e) => setNewOneTimePhone(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <h3
+                className="text-sm font-bold uppercase tracking-wider pb-2"
+                style={{
+                  color: "var(--color-text-muted)",
+                  borderBottom: "1px solid var(--color-border-subtle)",
+                }}
+              >
+                Helyszín és Rendszerek
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="Érintett rendszer / Eszközök *"
+                  placeholder="Pl. Hálózat, Kamera, Beléptető..."
+                  required
+                  value={newAffectedItems}
+                  onChange={(e) => setNewAffectedItems(e.target.value)}
+                />
+                <Input
+                  label="Helyszín"
+                  placeholder="Pl. Központi iroda, 2. emelet"
+                  value={newLocation}
+                  onChange={(e) => setNewLocation(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3
+                className="text-sm font-bold uppercase tracking-wider pb-2"
+                style={{
+                  color: "var(--color-text-muted)",
+                  borderBottom: "1px solid var(--color-border-subtle)",
+                }}
+              >
+                Részletes leírás
+              </h3>
+
+              <Textarea
+                label="Leírás *"
+                placeholder="Kérjük, írd le a lehető legrészletesebben a feladatot vagy hibát..."
+                required
+                className="min-h-[150px] resize-y"
+                value={newDescription}
+                onChange={(e) => setNewDescription(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="ghost" onClick={() => router.push("/tickets")}>
+              Mégse
+            </Button>
+            <Button type="submit" variant="primary" disabled={creating}>
+              {creating ? "Rögzítés…" : "Ticket rögzítése"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    );
+  }
 
   if (!ticket) {
     return (

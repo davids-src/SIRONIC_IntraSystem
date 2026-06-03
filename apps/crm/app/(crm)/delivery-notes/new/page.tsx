@@ -2,10 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, Button } from "@crm/ui";
+import {
+  Card,
+  Button,
+  Input,
+  Label,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@crm/ui";
 import { ChevronLeft, Plus, Trash2, Save, FileOutput } from "lucide-react";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
-import type { Contact, PriceListItem } from "@crm/types";
+import type { Contact, StockItemWithProduct } from "@crm/types";
 
 interface Line {
   price_list_item_id: string;
@@ -24,7 +34,11 @@ const emptyLine = (): Line => ({
 export default function NewDeliveryNotePage() {
   const router = useRouter();
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [priceListItems, setPriceListItems] = useState<PriceListItem[]>([]);
+  const [stockItems, setStockItems] = useState<StockItemWithProduct[]>([]);
+  const [projects, setProjects] = useState<
+    { _id: string; name: string; project_number: string }[]
+  >([]);
+
   const [contactId, setContactId] = useState("");
   const [projectId, setProjectId] = useState("");
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0]);
@@ -33,24 +47,41 @@ export default function NewDeliveryNotePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Load contacts and stock on mount
   useEffect(() => {
     Promise.all([
       apiJson<Contact[]>("/api/contacts"),
-      apiJson<PriceListItem[]>("/api/price-list"),
+      apiJson<StockItemWithProduct[]>("/api/warehouse/stock").catch(() => []),
     ])
-      .then(([cs, pls]) => {
+      .then(([cs, stList]) => {
         setContacts(cs);
-        setPriceListItems(pls.filter((p) => p.is_active && p.type === "product"));
+        // Only keep those with quantity_in_stock > 0 and a valid product
+        setStockItems(stList.filter((s) => s.quantity_in_stock > 0 && s.product));
       })
       .catch(() => {});
   }, []);
 
+  // Dynamically load projects when contact changes
+  useEffect(() => {
+    if (!contactId) {
+      setProjects([]);
+      setProjectId("");
+      return;
+    }
+    apiJson<any[]>(`/api/projects?contact_id=${contactId}`)
+      .then((res) => {
+        setProjects(res);
+        setProjectId("");
+      })
+      .catch(() => {});
+  }, [contactId]);
+
   const updateLine = (idx: number, key: keyof Line, value: string | number) =>
     setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, [key]: value } : l)));
 
-  const selectPriceListItem = (idx: number, itemId: string) => {
-    const item = priceListItems.find((p) => p._id === itemId);
-    if (!item) {
+  const selectStockItem = (idx: number, itemId: string) => {
+    const sItem = stockItems.find((s) => s.price_list_item_id === itemId);
+    if (!sItem) {
       updateLine(idx, "price_list_item_id", itemId);
       return;
     }
@@ -59,9 +90,9 @@ export default function NewDeliveryNotePage() {
         i === idx
           ? {
               ...l,
-              price_list_item_id: item._id,
-              name: item.name,
-              unit: item.unit,
+              price_list_item_id: sItem.price_list_item_id,
+              name: sItem.product.name,
+              unit: sItem.product.unit,
             }
           : l,
       ),
@@ -125,66 +156,70 @@ export default function NewDeliveryNotePage() {
         <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border-subtle)] pb-2">
           Alapadatok
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Partner */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-[var(--color-text-secondary)]">
-              Partner *
-            </label>
-            <select
-              value={contactId}
-              onChange={(e) => setContactId(e.target.value)}
-              className="px-3 py-2 text-sm rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-primary)]"
+            <Label htmlFor="dn-contact">Partner *</Label>
+            <Select
+              value={contactId || "__empty__"}
+              onValueChange={(v) => setContactId(v === "__empty__" ? "" : v)}
             >
-              <option value="">Válassz partnert…</option>
-              {contacts.map((c) => (
-                <option key={c._id} value={c._id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="dn-contact" className="w-full">
+                <SelectValue placeholder="Válassz partnert…" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__empty__">Válassz partnert…</SelectItem>
+                {contacts.map((c) => (
+                  <SelectItem key={c._id} value={c._id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Issue date */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-[var(--color-text-secondary)]">
-              Kiadás dátuma *
-            </label>
-            <input
-              type="date"
-              value={issueDate}
-              onChange={(e) => setIssueDate(e.target.value)}
-              className="px-3 py-2 text-sm rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-primary)]"
-            />
-          </div>
+          <Input
+            type="date"
+            label="Kiadás dátuma *"
+            value={issueDate}
+            onChange={(e) => setIssueDate(e.target.value)}
+          />
 
-          {/* Project id (optional) */}
+          {/* Project (optional) */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-[var(--color-text-secondary)]">
-              Projekt azonosító (opcionális)
-            </label>
-            <input
-              type="text"
-              value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
-              placeholder="Projekt ObjectId…"
-              className="px-3 py-2 text-sm rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-primary)]"
-            />
+            <Label htmlFor="dn-project">Projekt (opcionális)</Label>
+            <Select
+              value={projectId || "__empty__"}
+              onValueChange={(v) => setProjectId(v === "__empty__" ? "" : v)}
+              disabled={!contactId}
+            >
+              <SelectTrigger id="dn-project" className="w-full">
+                <SelectValue
+                  placeholder={
+                    contactId ? "Válassz projektet…" : "Előbb válassz partnert…"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__empty__">Válassz projektet (opcionális)…</SelectItem>
+                {projects.map((p) => (
+                  <SelectItem key={p._id} value={p._id}>
+                    {p.project_number} – {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Notes */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-[var(--color-text-secondary)]">
-              Megjegyzés
-            </label>
-            <input
-              type="text"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Pl. projekt neve, munkaszám…"
-              className="px-3 py-2 text-sm rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-primary)]"
-            />
-          </div>
+          <Input
+            type="text"
+            label="Megjegyzés"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Pl. projekt neve, munkaszám…"
+          />
         </div>
       </Card>
 
@@ -207,78 +242,75 @@ export default function NewDeliveryNotePage() {
           {lines.map((line, idx) => (
             <div
               key={idx}
-              className="grid grid-cols-12 gap-2 items-start p-3 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border-subtle)]"
+              className="grid grid-cols-12 gap-4 items-end p-3 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border-subtle)]"
             >
               {/* Product picker */}
-              <div className="col-span-5 flex flex-col gap-1">
-                <label className="text-xs text-[var(--color-text-muted)]">
-                  Árlistaelem
-                </label>
-                <select
-                  value={line.price_list_item_id}
-                  onChange={(e) => selectPriceListItem(idx, e.target.value)}
-                  className="px-2 py-1.5 text-sm rounded border border-[var(--color-border-subtle)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-primary)]"
+              <div className="col-span-5 flex flex-col gap-1.5">
+                <Label>Raktáron lévő termék *</Label>
+                <Select
+                  value={line.price_list_item_id || "__empty__"}
+                  onValueChange={(v) => selectStockItem(idx, v === "__empty__" ? "" : v)}
                 >
-                  <option value="">Válassz terméket…</option>
-                  {priceListItems.map((p) => (
-                    <option key={p._id} value={p._id}>
-                      {p.item_number} – {p.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Válassz terméket…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__empty__">Válassz terméket…</SelectItem>
+                    {stockItems.map((s) => (
+                      <SelectItem key={s._id} value={s.price_list_item_id}>
+                        {s.product.item_number} – {s.product.name} (készlet:{" "}
+                        {s.quantity_in_stock} {s.product.unit})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Name (auto-filled, editable) */}
-              <div className="col-span-3 flex flex-col gap-1">
-                <label className="text-xs text-[var(--color-text-muted)]">
-                  Megnevezés
-                </label>
-                <input
+              <div className="col-span-3">
+                <Input
                   type="text"
+                  label="Megnevezés"
                   value={line.name}
                   onChange={(e) => updateLine(idx, "name", e.target.value)}
                   placeholder="Termék neve"
-                  className="px-2 py-1.5 text-sm rounded border border-[var(--color-border-subtle)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-primary)]"
                 />
               </div>
 
               {/* Quantity */}
-              <div className="col-span-2 flex flex-col gap-1">
-                <label className="text-xs text-[var(--color-text-muted)]">
-                  Mennyiség
-                </label>
-                <input
+              <div className="col-span-2">
+                <Input
                   type="number"
                   min="0.001"
                   step="1"
+                  label="Mennyiség"
                   value={line.quantity}
                   onChange={(e) =>
                     updateLine(idx, "quantity", parseFloat(e.target.value) || 1)
                   }
-                  className="px-2 py-1.5 text-sm rounded border border-[var(--color-border-subtle)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-primary)] text-right"
+                  className="text-right"
                 />
               </div>
 
               {/* Unit */}
-              <div className="col-span-1 flex flex-col gap-1">
-                <label className="text-xs text-[var(--color-text-muted)]">Me.</label>
-                <input
+              <div className="col-span-1">
+                <Input
                   type="text"
+                  label="Me."
                   value={line.unit}
                   onChange={(e) => updateLine(idx, "unit", e.target.value)}
-                  className="px-2 py-1.5 text-sm rounded border border-[var(--color-border-subtle)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-primary)]"
                 />
               </div>
 
               {/* Remove */}
-              <div className="col-span-1 flex items-end justify-center pb-1">
+              <div className="col-span-1 flex justify-center pb-2">
                 <button
                   type="button"
                   onClick={() => setLines((prev) => prev.filter((_, i) => i !== idx))}
                   disabled={lines.length === 1}
-                  className="p-1.5 rounded text-[var(--color-status-error)] hover:bg-[var(--color-status-error)]/10 disabled:opacity-30 transition-colors"
+                  className="p-2 rounded text-[var(--color-status-error)] hover:bg-[var(--color-status-error)]/10 disabled:opacity-30 transition-colors"
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={16} />
                 </button>
               </div>
             </div>

@@ -25,10 +25,14 @@ export async function GET(req: Request) {
   try {
     const { actor } = await requireCrmAuth();
     guard(actor, { module: "settings", action: "view", scope: "global" });
+    const { searchParams } = new URL(req.url);
+    const includeArchived = searchParams.get("include_archived") === "true";
     return await withDb(async () => {
-      const rows = await PurchaseOrderModel.find({ tenantId: actor.tenantId })
-        .sort({ created_at: -1 })
-        .lean();
+      const filter: Record<string, unknown> = { tenantId: actor.tenantId };
+      if (!includeArchived) {
+        filter.is_archived = { $ne: true };
+      }
+      const rows = await PurchaseOrderModel.find(filter).sort({ created_at: -1 }).lean();
       return NextResponse.json(serializeForJson(rows));
     });
   } catch (e) {

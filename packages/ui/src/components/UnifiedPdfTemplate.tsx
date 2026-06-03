@@ -30,7 +30,6 @@ export function UnifiedPdfTemplate({
       className="pdf-container"
       style={{
         width: "210mm",
-        minHeight: "297mm",
         padding: "20mm",
         margin: "0 auto",
         backgroundColor: "#fff",
@@ -202,7 +201,7 @@ export function UnifiedPdfTemplate({
       </div>
 
       {/* Fő tartalom (Munkalap tételek, leírás, stb.) */}
-      <div style={{ minHeight: "200px" }}>{children}</div>
+      <div>{children}</div>
 
       {/* Aláírások */}
       {showSignatures && (

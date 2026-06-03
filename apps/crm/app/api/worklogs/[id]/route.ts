@@ -49,14 +49,20 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
   }
 }
 
-export async function DELETE(_req: Request, ctx: RouteCtx) {
+export async function DELETE(req: Request, ctx: RouteCtx) {
   try {
     const { id } = await ctx.params;
     const { actor } = await requireCrmAuth();
     guard(actor, { module: "worklog", action: "admin", scope: "global" });
+    const url = new URL(req.url);
+    const reason = url.searchParams.get("reason") || "Törölve";
     return await withDb(async () => {
-      const res = await WorklogModel.deleteOne({ _id: id, tenantId: actor.tenantId });
-      if (res.deletedCount === 0) {
+      const doc = await WorklogModel.findOneAndUpdate(
+        { _id: id, tenantId: actor.tenantId },
+        { $set: { is_archived: true, archived_at: new Date(), archive_reason: reason } },
+        { new: true },
+      ).lean();
+      if (!doc) {
         return NextResponse.json({ error: "Not found" }, { status: 404 });
       }
       return NextResponse.json({ ok: true });

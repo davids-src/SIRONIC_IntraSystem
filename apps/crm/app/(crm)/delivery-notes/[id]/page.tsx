@@ -1,8 +1,8 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, Badge, Button } from "@crm/ui";
+import { Card, Badge, Button, UnifiedPdfTemplate } from "@crm/ui";
 import {
   ChevronLeft,
   FileOutput,
@@ -13,9 +13,12 @@ import {
   User,
   Calendar,
   FileText,
+  Download,
+  Mail,
+  Loader2,
 } from "lucide-react";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
-import type { Contact } from "@crm/types";
+import type { Contact, Settings } from "@crm/types";
 
 interface DeliveryNoteLine {
   price_list_item_id: string;
@@ -71,17 +74,29 @@ export default function DeliveryNoteDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const printRef = useRef<HTMLDivElement>(null);
+
   const [note, setNote] = useState<DeliveryNoteDoc | null>(null);
   const [contact, setContact] = useState<Contact | null>(null);
+  const [companyDetails, setCompanyDetails] = useState<
+    Settings["company_details"] | null
+  >(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [acting, setActing] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailSuccess, setEmailSuccess] = useState(false);
 
   useEffect(() => {
     const ac = new AbortController();
-    apiJson<DeliveryNoteDoc>(`/api/delivery-notes/${id}`, { signal: ac.signal })
-      .then((data) => {
+    Promise.all([
+      apiJson<DeliveryNoteDoc>(`/api/delivery-notes/${id}`, { signal: ac.signal }),
+      apiJson<Settings>("/api/settings", { signal: ac.signal }),
+    ])
+      .then(([data, settings]) => {
         setNote(data);
+        setCompanyDetails(settings.company_details ?? null);
         return apiJson<Contact>(`/api/contacts/${data.contact_id}`, {
           signal: ac.signal,
         });
@@ -112,6 +127,49 @@ export default function DeliveryNoteDetailPage({
       setError(e instanceof ApiError ? e.message : "Státuszváltás sikertelen.");
     } finally {
       setActing(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!printRef.current) return;
+    setGeneratingPdf(true);
+    const element = printRef.current;
+    element.style.display = "block";
+    try {
+      const html2pdf = (await import("html2pdf.js")).default;
+      const opt = {
+        margin: 0,
+        filename: `Szallitolevel_${note?.delivery_number ?? id}.pdf`,
+        image: { type: "jpeg" as const, quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: {
+          unit: "mm" as const,
+          format: "a4" as const,
+          orientation: "portrait" as const,
+        },
+      };
+      await html2pdf().from(element).set(opt).save();
+    } catch (e) {
+      console.error("PDF hiba:", e);
+      alert("Hiba történt a PDF generálása során.");
+    } finally {
+      element.style.display = "none";
+      setGeneratingPdf(false);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    if (!note) return;
+    setSendingEmail(true);
+    setEmailSuccess(false);
+    setError(null);
+    try {
+      await apiJsonBody(`/api/delivery-notes/${id}/send-email`, "POST", {});
+      setEmailSuccess(true);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Hiba az e-mail küldése során.");
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -164,7 +222,35 @@ export default function DeliveryNoteDetailPage({
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* PDF download */}
+          <Button
+            variant="secondary"
+            onClick={() => void handleDownloadPdf()}
+            disabled={generatingPdf}
+          >
+            {generatingPdf ? (
+              <Loader2 size={15} className="mr-1.5 animate-spin" />
+            ) : (
+              <Download size={15} className="mr-1.5" />
+            )}
+            {generatingPdf ? "PDF…" : "PDF letöltés"}
+          </Button>
+
+          {/* Send email */}
+          <Button
+            variant="secondary"
+            onClick={() => void handleSendEmail()}
+            disabled={sendingEmail}
+          >
+            {sendingEmail ? (
+              <Loader2 size={15} className="mr-1.5 animate-spin" />
+            ) : (
+              <Mail size={15} className="mr-1.5" />
+            )}
+            {sendingEmail ? "Küldés…" : "E-mail küldés"}
+          </Button>
+
           {note.status === "draft" && (
             <Button
               variant="primary"
@@ -193,6 +279,11 @@ export default function DeliveryNoteDetailPage({
         <p className="text-sm text-[var(--color-status-error)] bg-[var(--color-status-error)]/10 border border-[var(--color-status-error)]/30 rounded-md px-4 py-2">
           {error}
         </p>
+      )}
+      {emailSuccess && (
+        <div className="bg-green-950/30 text-green-400 p-4 rounded-lg border border-green-900/50">
+          E-mail sikeresen elküldve a partnernek.
+        </div>
       )}
 
       {/* Partner info */}
@@ -266,6 +357,57 @@ export default function DeliveryNoteDetailPage({
           </div>
         )}
       </Card>
+
+      {/* Hidden PDF template */}
+      <div style={{ display: "none" }}>
+        <div ref={printRef}>
+          <UnifiedPdfTemplate
+            documentTitle="Szállítólevél"
+            documentId={note.delivery_number}
+            date={new Date(note.issue_date)}
+            provider={companyDetails}
+            client={contact}
+          >
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: "13px",
+                marginTop: "8px",
+              }}
+            >
+              <thead>
+                <tr
+                  style={{
+                    backgroundColor: "#f3f4f6",
+                    borderBottom: "2px solid #e5e7eb",
+                  }}
+                >
+                  <th style={{ padding: "8px", textAlign: "left" }}>Termék</th>
+                  <th style={{ padding: "8px", textAlign: "center" }}>Mennyiség</th>
+                  <th style={{ padding: "8px", textAlign: "left" }}>Me.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {note.lines.map((line, i) => (
+                  <tr key={i} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                    <td style={{ padding: "7px 8px", fontWeight: 600 }}>{line.name}</td>
+                    <td style={{ padding: "7px 8px", textAlign: "center" }}>
+                      {line.quantity}
+                    </td>
+                    <td style={{ padding: "7px 8px" }}>{line.unit}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {note.notes && (
+              <div style={{ marginTop: "16px", fontSize: "12px", color: "#6b7280" }}>
+                <strong>Megjegyzés:</strong> {note.notes}
+              </div>
+            )}
+          </UnifiedPdfTemplate>
+        </div>
+      </div>
     </div>
   );
 }

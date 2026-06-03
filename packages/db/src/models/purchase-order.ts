@@ -29,6 +29,9 @@ const purchaseOrderSchema = defineSchema(
     currency: { type: String, required: true, default: "HUF" },
     lines: [purchaseOrderLineSchema],
     notes: { type: String, default: null },
+    is_archived: { type: Boolean, default: false },
+    archived_at: { type: Date, default: null },
+    archive_reason: { type: String, default: null },
   },
   ts,
 );

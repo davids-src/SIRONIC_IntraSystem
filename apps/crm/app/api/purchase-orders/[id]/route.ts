@@ -16,6 +16,9 @@ const updateSchema = z.object({
   status: z.enum(["draft", "sent", "fulfilled", "cancelled"]).optional(),
   expected_delivery_date: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
+  is_archived: z.boolean().optional(),
+  archived_at: z.any().optional(),
+  archive_reason: z.string().nullable().optional(),
 });
 
 export async function GET(
@@ -200,6 +203,30 @@ export async function PATCH(
       // ──────────────────────────────────────────────────────────────────────
 
       return NextResponse.json(serializeForJson(doc));
+    });
+  } catch (e) {
+    return handleApiError(e);
+  }
+}
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { actor } = await requireCrmAuth();
+    guard(actor, { module: "settings", action: "admin", scope: "global" });
+    const { id } = await params;
+    const url = new URL(req.url);
+    const reason = url.searchParams.get("reason") || "Törölve";
+    return await withDb(async () => {
+      const doc = await PurchaseOrderModel.findOneAndUpdate(
+        { _id: id, tenantId: actor.tenantId },
+        { $set: { is_archived: true, archived_at: new Date(), archive_reason: reason } },
+        { new: true },
+      ).lean();
+      if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
+      return NextResponse.json({ ok: true });
     });
   } catch (e) {
     return handleApiError(e);

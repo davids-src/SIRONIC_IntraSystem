@@ -46,19 +46,10 @@ export default function NewProjectPage() {
   const [budgetHours, setBudgetHours] = useState("");
   const [portalVisible, setPortalVisible] = useState(true);
 
-  const [phases, setPhases] = useState([
-    { name: "Felmérés", due_date: "" },
-    { name: "Tervezés", due_date: "" },
-    { name: "Telepítés", due_date: "" },
-    { name: "Tesztelés", due_date: "" },
-    { name: "Átadás", due_date: "" },
-  ]);
+  const [phases, setPhases] = useState<{ name: string; due_date: string }[]>([]);
   const [checklist, setChecklist] = useState<
     { label: string; category: string; required: boolean }[]
-  >([
-    { label: "Helyszínrajz / alaprajz", category: "documents", required: true },
-    { label: "Eszközlista igény", category: "technical", required: true },
-  ]);
+  >([]);
 
   useEffect(() => {
     const ac = new AbortController();

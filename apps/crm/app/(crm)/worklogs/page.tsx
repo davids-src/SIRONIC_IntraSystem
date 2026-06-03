@@ -21,6 +21,8 @@ import {
   CheckCircle,
   FileText,
   Filter,
+  Archive,
+  RotateCcw,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -49,37 +51,85 @@ export default function WorklogsPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [rows, setRows] = useState<WorklogRow[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [includeArchived, setIncludeArchived] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState<WorklogRow | null>(null);
+  const [archiveReason, setArchiveReason] = useState("");
+
+  const loadData = async () => {
+    try {
+      const [rc, rw] = await Promise.all([
+        fetch("/api/contacts"),
+        fetch(`/api/worklogs?include_archived=${includeArchived}`),
+      ]);
+      if (!rc.ok || !rw.ok) {
+        setLoadError("A munkalap lista nem elérhető.");
+        return;
+      }
+      const contacts = (await rc.json()) as Contact[];
+      const worklogsRaw = (await rw.json()) as unknown[];
+      const nameById = new Map(contacts.map((c) => [c._id, c.name]));
+      setRows(
+        worklogsRaw.map((raw) => {
+          const w = raw as Worklog;
+          const nm = w.contact_id ? (nameById.get(w.contact_id) ?? w.contact_id) : "—";
+          return parseWorklog(raw, nm);
+        }),
+      );
+    } catch {
+      setLoadError("A munkalap lista nem elérhető.");
+    }
+  };
 
   useEffect(() => {
-    const ac = new AbortController();
-    (async () => {
-      try {
-        const [rc, rw] = await Promise.all([
-          fetch("/api/contacts", { signal: ac.signal }),
-          fetch("/api/worklogs", { signal: ac.signal }),
-        ]);
-        if (!rc.ok || !rw.ok) {
-          setLoadError("A munkalap lista nem elérhető.");
-          return;
-        }
-        const contacts = (await rc.json()) as Contact[];
-        const worklogsRaw = (await rw.json()) as unknown[];
-        const nameById = new Map(contacts.map((c) => [c._id, c.name]));
-        setRows(
-          worklogsRaw.map((raw) => {
-            const w = raw as Worklog;
-            const nm = w.contact_id ? (nameById.get(w.contact_id) ?? w.contact_id) : "—";
-            return parseWorklog(raw, nm);
-          }),
-        );
-      } catch {
-        if (!ac.signal.aborted) {
-          setLoadError("A munkalap lista nem elérhető.");
-        }
+    loadData();
+  }, [includeArchived]);
+
+  const handleArchive = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!archiveTarget) return;
+    try {
+      const res = await fetch(`/api/worklogs/${archiveTarget._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          is_archived: true,
+          archived_at: new Date(),
+          archive_reason: archiveReason.trim(),
+        }),
+      });
+      if (res.ok) {
+        setArchiveTarget(null);
+        setArchiveReason("");
+        loadData();
+      } else {
+        alert("Sikertelen archiválás.");
       }
-    })();
-    return () => ac.abort();
-  }, []);
+    } catch {
+      alert("Sikertelen archiválás.");
+    }
+  };
+
+  const handleRestore = async (id: string) => {
+    if (!confirm("Biztosan vissza szeretnéd állítani ezt a munkalapot?")) return;
+    try {
+      const res = await fetch(`/api/worklogs/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          is_archived: false,
+          archived_at: null,
+          archive_reason: null,
+        }),
+      });
+      if (res.ok) {
+        loadData();
+      } else {
+        alert("Sikertelen visszaállítás.");
+      }
+    } catch {
+      alert("Sikertelen visszaállítás.");
+    }
+  };
 
   const filtered = rows.filter((w) => {
     const q = search.toLowerCase();
@@ -217,6 +267,31 @@ export default function WorklogsPage() {
             </SelectContent>
           </Select>
         </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <input
+            type="checkbox"
+            id="wl-include-archived"
+            checked={includeArchived}
+            onChange={(e) => setIncludeArchived(e.target.checked)}
+            style={{
+              width: "16px",
+              height: "16px",
+              cursor: "pointer",
+              accentColor: "var(--color-accent-primary)",
+            }}
+          />
+          <label
+            htmlFor="wl-include-archived"
+            style={{
+              fontSize: "0.875rem",
+              color: "var(--color-text-muted)",
+              cursor: "pointer",
+              userSelect: "none",
+            }}
+          >
+            Archivált elemek megjelenítése
+          </label>
+        </div>
       </div>
 
       {/* Table */}
@@ -346,27 +421,57 @@ export default function WorklogsPage() {
                         className="px-4 py-3 whitespace-nowrap"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        {w.pdf_url && (
-                          <button
-                            onClick={() => window.open(w.pdf_url!, "_blank")}
-                            className="p-1.5 rounded-md transition-colors"
-                            style={{
-                              background: "transparent",
-                              border: "none",
-                              cursor: "pointer",
-                              color: "var(--color-text-muted)",
-                            }}
-                            title="PDF letöltése"
-                            onMouseEnter={(e) =>
-                              (e.currentTarget.style.background = "var(--color-bg-card)")
-                            }
-                            onMouseLeave={(e) =>
-                              (e.currentTarget.style.background = "transparent")
-                            }
-                          >
-                            <Download size={15} />
-                          </button>
-                        )}
+                        <div
+                          style={{ display: "flex", gap: "6px", alignItems: "center" }}
+                        >
+                          {w.pdf_url && (
+                            <button
+                              onClick={() => window.open(w.pdf_url!, "_blank")}
+                              className="p-1.5 rounded-md transition-colors"
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                cursor: "pointer",
+                                color: "var(--color-text-muted)",
+                              }}
+                              title="PDF letöltése"
+                            >
+                              <Download size={15} />
+                            </button>
+                          )}
+                          {w.is_archived ? (
+                            <button
+                              onClick={() => handleRestore(w._id)}
+                              className="p-1.5 rounded-md transition-colors"
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                cursor: "pointer",
+                                color: "var(--color-text-secondary)",
+                              }}
+                              title="Visszaállítás"
+                            >
+                              <RotateCcw size={15} />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setArchiveTarget(w);
+                                setArchiveReason("");
+                              }}
+                              className="p-1.5 rounded-md transition-colors"
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                cursor: "pointer",
+                                color: "var(--color-status-error, #f87171)",
+                              }}
+                              title="Archiválás"
+                            >
+                              <Archive size={15} />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -376,6 +481,83 @@ export default function WorklogsPage() {
           </table>
         </div>
       </div>
+
+      {archiveTarget && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => setArchiveTarget(null)}
+        >
+          <div
+            className="rounded-xl border p-6"
+            style={{
+              background: "var(--color-bg-card)",
+              borderColor: "var(--color-border-subtle)",
+              width: "100%",
+              maxWidth: "450px",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ margin: "0 0 12px 0", color: "#fff" }}>Munkalap archiválása</h2>
+            <p
+              style={{
+                fontSize: "14px",
+                color: "var(--color-text-muted)",
+                marginBottom: "16px",
+              }}
+            >
+              Biztosan archiválni szeretnéd:{" "}
+              <strong>{archiveTarget.worklog_number}</strong>?<br />
+              Kérjük, add meg az archiválás indokát.
+            </p>
+            <form
+              onSubmit={handleArchive}
+              style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "14px", color: "var(--color-text-secondary)" }}>
+                  Archiválás oka *
+                </label>
+                <Input
+                  value={archiveReason}
+                  onChange={(e) => setArchiveReason(e.target.value)}
+                  placeholder="Pl. Duplikátum, hibás adatok..."
+                  required
+                />
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setArchiveTarget(null)}
+                >
+                  Mégse
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  style={{
+                    backgroundColor: "var(--color-status-error, #f87171)",
+                    borderColor: "var(--color-status-error, #f87171)",
+                  }}
+                >
+                  Archiválás
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

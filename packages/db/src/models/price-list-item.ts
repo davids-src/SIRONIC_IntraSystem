@@ -24,6 +24,9 @@ const priceListItemSchema = defineSchema(
     purchase_records: [purchaseRecordSchema],
     last_purchase_price: { type: Number, default: null },
     preferred_supplier: { type: String, default: null },
+    is_archived: { type: Boolean, default: false },
+    archived_at: { type: Date, default: null },
+    archive_reason: { type: String, default: null },
   },
   ts,
 );

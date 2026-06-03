@@ -40,6 +40,10 @@ interface PriceItem {
   purchase_records: PurchaseRecord[];
   last_purchase_price: number | null;
   preferred_supplier: string | null;
+  rawCategory?: string;
+  rawType?: string;
+  is_archived: boolean;
+  archive_reason: string | null;
 }
 
 function mapPriceListItem(p: PriceListItem): PriceItem {
@@ -61,6 +65,10 @@ function mapPriceListItem(p: PriceListItem): PriceItem {
     })),
     last_purchase_price: p.last_purchase_price,
     preferred_supplier: p.preferred_supplier,
+    rawCategory: p.category,
+    rawType: p.type,
+    is_archived: p.is_archived ?? false,
+    archive_reason: p.archive_reason ?? null,
   };
 }
 
@@ -97,6 +105,22 @@ export default function PriceListPage() {
   // Modal states
   const [showNewItemModal, setShowNewItemModal] = useState(false);
   const [showNewPurchaseModal, setShowNewPurchaseModal] = useState<string | null>(null);
+  const [showEditModal, setShowEditModal] = useState<PriceItem | null>(null);
+  const [showArchiveModal, setShowArchiveModal] = useState<PriceItem | null>(null);
+  const [archiveReason, setArchiveReason] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
+
+  // Edit Item Form
+  const [editItemForm, setEditItemForm] = useState({
+    name: "",
+    category: "",
+    type: "product" as "product" | "service" | "labor" | "package",
+    unit: "db",
+    net_price: 0,
+    tax_rate: 27,
+    description: "",
+    is_active: true,
+  });
 
   // New Item Form
   const [newItem, setNewItem] = useState({
@@ -184,15 +208,16 @@ export default function PriceListPage() {
 
   const filtered = prices.filter(
     (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.code.toLowerCase().includes(search.toLowerCase()) ||
-      categoryLabel[p.category].toLowerCase().includes(search.toLowerCase()),
+      (showArchived || !p.is_archived) &&
+      (p.name.toLowerCase().includes(search.toLowerCase()) ||
+        p.code.toLowerCase().includes(search.toLowerCase()) ||
+        (categoryLabel[p.category] || "").toLowerCase().includes(search.toLowerCase())),
   );
 
   const counts = {
-    total: prices.length,
-    active: prices.filter((p) => p.status === "active").length,
-    services: prices.filter((p) => p.category === "service").length,
+    total: prices.filter((p) => !p.is_archived).length,
+    active: prices.filter((p) => !p.is_archived && p.status === "active").length,
+    services: prices.filter((p) => !p.is_archived && p.category === "service").length,
   };
 
   const toggleExpand = (id: string) => setExpandedId((prev) => (prev === id ? null : id));
@@ -263,6 +288,85 @@ export default function PriceListPage() {
     } catch (e) {
       console.error(e);
       alert("Hiba történt a mentés során.");
+    }
+  };
+
+  const handleEditItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!showEditModal) return;
+    try {
+      const payload = {
+        name: editItemForm.name.trim(),
+        category: editItemForm.category,
+        type: editItemForm.type,
+        unit: editItemForm.unit.trim(),
+        net_price: editItemForm.net_price,
+        tax_rate: editItemForm.tax_rate,
+        description: editItemForm.description.trim() || null,
+        is_active: editItemForm.is_active,
+      };
+
+      const res = await apiJsonBody(
+        `/api/price-list/${showEditModal._id}`,
+        "PATCH",
+        payload,
+      );
+      if (res && typeof res === "object" && "_id" in res) {
+        setPrices((prev) =>
+          prev.map((p) =>
+            p._id === showEditModal._id ? mapPriceListItem(res as PriceListItem) : p,
+          ),
+        );
+        setShowEditModal(null);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Hiba történt a mentés során.");
+    }
+  };
+
+  const handleArchiveItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!showArchiveModal || !archiveReason.trim()) return;
+    try {
+      const res = await apiJsonBody(`/api/price-list/${showArchiveModal._id}`, "PATCH", {
+        is_archived: true,
+        archived_at: new Date().toISOString(),
+        archive_reason: archiveReason.trim(),
+      });
+      if (res && typeof res === "object" && "_id" in res) {
+        setPrices((prev) =>
+          prev.map((p) =>
+            p._id === showArchiveModal._id ? mapPriceListItem(res as PriceListItem) : p,
+          ),
+        );
+        setShowArchiveModal(null);
+        setArchiveReason("");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Hiba történt az archiválás során.");
+    }
+  };
+
+  const handleRestoreItem = async (item: PriceItem) => {
+    if (!confirm("Biztosan visszaállítod ezt a tételt az archívumból?")) return;
+    try {
+      const res = await apiJsonBody(`/api/price-list/${item._id}`, "PATCH", {
+        is_archived: false,
+        archived_at: null,
+        archive_reason: null,
+      });
+      if (res && typeof res === "object" && "_id" in res) {
+        setPrices((prev) =>
+          prev.map((p) =>
+            p._id === item._id ? mapPriceListItem(res as PriceListItem) : p,
+          ),
+        );
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Hiba történt a visszaállítás során.");
     }
   };
 
@@ -372,6 +476,38 @@ export default function PriceListPage() {
               style={{ paddingLeft: "36px" }}
             />
           </div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              paddingRight: "10px",
+            }}
+          >
+            <input
+              type="checkbox"
+              id="show-archived-toggle"
+              checked={showArchived}
+              onChange={(e) => setShowArchived(e.target.checked)}
+              style={{
+                width: "16px",
+                height: "16px",
+                accentColor: "var(--color-accent)",
+                cursor: "pointer",
+              }}
+            />
+            <label
+              htmlFor="show-archived-toggle"
+              style={{
+                fontSize: "14px",
+                color: "var(--color-text-muted)",
+                cursor: "pointer",
+                userSelect: "none",
+              }}
+            >
+              Archiváltak megjelenítése
+            </label>
+          </div>
           <Button variant="secondary">
             <Filter size={15} style={{ marginRight: "6px" }} />
             Szűrők
@@ -477,7 +613,18 @@ export default function PriceListPage() {
 
                 {/* Név + leírás */}
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>{item.name}</div>
+                  <div
+                    style={{
+                      fontWeight: 600,
+                      fontSize: "0.875rem",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    {item.name}
+                    {item.is_archived && <Badge variant="error">Archivált</Badge>}
+                  </div>
                   <div
                     style={{
                       fontSize: "0.72rem",
@@ -638,6 +785,49 @@ export default function PriceListPage() {
                         <Plus size={13} style={{ marginRight: "5px" }} />
                         Új bszerz. rögzítése
                       </Button>
+                      <Button
+                        variant="secondary"
+                        style={{ fontSize: "0.78rem", padding: "4px 12px" }}
+                        onClick={() => {
+                          setEditItemForm({
+                            name: item.name,
+                            category: item.rawCategory || "",
+                            type: (item.rawType as any) || "product",
+                            unit: item.unit,
+                            net_price: item.unit_price,
+                            tax_rate: item.tax_percent,
+                            description: item.description,
+                            is_active: item.status === "active",
+                          });
+                          setShowEditModal(item);
+                        }}
+                      >
+                        Szerkesztés
+                      </Button>
+                      {item.is_archived ? (
+                        <Button
+                          variant="secondary"
+                          style={{ fontSize: "0.78rem", padding: "4px 12px" }}
+                          onClick={() => handleRestoreItem(item)}
+                        >
+                          Visszaállítás
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="secondary"
+                          style={{
+                            fontSize: "0.78rem",
+                            padding: "4px 12px",
+                            color: "var(--color-status-error)",
+                          }}
+                          onClick={() => {
+                            setArchiveReason("");
+                            setShowArchiveModal(item);
+                          }}
+                        >
+                          Archiválás
+                        </Button>
+                      )}
                     </div>
                   </div>
 
@@ -1124,6 +1314,267 @@ export default function PriceListPage() {
                 </Button>
                 <Button type="submit" variant="primary">
                   Rögzítés
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal - Szerkesztés */}
+      {showEditModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.6)",
+            zIndex: 100,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Card style={{ padding: "24px", width: "100%", maxWidth: "550px" }}>
+            <h2 style={{ margin: "0 0 16px 0" }}>
+              Tétel szerkesztése ({showEditModal.code})
+            </h2>
+            <form
+              onSubmit={handleEditItem}
+              style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "14px" }}>Név</label>
+                <Input
+                  value={editItemForm.name}
+                  onChange={(e) =>
+                    setEditItemForm({ ...editItemForm, name: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div
+                style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "14px" }}>Kategória</label>
+                  <select
+                    value={editItemForm.category}
+                    onChange={(e) =>
+                      setEditItemForm({ ...editItemForm, category: e.target.value })
+                    }
+                    className="input-base"
+                    required
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "6px",
+                      border: "1px solid var(--color-border-subtle)",
+                      background: "var(--color-bg-input)",
+                      color: "inherit",
+                    }}
+                  >
+                    <option value="">Válassz kategóriát</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({c.prefix})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "14px" }}>Típus</label>
+                  <select
+                    value={editItemForm.type}
+                    onChange={(e) =>
+                      setEditItemForm({ ...editItemForm, type: e.target.value as any })
+                    }
+                    className="input-base"
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "6px",
+                      border: "1px solid var(--color-border-subtle)",
+                      background: "var(--color-bg-input)",
+                      color: "inherit",
+                    }}
+                  >
+                    <option value="product">Termék (Hardver)</option>
+                    <option value="service">Szolgáltatás</option>
+                    <option value="labor">Munkadíj</option>
+                    <option value="package">Csomag</option>
+                  </select>
+                </div>
+              </div>
+              <div
+                style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "14px" }}>Eladási ár (Nettó)</label>
+                  <Input
+                    type="number"
+                    value={editItemForm.net_price.toString()}
+                    onChange={(e) =>
+                      setEditItemForm({
+                        ...editItemForm,
+                        net_price: Number(e.target.value),
+                      })
+                    }
+                    required
+                  />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "14px" }}>Mértékegység</label>
+                  <Input
+                    value={editItemForm.unit}
+                    onChange={(e) =>
+                      setEditItemForm({ ...editItemForm, unit: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+              </div>
+              <div
+                style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "14px" }}>ÁFA kulcs (%)</label>
+                  <Input
+                    type="number"
+                    value={editItemForm.tax_rate.toString()}
+                    onChange={(e) =>
+                      setEditItemForm({
+                        ...editItemForm,
+                        tax_rate: Number(e.target.value),
+                      })
+                    }
+                    required
+                  />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <label style={{ fontSize: "14px" }}>Állapot</label>
+                  <select
+                    value={editItemForm.is_active ? "true" : "false"}
+                    onChange={(e) =>
+                      setEditItemForm({
+                        ...editItemForm,
+                        is_active: e.target.value === "true",
+                      })
+                    }
+                    className="input-base"
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "6px",
+                      border: "1px solid var(--color-border-subtle)",
+                      background: "var(--color-bg-input)",
+                      color: "inherit",
+                    }}
+                  >
+                    <option value="true">Aktív</option>
+                    <option value="false">Inaktív</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "14px" }}>Leírás (Opcionális)</label>
+                <Input
+                  value={editItemForm.description}
+                  onChange={(e) =>
+                    setEditItemForm({ ...editItemForm, description: e.target.value })
+                  }
+                />
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "8px",
+                  marginTop: "8px",
+                }}
+              >
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setShowEditModal(null)}
+                >
+                  Mégse
+                </Button>
+                <Button type="submit" variant="primary">
+                  Mentés
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal - Archiválás */}
+      {showArchiveModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.6)",
+            zIndex: 100,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Card style={{ padding: "24px", width: "100%", maxWidth: "450px" }}>
+            <h2 style={{ margin: "0 0 16px 0" }}>Tétel archiválása</h2>
+            <p
+              style={{
+                fontSize: "14px",
+                color: "var(--color-text-muted)",
+                marginBottom: "16px",
+              }}
+            >
+              Biztosan archiválni szeretnéd a következő tételt:{" "}
+              <strong>{showArchiveModal.name}</strong> ({showArchiveModal.code})?
+              <br />
+              Kérjük, add meg az archiválás indokát.
+            </p>
+            <form
+              onSubmit={handleArchiveItem}
+              style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "14px" }}>Archiválás oka *</label>
+                <Input
+                  value={archiveReason}
+                  onChange={(e) => setArchiveReason(e.target.value)}
+                  placeholder="Pl. Már nem forgalmazott termék, elavult típus..."
+                  required
+                />
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "8px",
+                  marginTop: "8px",
+                }}
+              >
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setShowArchiveModal(null)}
+                >
+                  Mégse
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  style={{
+                    backgroundColor: "var(--color-status-error)",
+                    borderColor: "var(--color-status-error)",
+                  }}
+                >
+                  Archiválás
                 </Button>
               </div>
             </form>

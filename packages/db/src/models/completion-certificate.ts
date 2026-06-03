@@ -26,7 +26,12 @@ const completionCertificateSchema = defineSchema(
     client_title: { type: String, default: null },
     client_signature: { type: String, default: null },
     signed_at: { type: Date, default: null },
+    recipient_name: { type: String, default: null },
+    recipient_email: { type: String, default: null },
     pdf_url: { type: String, default: null },
+    is_archived: { type: Boolean, default: false },
+    archived_at: { type: Date, default: null },
+    archive_reason: { type: String, default: null },
   },
   ts,
 );

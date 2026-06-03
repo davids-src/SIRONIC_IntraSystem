@@ -66,6 +66,7 @@ interface CartItem {
   item: PriceItem;
   qty: number;
   custom_price: number | null; // ha felül akarják bírálni az egységárat
+  discount_percent: number; // tételenkénti kedvezmény % (0-100)
 }
 
 // -------------------------------------------------------
@@ -161,7 +162,7 @@ export default function NewOfferPage() {
       if (existing) {
         return prev.map((c) => (c.item._id === item._id ? { ...c, qty: c.qty + 1 } : c));
       }
-      return [...prev, { item, qty: 1, custom_price: null }];
+      return [...prev, { item, qty: 1, custom_price: null, discount_percent: 0 }];
     });
   };
 
@@ -205,7 +206,10 @@ export default function NewOfferPage() {
       setCart((prev) => {
         const idx = prev.findIndex((c) => c.item._id === mapped._id);
         if (idx >= 0) return prev;
-        return [...prev, { item: mapped, qty: 1, custom_price: null }];
+        return [
+          ...prev,
+          { item: mapped, qty: 1, custom_price: null, discount_percent: 0 },
+        ];
       });
 
       setCreatingCustom(false);
@@ -231,15 +235,14 @@ export default function NewOfferPage() {
 
   const isInCart = (id: string) => cart.some((c) => c.item._id === id);
 
-  const totalNet = cart.reduce(
-    (sum, c) => sum + (c.custom_price ?? c.item.unit_price) * c.qty,
-    0,
-  );
-  const totalVat = cart.reduce(
-    (sum, c) =>
-      sum + (c.custom_price ?? c.item.unit_price) * c.qty * (c.item.tax_percent / 100),
-    0,
-  );
+  const totalNet = cart.reduce((sum, c) => {
+    const base = (c.custom_price ?? c.item.unit_price) * (1 - c.discount_percent / 100);
+    return sum + base * c.qty;
+  }, 0);
+  const totalVat = cart.reduce((sum, c) => {
+    const base = (c.custom_price ?? c.item.unit_price) * (1 - c.discount_percent / 100);
+    return sum + base * c.qty * (c.item.tax_percent / 100);
+  }, 0);
   const totalGross = totalNet + totalVat;
 
   const contactLabel = contacts.find((c) => c._id === header.contact_id)?.name ?? "";
@@ -255,6 +258,7 @@ export default function NewOfferPage() {
       unit: c.item.unit,
       net_unit_price: c.custom_price ?? c.item.unit_price,
       tax_rate: c.item.tax_percent,
+      discount_percent: c.discount_percent,
     }));
     return {
       title: header.title.trim(),
@@ -822,6 +826,17 @@ export default function NewOfferPage() {
                             }}
                           >
                             {fmt(c.custom_price ?? c.item.unit_price)} / {c.item.unit}
+                            {c.discount_percent > 0 && (
+                              <span
+                                style={{
+                                  marginLeft: "6px",
+                                  color: "var(--color-status-success, #22c55e)",
+                                  fontWeight: 700,
+                                }}
+                              >
+                                (-{c.discount_percent}%)
+                              </span>
+                            )}
                           </div>
                         </div>
                         <button
@@ -905,7 +920,66 @@ export default function NewOfferPage() {
                           </span>
                         </div>
                         <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>
-                          {fmt((c.custom_price ?? c.item.unit_price) * c.qty)}
+                          {fmt(
+                            (c.custom_price ?? c.item.unit_price) *
+                              (1 - c.discount_percent / 100) *
+                              c.qty,
+                          )}
+                        </span>
+                      </div>
+
+                      {/* Discount input */}
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          marginTop: "8px",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "0.7rem",
+                            color: "var(--color-text-muted, #555)",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          Kedvezmény:
+                        </span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={1}
+                          value={c.discount_percent}
+                          onChange={(e) => {
+                            const val = Math.min(
+                              100,
+                              Math.max(0, Number(e.target.value)),
+                            );
+                            setCart((prev) =>
+                              prev.map((ci) =>
+                                ci.item._id === c.item._id
+                                  ? { ...ci, discount_percent: val }
+                                  : ci,
+                              ),
+                            );
+                          }}
+                          style={{
+                            width: "52px",
+                            padding: "2px 6px",
+                            borderRadius: "5px",
+                            border: "1px solid var(--color-border-subtle)",
+                            background: "var(--color-bg-input)",
+                            color: "inherit",
+                            fontSize: "0.78rem",
+                            textAlign: "center",
+                          }}
+                        />
+                        <span
+                          style={{ fontSize: "0.7rem", color: "var(--color-text-muted)" }}
+                        >
+                          %
                         </span>
                       </div>
                     </div>
@@ -1187,7 +1261,7 @@ export default function NewOfferPage() {
               onClick={() => void saveOffer("sent")}
             >
               <Send size={16} style={{ marginRight: "6px" }} />
-              {saving ? "Mentés…" : "Ajánlat véglegesítése"}
+              {saving ? "Mentés…" : "Mentés véglegesként"}
             </Button>
           </div>
         </div>

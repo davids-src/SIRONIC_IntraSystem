@@ -37,6 +37,9 @@ const ticketSchema = defineSchema(
     comments: [ticketCommentSchema],
     resolution_notes: { type: String, default: null },
     resolved_at: { type: Date, default: null },
+    is_archived: { type: Boolean, default: false },
+    archived_at: { type: Date, default: null },
+    archive_reason: { type: String, default: null },
   },
   ts,
 );

@@ -29,6 +29,9 @@ const projectSchema = defineSchema(
     checklist: [checklistItemSchema],
     notes: { type: String, default: null },
     contract_warning_dismissed: { type: Boolean, required: true },
+    is_archived: { type: Boolean, default: false },
+    archived_at: { type: Date, default: null },
+    archive_reason: { type: String, default: null },
   },
   ts,
 );

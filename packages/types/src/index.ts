@@ -76,6 +76,8 @@ export interface OfferLine {
   unit: string;
   net_unit_price: number;
   tax_rate: number;
+  /** Tételenkénti kedvezmény %-ban, default: 0 */
+  discount_percent?: number;
 }
 
 export interface Offer {
@@ -92,6 +94,9 @@ export interface Offer {
   created_by: string;
   lines: OfferLine[];
   notes: string | null;
+  is_archived?: boolean;
+  archived_at?: Date | null;
+  archive_reason?: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -202,6 +207,9 @@ export interface PriceListItem {
   last_purchase_price: number | null;
   /** Ajánlott / elsődleges szállító */
   preferred_supplier: string | null;
+  is_archived?: boolean;
+  archived_at?: Date | null;
+  archive_reason?: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -248,6 +256,9 @@ export interface Ticket {
   comments: TicketComment[];
   resolution_notes: string | null;
   resolved_at: Date | null;
+  is_archived?: boolean;
+  archived_at?: Date | null;
+  archive_reason?: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -287,6 +298,9 @@ export interface Worklog {
   travel_km: number | null;
   notes: string | null;
   pdf_url: string | null;
+  is_archived?: boolean;
+  archived_at?: Date | null;
+  archive_reason?: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -312,7 +326,12 @@ export interface CompletionCertificate {
   client_title: string | null;
   client_signature: string | null;
   signed_at: Date | null;
+  recipient_name: string | null;
+  recipient_email: string | null;
   pdf_url: string | null;
+  is_archived?: boolean;
+  archived_at?: Date | null;
+  archive_reason?: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -393,6 +412,9 @@ export interface Project {
   checklist: ChecklistItem[];
   notes: string | null;
   contract_warning_dismissed: boolean;
+  is_archived?: boolean;
+  archived_at?: Date | null;
+  archive_reason?: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -578,6 +600,9 @@ export interface PurchaseOrder {
   currency: string;
   lines: PurchaseOrderLine[];
   notes: string | null;
+  is_archived?: boolean;
+  archived_at?: Date | null;
+  archive_reason?: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -662,6 +687,9 @@ export interface DeliveryNote {
   lines: DeliveryNoteLine[];
   notes: string | null;
   created_by: string;
+  is_archived?: boolean;
+  archived_at?: Date | null;
+  archive_reason?: string | null;
   created_at: Date;
   updated_at: Date;
 }
