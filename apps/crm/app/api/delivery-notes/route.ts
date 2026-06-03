@@ -103,7 +103,7 @@ export async function POST(req: Request) {
               _id: line.price_list_item_id,
               tenantId: actor.tenantId,
             }).lean();
-            if (item && item.type !== "product") {
+            if (item && (item as any).type !== "product") {
               continue; // Only deduct stock for product type items
             }
 

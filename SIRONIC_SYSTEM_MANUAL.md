@@ -59,7 +59,17 @@ Az ügyfélélményre fókuszáló, "sandbox" környezet.
 
 ## 3. Adatbázis Entitások, Indexek és Kapcsolatok (ERD)
 
-Minden entitás UUID-t (`_id`) vagy MongoDB ObjectID-t használ elsődleges kulcsként. A hivatkozások (Foreign Keys) string alapúak (pl. `contact_id`).
+Minden entitas UUID-t (`_id`) vagy MongoDB ObjectID-t hasznal elsodleges kulcskent. A hivatkozasok (Foreign Keys) string alapuak (pl. `contact_id`).
+
+### 3.0. Globalis Archivalasi Mezok
+
+A rendszer minden fo entitason (Offer, Worklog, Ticket, Project, DeliveryNote, CompletionCertificate, PurchaseOrder, PriceListItem) egyseges **soft-delete / archivalasi** mechanizmust alkalmaz. Minden erintett Mongoose sema tartalmazza a kovetkezo harom opcionalis mezot:
+
+- `is_archived` (`Boolean`, default: `false`) - Jelzi, hogy az adott rekord archivaltnak tekintendo-e.
+- `archived_at` (`Date`, opcionalis) - Az archivalas pontos idobelyege.
+- `archive_reason` (`String`, opcionalis) - A felhasznalo altal megadott archivalasi indok (pl. "Elavult", "Duplikatum", "Ugyfel lemondta").
+
+Ezek a mezok a schema definicioban `required: false` jelzessel szerepelnek, es **nem befolyasoljak a meglevo dokumentumokat** - a migraciomentesseg biztositott, mivel a `$ne: true` szures a `null`/`undefined` ertekeket is kiszuri.
 
 ### 3.1. Partnerek (Contact)
 
@@ -73,9 +83,9 @@ Minden entitás UUID-t (`_id`) vagy MongoDB ObjectID-t használ elsődleges kulc
 
 ### 3.3. Hibajegyek és Munkalapok (Ticket & Worklog)
 
-- **Ticket:** Olyan `comments` tömböt tartalmaz, ahol minden üzenet objektum. Ha az `is_internal: true`, a Partner Portálon nem jelenik meg, és a CRM UI-on a megjegyzés egy sárgás hátterű ("Internal Note") stílust kap.
-- **Worklog:** `items` tömb hivatkozik a `PriceListItem`-re. Tárolja az aláírásokat Data URI formátumban (`client_signature`).
-- **UI/UX:** A Munkalap űrlapon a tételek felvitele dinamikus sor-hozzáadással történik (Field Array). A digitális aláírás rögzítéséhez egy HTML5 Canvas alapú "Signature Pad" komponens nyílik meg modálisan (Dialog).
+- **Ticket:** Olyan `comments` tombot tartalmaz, ahol minden uzenet objektum. Ha az `is_internal: true`, a Partner Portalon nem jelenik meg, es a CRM UI-on a megjegyzes egy sargas hatteru ("Internal Note") stilust kap. Tamogatja az archivalasi mezoket (ld. 3.0).
+- **Worklog:** `items` tomb hivatkozik a `PriceListItem`-re. Tarolja az alairasokat Data URI formatumban (`client_signature`). Tamogatja az archivalasi mezoket (ld. 3.0).
+- **UI/UX:** A Munkalap urlapon a tetelek felvitele dinamikus sor-hozzaadassal tortenik (Field Array). A digitalis alairas rogzitesehez egy HTML5 Canvas alapu "Signature Pad" komponens nyilik meg modalisan (Dialog). Mindket lista nezetben elerheto az "Archivalt elemek megjelenitese" szuro toggle es az archiv/visszaallito muveleti gombok.
 
 ### 3.4. Raktár és Készlet (Warehouse, PriceListItem, StockItem)
 
@@ -100,6 +110,8 @@ A raktárkészlet fizikai mozgását a rendszer **Event Sourcing** jellegű tran
 7. Frissíti a Szállítólevél állapotát `issued`-re.
 8. Tranzakció Commit (`commitTransaction()`).
    **UI Működés:** A felhasználó a "Kiadás" gombra kattint (ami betöltődik/disabled lesz, hogy megelőzze a dupla kattintást), és a sikeresség után egy Toast értesítést (zöld "Sikeres mentés") kap.
+
+> **Megjegyzés - Soft-Delete:** A szállítólevél `DELETE` végpontja **nem törli véglegesen** a dokumentumot, hanem `is_archived: true` állapotba helyezi (ld. 4.6. fejezet). Kiadott (`issued`) szállítólevél továbbra sem archivált közvetlenül - előbb sztornózni szükséges.
 
 ### 4.2. Titoktár (Secrets) Kriptográfiai Folyama
 
@@ -148,4 +160,31 @@ Amikor a Számla (Invoice) elkészül, a rendszer a külső szolgáltatóhoz (Bi
 
 ---
 
-_Minden új adatbázis mező, új API paraméter vagy UI gomb bevezetése esetén ezt a dokumentumot értelemszerűen, ugyanilyen mélységben, logikailag vezetve kell bővíteni!_
+### 4.6. Globalis Archivalas es Soft-Delete Mechanizmus
+
+A rendszer 7 fo modulja (Ajanlatok, Munkalapok, Ticketek, Projektek, Szallitolevelek, Teljesitesi Igazolasok, Megrendelolapok) egyseges archivalasi munkafolyamatot kovet.
+
+**API Szintu Mukodes:**
+
+1. **GET lista szures:** Alapertelmezeskent a `GET /api/<modul>` vegpontok kiszurik az archivalt rekordokat (`{ is_archived: { $ne: true } }`). Az `?include_archived=true` query parameterrel a kliens visszakaphatja az archivalt elemeket is.
+2. **PATCH archivalas:** A `PATCH /api/<modul>/:id` vegponton a kliens elkuldheti a `{ is_archived: true, archived_at: <ISO Date>, archive_reason: "<indok>" }` mezoket. A visszaallitashoz: `{ is_archived: false, archived_at: null, archive_reason: null }`.
+3. **DELETE -> Soft-Delete:** A `DELETE /api/<modul>/:id` vegpont **nem hajtja vegre a dokumentum fizikai torleset**. Ehelyett `findOneAndUpdate` hivassal `is_archived: true` allapotba helyezi a rekordot, az archivalas okat a `?reason=<ok>` query parameterbol vagy alapertelmezett "Torolve" ertekbol veszi.
+
+**Frontend Feluleti Elemek (minden erintett lista nezeten egyseges):**
+
+- **"Archivalt elemek megjelenitese" toggle:** Checkbox a szurosavban; ha bekapcsolt, a lista ujratoltodik `?include_archived=true` parameterrel.
+- **Archiv gomb (Archive ikon, piros):** Minden nem-archivalt sor muveleti cellajaban megjelenik. Kattintasra egy modalis parbeszedalblak nyilik, amelyben a felhasznalonak kotelezo kitoltenie az "Archivalas oka" mezot. A "Megse" gomb bezarja a modalt, az "Archivalas" gomb elkuldi a PATCH kerest.
+- **Visszaallitas gomb (RotateCcw ikon, szurke):** Archivalt soroknal jelenik meg a piros archiv ikon helyett. Kattintasra egy `confirm()` dialogust kovet a PATCH keres `is_archived: false` adatokkal.
+- **Archivalt badge:** Az archivalt rekordok az azonosito oszlopban piros "Archivalt" badge-et kapnak a gyors vizualis megkulonbozteteshez.
+
+**Specialis modul-viselkedes:**
+
+| Modul         | Specialis szabaly                                                                                                                                                                                                               |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Szallitolevel | Kiadott (`issued`) szallitolevel DELETE nem engedelyezett - elobb sztornora kell allitani. Sztornozott/piszkozat szallitolevel archivalt allapotu modositasa (PATCH `is_archived`) engedelyezett, meg ha a statusz `cancelled`. |
+| Megrendelolap | A PATCH Zod semaja kibovult az `is_archived`, `archived_at`, `archive_reason` mezokkel, igy a validacio nem utasitja el az archivalasi kereseket. A DELETE handler is hozzaadva.                                                |
+| Arlista       | Az arlista archivalas a korabbi, dedikalt `is_active: false` + archiv UI megoldassal mukodik (ld. Modul 1.2), de a sema szinten tartalmazza az `is_archived` mezot a globalis konzisztencia erdekeben.                          |
+
+---
+
+_Minden uj adatbazis mezo, uj API parameter vagy UI gomb bevezetese eseten ezt a dokumentumot ertelemszeruen, ugyanilyen melysegben, logikailag vezetve kell boviteni!_

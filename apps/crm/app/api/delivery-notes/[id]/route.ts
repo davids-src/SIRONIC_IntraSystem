@@ -84,7 +84,7 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
               _id: line.price_list_item_id,
               tenantId: actor.tenantId,
             }).lean();
-            if (item && item.type !== "product") {
+            if (item && (item as any).type !== "product") {
               continue;
             }
 
@@ -119,7 +119,7 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
               _id: line.price_list_item_id,
               tenantId: actor.tenantId,
             }).lean();
-            if (item && item.type !== "product") {
+            if (item && (item as any).type !== "product") {
               continue;
             }
 
