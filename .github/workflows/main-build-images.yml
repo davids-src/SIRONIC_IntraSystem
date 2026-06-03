@@ -45,5 +45,5 @@ jobs:
           tags: |
             ghcr.io/${{ steps.owner.outputs.owner }}/${{ matrix.image }}:latest
             ghcr.io/${{ steps.owner.outputs.owner }}/${{ matrix.image }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ github.workflow }}-${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ github.workflow }}-${{ matrix.app }}
