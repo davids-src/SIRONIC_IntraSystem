@@ -26,4 +26,5 @@ export {
   DeliveryNoteModel,
   SecretModel,
   WarrantyCardModel,
+  WeeklyPlanModel,
 } from "./models";

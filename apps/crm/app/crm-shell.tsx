@@ -23,6 +23,7 @@ import {
   ShoppingCart,
   Users,
   FileOutput,
+  Calendar,
 } from "lucide-react";
 
 const crmNavItems: NavItem[] = [
@@ -50,6 +51,12 @@ const crmNavItems: NavItem[] = [
     label: "Munkalapok",
     href: "/worklogs",
     icon: <ClipboardList size={16} />,
+  },
+  {
+    key: "weekly-plans",
+    label: "Heti tervek",
+    href: "/weekly-plans",
+    icon: <Calendar size={16} />,
   },
   {
     key: "contracts",

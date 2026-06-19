@@ -23,7 +23,7 @@ A MongoDB adatbázisban minden egyes gyűjtemény (Collection) összes dokumentu
 A jogosultságokat az `ActorContext` ellenőrzi. A szerepkörök (`RoleKey`: `crm.admin`, `crm.staff`, `partner.admin`, `partner.viewer`) statikusan le vannak képezve granuláris jogosultságokra a `packages/rbac` modulban.
 A jogosultság 3 dimenziós:
 
-- **Modul:** pl. `worklog`, `ticket`, `secret`
+- **Modul:** pl. `worklog`, `ticket`, `secret`, `weekly_plan`
 - **Akció:** pl. `view`, `write`, `manage`
 - **Hatókör (Scope):** `global` (CRM szint, mindenhez is), `contact` (csak a saját partneradatok), `resource` (csak a saját maga által létrehozott entitás).
 
@@ -91,6 +91,12 @@ Ezek a mezok a schema definicioban `required: false` jelzessel szerepelnek, es *
 
 - **PriceListItem:** Raktározható (`product`) vagy virtuális (`service`, `labor`) tételek. Titkos mezője a `purchase_records` (beszállítói adatok). A kódgenerálás Prefix-alapú (pl. "HW-").
 - **UI/UX:** A Raktár nézet bal oldalán a Raktárhelyek (fa-struktúra szerű mappa-nézet) listája, jobb oldalon a szűrt Készlet (StockItems) táblázata látható. A bevételezés egy több-lépéses (Wizard) modál ablakban történik.
+
+### 3.5. Heti tervek (WeeklyPlan)
+
+- **Mezők:** `assignee_id` (CrmUser hivatkozás), `week_number` (ISO hét), `year` (év), `title` (cím), `description` (leírás), `status` (todo, in_progress, done, blocked), `priority` (low, medium, high, urgent), `due_date` (határidő, Date pickerrel), `ticket_id` (opcionális N:1 kapcsolat), `project_id` (opcionális N:1 kapcsolat), `worklog_id` (opcionális N:1 kapcsolat). Támogatja az archiválási mezőket (ld. 3.0).
+- **Indexek:** Összetett index (`assignee_id: 1`, `year: 1`, `week_number: 1`) a heti tervek gyors lekéréséhez és szűréséhez.
+- **UI/UX:** Vizuális Kanban tábla, amely támogatja a heti és éves navigációt, a felelős és az archivált szűrőket, valamint a kártyák közötti gyors állapot-mozgatást nyilakkal.
 
 ---
 
@@ -184,6 +190,19 @@ A rendszer 7 fo modulja (Ajanlatok, Munkalapok, Ticketek, Projektek, Szallitolev
 | Szallitolevel | Kiadott (`issued`) szallitolevel DELETE nem engedelyezett - elobb sztornora kell allitani. Sztornozott/piszkozat szallitolevel archivalt allapotu modositasa (PATCH `is_archived`) engedelyezett, meg ha a statusz `cancelled`. |
 | Megrendelolap | A PATCH Zod semaja kibovult az `is_archived`, `archived_at`, `archive_reason` mezokkel, igy a validacio nem utasitja el az archivalasi kereseket. A DELETE handler is hozzaadva.                                                |
 | Arlista       | Az arlista archivalas a korabbi, dedikalt `is_active: false` + archiv UI megoldassal mukodik (ld. Modul 1.2), de a sema szinten tartalmazza az `is_archived` mezot a globalis konzisztencia erdekeben.                          |
+
+### 4.7. Heti tervek (Weekly Planner) Munkafolyamata és Jogosultságai
+
+A belső munkatársak heti feladatainak hatékony követésére és menedzselésére szolgáló modul.
+
+1. **Jogosultsági és delegálási szabályok:**
+   - **`crm.admin`:** Bármely munkatárs heti tervét láthatja, módosíthatja, újat hozhat létre számukra (delegáció), illetve véglegesen vagy soft-delete formában törölheti/archiválhatja azokat.
+   - **`crm.staff`:** Bármely munkatárs heti terveit megtekintheti (olvasási jog koordinációhoz), de módosítani és újat létrehozni **kizárólag saját maga számára** tud (`assignee_id === actor.actorId`). Az API végpontok (`POST`, `PATCH`, `DELETE`) szigorúan ellenőrzik ezt a feltételt, és nem engedélyezik a jogosulatlan módosítást (403 Forbidden).
+2. **Entitás kapcsolatok kezelése:**
+   - A tervek opcionálisan összekapcsolhatók hibajegyekkel (`ticket_id`), projektekkel (`project_id`) és munkalapokkal (`worklog_id`).
+   - A Kanban kártyákon ezek a kapcsolatok közvetlen hivatkozásként jelennek meg, lehetővé téve a gyors navigációt az érintett modulok részletes nézeteire.
+3. **Soft-delete (Archiválás):**
+   - Törlés gombra kattintva a rendszer egy megerősítő modálban bekéri az archiválás okát (`archive_reason`), majd a dokumentumot soft-delete módon archiválja (`is_archived: true`, `archived_at: Date.now()`). Az archivált tervek elrejthetők a tábláról, de a szűrősávban lévő "Archiváltak" toggle segítségével bármikor visszakereshetők és visszaállíthatók.
 
 ---
 

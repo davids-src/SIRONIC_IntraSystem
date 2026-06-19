@@ -32,7 +32,8 @@ export type PermissionModule =
   | "delivery_note"
   | "secret"
   | "warranty"
-  | "settings";
+  | "settings"
+  | "weekly_plan";
 
 /** CRM app login roles only (subset of RoleKey). */
 export type CrmRoleKey = "crm.admin" | "crm.staff";
@@ -752,6 +753,35 @@ export interface WarrantyCard {
   status: WarrantyStatus;
   /** Generált PDF URL */
   pdf_url: string | null;
+  created_by: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WEEKLY PLAN / HETI TERVEK MODULE
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type WeeklyPlanStatus = "todo" | "in_progress" | "done" | "blocked";
+export type WeeklyPlanPriority = "low" | "medium" | "high" | "urgent";
+
+export interface WeeklyPlan {
+  _id: string;
+  tenantId: string;
+  assignee_id: string;
+  week_number: number; // ISO week number
+  year: number;
+  title: string;
+  description: string | null;
+  status: WeeklyPlanStatus;
+  priority: WeeklyPlanPriority;
+  ticket_id: string | null;
+  project_id: string | null;
+  worklog_id: string | null;
+  due_date: Date | string | null;
+  is_archived?: boolean;
+  archived_at?: Date | null;
+  archive_reason?: string | null;
   created_by: string;
   created_at: Date;
   updated_at: Date;
