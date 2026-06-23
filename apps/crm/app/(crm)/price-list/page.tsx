@@ -110,6 +110,16 @@ export default function PriceListPage() {
   const [archiveReason, setArchiveReason] = useState("");
   const [showArchived, setShowArchived] = useState(false);
 
+  // Filter and Sorting states
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterCategory, setFilterCategory] = useState<string>("");
+  const [filterType, setFilterType] = useState<string>("");
+  const [filterStock, setFilterStock] = useState<string>("all"); // "all" | "in-stock" | "out-of-stock"
+  const [filterSupplier, setFilterSupplier] = useState<string>("");
+  const [filterMinPrice, setFilterMinPrice] = useState<string>("");
+  const [filterMaxPrice, setFilterMaxPrice] = useState<string>("");
+  const [sortBy, setSortBy] = useState<string>("name-asc");
+
   // Edit Item Form
   const [editItemForm, setEditItemForm] = useState({
     name: "",
@@ -206,13 +216,83 @@ export default function PriceListPage() {
     return () => ac.abort();
   }, []);
 
-  const filtered = prices.filter(
-    (p) =>
-      (showArchived || !p.is_archived) &&
-      (p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.code.toLowerCase().includes(search.toLowerCase()) ||
-        (categoryLabel[p.category] || "").toLowerCase().includes(search.toLowerCase())),
-  );
+  const uniquePreferredSuppliers = Array.from(
+    new Set(prices.map((p) => p.preferred_supplier).filter(Boolean)),
+  ) as string[];
+
+  const filtered = prices
+    .filter((p) => {
+      // Archive filter
+      if (!showArchived && p.is_archived) return false;
+
+      // Category filter
+      if (filterCategory) {
+        if (p.rawCategory !== filterCategory && p.category !== filterCategory) {
+          return false;
+        }
+      }
+
+      // Type filter
+      if (filterType && p.rawType !== filterType) return false;
+
+      // Stock filter
+      if (filterStock !== "all") {
+        const stockQty = stock[p._id] ?? 0;
+        if (filterStock === "in-stock" && stockQty <= 0) return false;
+        if (filterStock === "out-of-stock" && stockQty > 0) return false;
+      }
+
+      // Supplier filter
+      if (filterSupplier && p.preferred_supplier !== filterSupplier) return false;
+
+      // Price range filter
+      if (filterMinPrice && p.unit_price < Number(filterMinPrice)) return false;
+      if (filterMaxPrice && p.unit_price > Number(filterMaxPrice)) return false;
+
+      // Advanced text search: split by space, all terms must match name, code, category label, supplier, or description.
+      if (search.trim()) {
+        const searchTerms = search.toLowerCase().trim().split(/\s+/);
+        const nameText = p.name.toLowerCase();
+        const codeText = p.code.toLowerCase();
+        const categoryText = (categoryLabel[p.category] || "").toLowerCase();
+        const descText = p.description.toLowerCase();
+        const supplierText = (p.preferred_supplier || "").toLowerCase();
+
+        return searchTerms.every(
+          (term) =>
+            nameText.includes(term) ||
+            codeText.includes(term) ||
+            categoryText.includes(term) ||
+            descText.includes(term) ||
+            supplierText.includes(term),
+        );
+      }
+
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === "name-asc") {
+        return a.name.localeCompare(b.name, "hu-HU");
+      }
+      if (sortBy === "name-desc") {
+        return b.name.localeCompare(a.name, "hu-HU");
+      }
+      if (sortBy === "price-asc") {
+        return a.unit_price - b.unit_price;
+      }
+      if (sortBy === "price-desc") {
+        return b.unit_price - a.unit_price;
+      }
+      if (sortBy === "code-asc") {
+        return a.code.localeCompare(b.code);
+      }
+      if (sortBy === "stock-desc") {
+        const stockA = stock[a._id] ?? 0;
+        const stockB = stock[b._id] ?? 0;
+        return stockB - stockA;
+      }
+      return 0;
+    });
 
   const counts = {
     total: prices.filter((p) => !p.is_archived).length,
@@ -403,117 +483,582 @@ export default function PriceListPage() {
             count: counts.total,
             icon: <Layers size={16} />,
             color: "#6b7280",
+            onClick: () => {
+              setFilterCategory("");
+              setFilterType("");
+              setFilterStock("all");
+              setFilterSupplier("");
+              setFilterMinPrice("");
+              setFilterMaxPrice("");
+              setShowArchived(false);
+            },
           },
           {
             label: "Aktív tételek",
             count: counts.active,
             icon: <Tag size={16} />,
             color: "#22c55e",
+            onClick: () => {
+              setFilterCategory("");
+              setFilterType("");
+              setShowArchived(false);
+            },
           },
           {
             label: "Szolgáltatások",
             count: counts.services,
             icon: <Server size={16} />,
             color: "#f59e0b",
+            onClick: () => {
+              setFilterCategory("service");
+              setShowArchived(false);
+            },
           },
         ].map((stat) => (
-          <Card key={stat.label} className="p-5">
-            <div
+          <button
+            key={stat.label}
+            onClick={stat.onClick}
+            style={{
+              background: "none",
+              border: "none",
+              padding: 0,
+              margin: 0,
+              font: "inherit",
+              color: "inherit",
+              textAlign: "left",
+              cursor: "pointer",
+              width: "100%",
+            }}
+          >
+            <Card
+              className="p-5"
               style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: "10px",
+                height: "100%",
+                transition: "all 0.2s ease-in-out",
+                border: "1px solid var(--color-border-default, #222)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = stat.color;
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = `0 4px 12px ${stat.color}15`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "var(--color-border-default, #222)";
+                e.currentTarget.style.transform = "none";
+                e.currentTarget.style.boxShadow = "none";
               }}
             >
-              <span
+              <div
                 style={{
-                  fontSize: "0.75rem",
-                  fontWeight: 600,
-                  color: "var(--color-text-muted, #555)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: "10px",
                 }}
               >
-                {stat.label}
-              </span>
-              <span style={{ color: stat.color }}>{stat.icon}</span>
-            </div>
-            <div
-              style={{
-                fontSize: "1.75rem",
-                fontWeight: 700,
-                color: "var(--color-text-primary, #fff)",
-                lineHeight: 1,
-              }}
-            >
-              {stat.count}
-            </div>
-          </Card>
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    color: "var(--color-text-muted, #555)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  {stat.label}
+                </span>
+                <span style={{ color: stat.color }}>{stat.icon}</span>
+              </div>
+              <div
+                style={{
+                  fontSize: "1.75rem",
+                  fontWeight: 700,
+                  color: "var(--color-text-primary, #fff)",
+                  lineHeight: 1,
+                }}
+              >
+                {stat.count}
+              </div>
+            </Card>
+          </button>
         ))}
       </div>
 
-      {/* Kereső */}
-      <Card className="p-5">
-        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: "200px", position: "relative" }}>
-            <Search
-              size={15}
-              style={{
-                position: "absolute",
-                left: "12px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: "var(--color-text-muted, #555)",
-                pointerEvents: "none",
-              }}
-            />
-            <Input
-              label=""
-              placeholder="Keresés cikkszám vagy megnevezés alapján..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{ paddingLeft: "36px" }}
-            />
-          </div>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              paddingRight: "10px",
-            }}
+      {/* Kereső és Szűrők */}
+      {(() => {
+        const hasActiveFilters =
+          !!filterCategory ||
+          !!filterType ||
+          filterStock !== "all" ||
+          !!filterSupplier ||
+          !!filterMinPrice ||
+          !!filterMaxPrice;
+        const activeFiltersCount =
+          (filterCategory ? 1 : 0) +
+          (filterType ? 1 : 0) +
+          (filterStock !== "all" ? 1 : 0) +
+          (filterSupplier ? 1 : 0) +
+          (filterMinPrice || filterMaxPrice ? 1 : 0);
+
+        return (
+          <Card
+            className="p-5"
+            style={{ display: "flex", flexDirection: "column", gap: "16px" }}
           >
-            <input
-              type="checkbox"
-              id="show-archived-toggle"
-              checked={showArchived}
-              onChange={(e) => setShowArchived(e.target.checked)}
+            <div
               style={{
-                width: "16px",
-                height: "16px",
-                accentColor: "var(--color-accent)",
-                cursor: "pointer",
-              }}
-            />
-            <label
-              htmlFor="show-archived-toggle"
-              style={{
-                fontSize: "14px",
-                color: "var(--color-text-muted)",
-                cursor: "pointer",
-                userSelect: "none",
+                display: "flex",
+                gap: "12px",
+                flexWrap: "wrap",
+                alignItems: "center",
               }}
             >
-              Archiváltak megjelenítése
-            </label>
-          </div>
-          <Button variant="secondary">
-            <Filter size={15} style={{ marginRight: "6px" }} />
-            Szűrők
-          </Button>
-        </div>
-      </Card>
+              {/* Keresőmező */}
+              <div style={{ flex: 1, minWidth: "250px", position: "relative" }}>
+                <Search
+                  size={15}
+                  style={{
+                    position: "absolute",
+                    left: "12px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    color: "var(--color-text-muted, #555)",
+                    pointerEvents: "none",
+                  }}
+                />
+                <Input
+                  label=""
+                  placeholder="Keresés cikkszám, megnevezés, leírás vagy beszállító szerint..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  style={{ paddingLeft: "36px" }}
+                />
+              </div>
+
+              {/* Rendezés */}
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <label
+                  style={{
+                    fontSize: "12px",
+                    color: "var(--color-text-muted)",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Rendezés:
+                </label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--color-border-subtle, #222)",
+                    background: "var(--color-bg-input, #111)",
+                    color: "inherit",
+                    fontSize: "14px",
+                    cursor: "pointer",
+                  }}
+                >
+                  <option value="name-asc">Név (A-Z)</option>
+                  <option value="name-desc">Név (Z-A)</option>
+                  <option value="price-asc">Nettó ár (alacsony → magas)</option>
+                  <option value="price-desc">Nettó ár (magas → alacsony)</option>
+                  <option value="code-asc">Cikkszám (A-Z)</option>
+                  <option value="stock-desc">Készleten lévő (több → kevesebb)</option>
+                </select>
+              </div>
+
+              {/* Archiváltak kapcsoló */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  id="show-archived-toggle"
+                  checked={showArchived}
+                  onChange={(e) => setShowArchived(e.target.checked)}
+                  style={{
+                    width: "16px",
+                    height: "16px",
+                    accentColor: "var(--color-accent)",
+                    cursor: "pointer",
+                  }}
+                />
+                <label
+                  htmlFor="show-archived-toggle"
+                  style={{
+                    fontSize: "14px",
+                    color: "var(--color-text-muted)",
+                    cursor: "pointer",
+                    userSelect: "none",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Archiváltak
+                </label>
+              </div>
+
+              {/* Szűrők gomb */}
+              <Button
+                variant={showFilters || hasActiveFilters ? "primary" : "secondary"}
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter size={15} style={{ marginRight: "6px" }} />
+                Szűrők {activeFiltersCount > 0 && `(${activeFiltersCount})`}
+              </Button>
+            </div>
+
+            {/* Szűrő panel kinyitva */}
+            {showFilters && (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                  gap: "16px",
+                  paddingTop: "16px",
+                  borderTop: "1px solid var(--color-border-subtle, #222)",
+                }}
+              >
+                {/* Kategória szűrő */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: "var(--color-text-muted)",
+                    }}
+                  >
+                    Kategória
+                  </label>
+                  <select
+                    value={filterCategory}
+                    onChange={(e) => setFilterCategory(e.target.value)}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "6px",
+                      border: "1px solid var(--color-border-subtle, #222)",
+                      background: "var(--color-bg-input, #111)",
+                      color: "inherit",
+                      fontSize: "14px",
+                    }}
+                  >
+                    <option value="">Mindegyik kategória</option>
+                    <option value="hardware">Hardver (Alap)</option>
+                    <option value="service">Szolgáltatás (Alap)</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Típus szűrő */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: "var(--color-text-muted)",
+                    }}
+                  >
+                    Típus
+                  </label>
+                  <select
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value)}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "6px",
+                      border: "1px solid var(--color-border-subtle, #222)",
+                      background: "var(--color-bg-input, #111)",
+                      color: "inherit",
+                      fontSize: "14px",
+                    }}
+                  >
+                    <option value="">Mindegyik típus</option>
+                    <option value="product">Termék</option>
+                    <option value="service">Szolgáltatás</option>
+                    <option value="labor">Munkadíj</option>
+                    <option value="package">Csomag</option>
+                  </select>
+                </div>
+
+                {/* Raktárkészlet szűrő */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: "var(--color-text-muted)",
+                    }}
+                  >
+                    Készlet állapota
+                  </label>
+                  <select
+                    value={filterStock}
+                    onChange={(e) => setFilterStock(e.target.value)}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "6px",
+                      border: "1px solid var(--color-border-subtle, #222)",
+                      background: "var(--color-bg-input, #111)",
+                      color: "inherit",
+                      fontSize: "14px",
+                    }}
+                  >
+                    <option value="all">Mindegyik tétel</option>
+                    <option value="in-stock">Csak készleten lévő (&gt; 0 db)</option>
+                    <option value="out-of-stock">
+                      Nincs készleten (0 db vagy virtuális)
+                    </option>
+                  </select>
+                </div>
+
+                {/* Beszállító szűrő */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: "var(--color-text-muted)",
+                    }}
+                  >
+                    Preferált beszállító
+                  </label>
+                  <select
+                    value={filterSupplier}
+                    onChange={(e) => setFilterSupplier(e.target.value)}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "6px",
+                      border: "1px solid var(--color-border-subtle, #222)",
+                      background: "var(--color-bg-input, #111)",
+                      color: "inherit",
+                      fontSize: "14px",
+                    }}
+                  >
+                    <option value="">Mindegyik beszállító</option>
+                    {uniquePreferredSuppliers.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Nettó ár szűrő */}
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "6px",
+                    gridColumn: "span 2",
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: "var(--color-text-muted)",
+                    }}
+                  >
+                    Nettó eladási ár-tartomány (HUF)
+                  </label>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    <Input
+                      type="number"
+                      placeholder="Minimum ár"
+                      value={filterMinPrice}
+                      onChange={(e) => setFilterMinPrice(e.target.value)}
+                      style={{ flex: 1 }}
+                    />
+                    <span style={{ color: "var(--color-text-muted)" }}>—</span>
+                    <Input
+                      type="number"
+                      placeholder="Maximum ár"
+                      value={filterMaxPrice}
+                      onChange={(e) => setFilterMaxPrice(e.target.value)}
+                      style={{ flex: 1 }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Aktív szűrők visszajelzése és törlése */}
+            {hasActiveFilters && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  paddingTop: "12px",
+                  borderTop: "1px solid var(--color-border-subtle, #222)",
+                  flexWrap: "wrap",
+                  gap: "8px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "8px",
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "12px",
+                      color: "var(--color-text-muted)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Aktív szűrők:
+                  </span>
+
+                  {filterCategory && (
+                    <Badge variant="info">
+                      Kategória:{" "}
+                      {filterCategory in categoryLabel
+                        ? categoryLabel[filterCategory as keyof typeof categoryLabel]
+                        : categories.find((c) => c.id === filterCategory)?.name ||
+                          filterCategory}
+                      <button
+                        onClick={() => setFilterCategory("")}
+                        style={{
+                          marginLeft: "6px",
+                          border: "none",
+                          background: "none",
+                          color: "inherit",
+                          cursor: "pointer",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  )}
+
+                  {filterType && (
+                    <Badge variant="default">
+                      Típus:{" "}
+                      {filterType === "product"
+                        ? "Termék"
+                        : filterType === "service"
+                          ? "Szolgáltatás"
+                          : filterType === "labor"
+                            ? "Munkadíj"
+                            : filterType === "package"
+                              ? "Csomag"
+                              : filterType}
+                      <button
+                        onClick={() => setFilterType("")}
+                        style={{
+                          marginLeft: "6px",
+                          border: "none",
+                          background: "none",
+                          color: "inherit",
+                          cursor: "pointer",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  )}
+
+                  {filterStock !== "all" && (
+                    <Badge variant="warning">
+                      Készlet:{" "}
+                      {filterStock === "in-stock" ? "Készleten van" : "Nincs készleten"}
+                      <button
+                        onClick={() => setFilterStock("all")}
+                        style={{
+                          marginLeft: "6px",
+                          border: "none",
+                          background: "none",
+                          color: "inherit",
+                          cursor: "pointer",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  )}
+
+                  {filterSupplier && (
+                    <Badge variant="success">
+                      Beszállító: {filterSupplier}
+                      <button
+                        onClick={() => setFilterSupplier("")}
+                        style={{
+                          marginLeft: "6px",
+                          border: "none",
+                          background: "none",
+                          color: "inherit",
+                          cursor: "pointer",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  )}
+
+                  {(filterMinPrice || filterMaxPrice) && (
+                    <Badge variant="info">
+                      Ár: {filterMinPrice ? fmt(Number(filterMinPrice)) : "0 Ft"} —{" "}
+                      {filterMaxPrice ? fmt(Number(filterMaxPrice)) : "∞"}
+                      <button
+                        onClick={() => {
+                          setFilterMinPrice("");
+                          setFilterMaxPrice("");
+                        }}
+                        style={{
+                          marginLeft: "6px",
+                          border: "none",
+                          background: "none",
+                          color: "inherit",
+                          cursor: "pointer",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  )}
+                </div>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setFilterCategory("");
+                    setFilterType("");
+                    setFilterStock("all");
+                    setFilterSupplier("");
+                    setFilterMinPrice("");
+                    setFilterMaxPrice("");
+                  }}
+                  style={{
+                    fontSize: "12px",
+                    padding: "4px 8px",
+                    color: "var(--color-status-error)",
+                  }}
+                >
+                  Szűrők törlése
+                </Button>
+              </div>
+            )}
+          </Card>
+        );
+      })()}
 
       {/* Árlista sorok – kattintható, expandable */}
       <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
