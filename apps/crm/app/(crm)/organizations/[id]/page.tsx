@@ -24,6 +24,7 @@ import type {
   InventoryItem,
   PortalPermissions,
   PortalUser,
+  Worklog,
 } from "@crm/types";
 import {
   Building2,
@@ -42,6 +43,8 @@ import {
   User,
   Mail,
   KeyRound,
+  Save,
+  Trash2,
 } from "lucide-react";
 import { ContactContractsTab } from "../../contacts/[id]/ContactContractsTab";
 import { ContactWorklogsTab } from "../../contacts/[id]/ContactWorklogsTab";
@@ -122,6 +125,9 @@ export default function OrganizationDetailPage({
   const [contact, setContact] = useState<Contact | null>(null);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [domainRows, setDomainRows] = useState<DomainHostingRecord[]>([]);
+  const [worklogs, setWorklogs] = useState<Worklog[]>([]);
+  const [editingInventoryItem, setEditingInventoryItem] =
+    useState<Partial<InventoryItem> | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -187,14 +193,23 @@ export default function OrganizationDetailPage({
     const ac = new AbortController();
     (async () => {
       try {
-        const [inv, dom] = await Promise.all([
+        const [inv, dom, wl] = await Promise.all([
           apiJson<unknown[]>(`/api/inventory?contact_id=${id}`, { signal: ac.signal }),
           apiJson<unknown[]>(`/api/domain-hosting?contact_id=${id}`, {
             signal: ac.signal,
           }),
+          apiJson<unknown[]>(`/api/worklogs?contact_id=${id}`, { signal: ac.signal }),
         ]);
         setInventory(parseInventoryRows(inv));
         setDomainRows(parseDomainRows(dom));
+        setWorklogs(
+          wl.map((d: any) => ({
+            ...d,
+            work_date: new Date(d.work_date),
+            created_at: new Date(d.created_at),
+            updated_at: new Date(d.updated_at),
+          })) as Worklog[],
+        );
       } catch {
         /* list errors are non-fatal */
       }
@@ -324,17 +339,59 @@ export default function OrganizationDetailPage({
     await refreshDomain();
   };
 
-  const addInventoryItem = async () => {
+  const addInventoryItem = () => {
     if (!contact) return;
-    const nameIn = window.prompt("Eszköz megnevezése")?.trim();
-    if (!nameIn) return;
-    await apiJsonBody("/api/inventory", "POST", {
-      contact_id: contact._id,
-      name: nameIn,
+    setEditingInventoryItem({
       category: "hardware",
       status: "active",
+      name: "",
+      serial_number: "",
+      notes: "",
+      assigned_to: "",
+      warranty_end: null,
     });
-    await refreshInventory();
+  };
+
+  const saveInventoryItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contact || !editingInventoryItem) return;
+    try {
+      const payload = {
+        contact_id: contact._id,
+        name: editingInventoryItem.name?.trim() || "",
+        category: editingInventoryItem.category,
+        serial_number: editingInventoryItem.serial_number?.trim() || null,
+        status: editingInventoryItem.status,
+        assigned_to: editingInventoryItem.assigned_to?.trim() || null,
+        warranty_end: editingInventoryItem.warranty_end || null,
+        notes: editingInventoryItem.notes?.trim() || null,
+      };
+
+      if (!payload.name) {
+        alert("Név megadása kötelező!");
+        return;
+      }
+
+      if (editingInventoryItem._id) {
+        await apiJsonBody(`/api/inventory/${editingInventoryItem._id}`, "PATCH", payload);
+      } else {
+        await apiJsonBody("/api/inventory", "POST", payload);
+      }
+      setEditingInventoryItem(null);
+      await refreshInventory();
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "Sikertelen mentés.");
+    }
+  };
+
+  const deleteInventoryItem = async (itemId: string) => {
+    if (!confirm("Biztosan törölni szeretnéd ezt a leltári tételt?")) return;
+    try {
+      await apiJsonBody(`/api/inventory/${itemId}`, "DELETE", {});
+      await refreshInventory();
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "Sikertelen törlés.");
+    }
   };
 
   if (!contact && !loadErr) {
@@ -670,57 +727,247 @@ export default function OrganizationDetailPage({
                       <th className="px-4 py-3 font-semibold">Típus</th>
                       <th className="px-4 py-3 font-semibold">Sorozatszám (SN)</th>
                       <th className="px-4 py-3 font-semibold">Garancia lejár</th>
-                      <th className="px-4 py-3 font-semibold rounded-tr-lg">Státusz</th>
+                      <th className="px-4 py-3 font-semibold">Státusz</th>
+                      <th className="px-4 py-3 font-semibold">Javítva volt?</th>
+                      <th className="px-4 py-3 font-semibold rounded-tr-lg text-right">
+                        Műveletek
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {inventory.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={5}
+                          colSpan={7}
                           className="px-4 py-6 text-[var(--color-text-muted)]"
                         >
                           Még nincs leltári tétel.
                         </td>
                       </tr>
                     ) : (
-                      inventory.map((row) => (
-                        <tr
-                          key={row._id}
-                          className="border-b border-[var(--color-border-subtle)] hover:bg-[var(--color-bg-secondary)] transition-colors"
-                        >
-                          <td className="px-4 py-4 font-medium">{row.name}</td>
-                          <td className="px-4 py-4 text-[var(--color-text-muted)]">
-                            {row.category === "hardware"
-                              ? "Hardver"
-                              : row.category === "software"
-                                ? "Szoftver"
-                                : "Licenc"}
-                          </td>
-                          <td className="px-4 py-4 font-mono text-xs">
-                            {row.serial_number ?? "—"}
-                          </td>
-                          <td className="px-4 py-4">{fmtDate(row.warranty_end)}</td>
-                          <td className="px-4 py-4">
-                            <Badge
-                              variant={
-                                row.status === "active"
-                                  ? "success"
+                      inventory.map((row) => {
+                        const itemWorklogs = worklogs.filter((w) =>
+                          w.serviced_item_ids?.includes(row._id),
+                        );
+                        const hasRepairs = itemWorklogs.length > 0;
+                        return (
+                          <tr
+                            key={row._id}
+                            className="border-b border-[var(--color-border-subtle)] hover:bg-[var(--color-bg-secondary)] transition-colors"
+                          >
+                            <td className="px-4 py-4 font-medium">{row.name}</td>
+                            <td className="px-4 py-4 text-[var(--color-text-muted)]">
+                              {row.category === "hardware"
+                                ? "Hardver"
+                                : row.category === "software"
+                                  ? "Szoftver"
+                                  : "Licenc"}
+                            </td>
+                            <td className="px-4 py-4 font-mono text-xs text-[var(--color-text-muted)]">
+                              {row.serial_number ?? "—"}
+                            </td>
+                            <td className="px-4 py-4 text-[var(--color-text-muted)]">
+                              {fmtDate(row.warranty_end)}
+                            </td>
+                            <td className="px-4 py-4">
+                              <Badge
+                                variant={
+                                  row.status === "active"
+                                    ? "success"
+                                    : row.status === "maintenance"
+                                      ? "warning"
+                                      : "default"
+                                }
+                              >
+                                {row.status === "active"
+                                  ? "Aktív"
                                   : row.status === "maintenance"
-                                    ? "warning"
-                                    : "default"
-                              }
-                            >
-                              {row.status}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))
+                                    ? "Karbantartás"
+                                    : "Kiselejtezett"}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-4">
+                              {hasRepairs ? (
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="text-xs font-semibold text-[var(--color-accent-primary)]">
+                                    Igen ({itemWorklogs.length}x)
+                                  </span>
+                                  <span className="text-[10px] text-[var(--color-text-muted)] font-mono">
+                                    {itemWorklogs.map((w) => w.worklog_number).join(", ")}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-[var(--color-text-muted)]">
+                                  Nem
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-4 text-right">
+                              <div className="flex items-center justify-end gap-3">
+                                <button
+                                  onClick={() =>
+                                    setEditingInventoryItem({
+                                      ...row,
+                                      warranty_end: row.warranty_end
+                                        ? (new Date(row.warranty_end)
+                                            .toISOString()
+                                            .split("T")[0] as any)
+                                        : "",
+                                    })
+                                  }
+                                  className="text-[var(--color-accent-primary)] hover:underline text-xs font-medium"
+                                >
+                                  Szerkesztés
+                                </button>
+                                <button
+                                  onClick={() => void deleteInventoryItem(row._id)}
+                                  className="text-red-400 hover:underline text-xs font-medium"
+                                >
+                                  Törlés
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
               </div>
             </Card>
+
+            {/* Inline editing form */}
+            {editingInventoryItem && (
+              <Card className="p-6 space-y-4 border-2 border-[var(--color-accent-primary)]/40">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-accent-primary)]">
+                  {editingInventoryItem._id
+                    ? "Eszköz szerkesztése"
+                    : "Új eszköz hozzáadása"}
+                </h3>
+                <form onSubmit={(e) => void saveInventoryItem(e)} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input
+                      label="Eszköz neve *"
+                      value={editingInventoryItem.name ?? ""}
+                      onChange={(e) =>
+                        setEditingInventoryItem((prev) =>
+                          prev ? { ...prev, name: e.target.value } : prev,
+                        )
+                      }
+                      placeholder="Pl. Hikvision DS-2CD2143G2-I"
+                      required
+                    />
+                    <div className="flex flex-col gap-1.5">
+                      <Label>Típus *</Label>
+                      <Select
+                        value={editingInventoryItem.category ?? "hardware"}
+                        onValueChange={(v) =>
+                          setEditingInventoryItem((prev) =>
+                            prev
+                              ? { ...prev, category: v as InventoryItem["category"] }
+                              : prev,
+                          )
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="hardware">Hardver</SelectItem>
+                          <SelectItem value="software">Szoftver</SelectItem>
+                          <SelectItem value="license">Licenc</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Input
+                      label="Sorozatszám (SN)"
+                      value={(editingInventoryItem.serial_number as string) ?? ""}
+                      onChange={(e) =>
+                        setEditingInventoryItem((prev) =>
+                          prev ? { ...prev, serial_number: e.target.value } : prev,
+                        )
+                      }
+                      placeholder="Pl. DS2CD-2023-XXXX"
+                    />
+                    <div className="flex flex-col gap-1.5">
+                      <Label>Státusz</Label>
+                      <Select
+                        value={editingInventoryItem.status ?? "active"}
+                        onValueChange={(v) =>
+                          setEditingInventoryItem((prev) =>
+                            prev
+                              ? { ...prev, status: v as InventoryItem["status"] }
+                              : prev,
+                          )
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Aktív</SelectItem>
+                          <SelectItem value="maintenance">Karbantartás alatt</SelectItem>
+                          <SelectItem value="retired">Kiselejtezett</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Input
+                      label="Garancia lejárat"
+                      type="date"
+                      value={
+                        (editingInventoryItem.warranty_end as unknown as string) ?? ""
+                      }
+                      onChange={(e) =>
+                        setEditingInventoryItem((prev) =>
+                          prev ? { ...prev, warranty_end: e.target.value as any } : prev,
+                        )
+                      }
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input
+                      label="Felelős / Hozzárendelve"
+                      value={(editingInventoryItem.assigned_to as string) ?? ""}
+                      onChange={(e) =>
+                        setEditingInventoryItem((prev) =>
+                          prev ? { ...prev, assigned_to: e.target.value } : prev,
+                        )
+                      }
+                      placeholder="Pl. Nagy Péter"
+                    />
+                    <Textarea
+                      label="Megjegyzések"
+                      value={(editingInventoryItem.notes as string) ?? ""}
+                      onChange={(e) =>
+                        setEditingInventoryItem((prev) =>
+                          prev ? { ...prev, notes: e.target.value } : prev,
+                        )
+                      }
+                      placeholder="Pl. Főbejárat melletti kamera, PoE tápellátás"
+                      rows={2}
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-3 pt-2">
+                    <Button variant="primary" type="submit">
+                      <Save size={14} className="mr-1.5" />
+                      {editingInventoryItem._id ? "Mentés" : "Hozzáadás"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      type="button"
+                      onClick={() => setEditingInventoryItem(null)}
+                    >
+                      Mégse
+                    </Button>
+                  </div>
+                </form>
+              </Card>
+            )}
           </div>
         )}
 

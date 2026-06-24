@@ -12,6 +12,7 @@ import {
   Clock,
   AlertTriangle,
   FileText,
+  Archive,
 } from "lucide-react";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 import type { WarrantyCard, Contact, CompanyDetails } from "@crm/types";
@@ -121,14 +122,10 @@ function buildPdfHtml(data: PdfData): string {
     .join("");
 
   return `
-<!DOCTYPE html>
-<html lang="hu">
-<head>
-  <meta charset="UTF-8"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<div class="pdf-wrapper">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Inter', sans-serif; background: #ffffff; color: #1e293b; -webkit-font-smoothing: antialiased; }
+    .pdf-wrapper { font-family: 'Inter', sans-serif; background: #ffffff; color: #1e293b; -webkit-font-smoothing: antialiased; }
+    .pdf-wrapper * { box-sizing: border-box; margin: 0; padding: 0; }
     .page { width: 210mm; min-height: 297mm; padding: 20mm; page-break-after: always; position: relative; }
     .page:last-child { page-break-after: auto; }
     
@@ -315,9 +312,8 @@ function buildPdfHtml(data: PdfData): string {
     <div class="footer-text">2. oldal / 2</div>
   </div>
 </div>
-
-</body>
-</html>`;
+</div>
+`;
 }
 
 // ─── Fő oldal komponens ───────────────────────────────────────────────────────
@@ -378,16 +374,26 @@ export default function WarrantyDetailPage({
       const html = buildPdfHtml(pdfData);
 
       const html2pdf = (await import("html2pdf.js")).default;
+
+      const container = document.createElement("div");
+      container.innerHTML = html;
+      container.style.position = "absolute";
+      container.style.left = "-9999px";
+      container.style.top = "0";
+      document.body.appendChild(container);
+
       await html2pdf()
-        .from(html)
+        .from(container)
         .set({
           margin: 0,
           filename: `Jótállási_jegy_${warranty.warranty_number}.pdf`,
           image: { type: "jpeg", quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true },
+          html2canvas: { scale: 2, useCORS: true, letterRendering: true },
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
         })
         .save();
+
+      document.body.removeChild(container);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "PDF generálás sikertelen.");
     } finally {
@@ -408,6 +414,20 @@ export default function WarrantyDetailPage({
       setWarranty(updated);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Státusz frissítés sikertelen.");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const handleArchive = async () => {
+    if (!warranty) return;
+    if (!confirm("Biztosan archiválni szeretnéd ezt a jótállási jegyet?")) return;
+    setUpdatingStatus(true);
+    try {
+      await apiJsonBody<{ ok: true }>(`/api/warranties/${id}`, "DELETE", {});
+      router.push("/warranties");
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Archiválás sikertelen.");
     } finally {
       setUpdatingStatus(false);
     }
@@ -476,6 +496,15 @@ export default function WarrantyDetailPage({
           >
             <Download size={15} className="mr-1.5" />
             {generatingPdf ? "Generálás…" : "PDF letöltése"}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => void handleArchive()}
+            disabled={updatingStatus}
+          >
+            <Archive size={14} className="mr-1" />
+            Archiválás
           </Button>
         </div>
       </div>

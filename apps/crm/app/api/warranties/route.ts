@@ -38,9 +38,13 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const contact_id = searchParams.get("contact_id");
     const status = searchParams.get("status");
+    const includeArchived = searchParams.get("include_archived") === "true";
 
     return await withDb(async () => {
       const query: Record<string, unknown> = { tenantId: actor.tenantId };
+      if (!includeArchived) {
+        query.is_archived = { $ne: true };
+      }
       if (contact_id) query.contact_id = contact_id;
       if (status) query.status = status;
 

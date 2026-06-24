@@ -27,6 +27,7 @@ import type {
   PriceListItem,
   StockItemWithProduct,
   ChecklistTemplate,
+  InventoryItem,
 } from "@crm/types";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 import {
@@ -112,6 +113,8 @@ function WorklogFormContent({ id }: { id: string }) {
   const [items, setItems] = useState<WorklogItem[]>([emptyItem()]);
   const [checklistTemplates, setChecklistTemplates] = useState<ChecklistTemplate[]>([]);
   const [checklistItems, setChecklistItems] = useState<any[]>([]);
+  const [servicedItemIds, setServicedItemIds] = useState<string[]>([]);
+  const [contactInventory, setContactInventory] = useState<InventoryItem[]>([]);
 
   const [showPricesOnPdf, setShowPricesOnPdf] = useState(true);
   const [showItemPicker, setShowItemPicker] = useState(false);
@@ -183,6 +186,7 @@ function WorklogFormContent({ id }: { id: string }) {
         setClientName(w.client_name ?? "");
         setItems(w.items.length ? w.items : [emptyItem()]);
         setChecklistItems((w as any).checklist_items || []);
+        setServicedItemIds((w as any).serviced_item_ids || []);
         setLoadErr(null);
       } catch {
         if (!ac.signal.aborted) {
@@ -192,6 +196,20 @@ function WorklogFormContent({ id }: { id: string }) {
     })();
     return () => ac.abort();
   }, [id, isNew]);
+
+  useEffect(() => {
+    if (!contactId) {
+      setContactInventory([]);
+      return;
+    }
+    const ac = new AbortController();
+    apiJson<InventoryItem[]>(`/api/inventory?contact_id=${contactId}`, {
+      signal: ac.signal,
+    })
+      .then((data) => setContactInventory(data))
+      .catch(() => setContactInventory([]));
+    return () => ac.abort();
+  }, [contactId]);
 
   const buildPayload = useCallback(() => {
     const travelParsed = travelKm.trim() === "" ? null : Number(travelKm);
@@ -232,6 +250,7 @@ function WorklogFormContent({ id }: { id: string }) {
       notes: notes.trim() || null,
       contact_id: contactId.trim() || null,
       checklist_items: checklistItems,
+      serviced_item_ids: servicedItemIds,
     };
   }, [
     travelKm,
@@ -247,6 +266,7 @@ function WorklogFormContent({ id }: { id: string }) {
     notes,
     contactId,
     checklistItems,
+    servicedItemIds,
   ]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -713,6 +733,75 @@ function WorklogFormContent({ id }: { id: string }) {
             )}
           </div>
         </div>
+
+        {/* Section 2.6: Karbantartott rendszerelemek */}
+        {contactId && contactInventory.length > 0 && (
+          <div
+            className="rounded-xl border p-6 flex flex-col gap-4"
+            style={{
+              background: "var(--color-bg-card)",
+              borderColor: "var(--color-border-subtle)",
+            }}
+          >
+            <div
+              className="flex items-center justify-between border-b pb-2"
+              style={{ borderColor: "var(--color-border-subtle)" }}
+            >
+              <div className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                Karbantartott rendszerelemek (Eszközök)
+              </div>
+            </div>
+
+            <p className="text-xs text-[var(--color-text-muted)]">
+              Jelöld ki azokat az ügyféleszközöket, amelyeken ebben a munkalapban
+              javítást/karbantartást végeztél.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+              {contactInventory.map((item) => {
+                const isChecked = servicedItemIds.includes(item._id);
+                return (
+                  <label
+                    key={item._id}
+                    className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                      isChecked
+                        ? "border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)]/5"
+                        : "border-[var(--color-border-subtle)] bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-card)]"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      disabled={disabled}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setServicedItemIds((prev) =>
+                          checked
+                            ? [...prev, item._id]
+                            : prev.filter((id) => id !== item._id),
+                        );
+                      }}
+                      className="rounded border-[var(--color-border-default)] text-[var(--color-accent-primary)] focus:ring-0 cursor-pointer h-4 w-4 mt-0.5"
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold text-white">
+                        {item.name}
+                      </span>
+                      <span className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                        {item.category === "hardware"
+                          ? "Hardver"
+                          : item.category === "software"
+                            ? "Szoftver"
+                            : "Licenc"}
+                        {item.serial_number ? ` • SN: ${item.serial_number}` : ""}
+                      </span>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Section 3: tételek (szerviz / anyag) */}
         <div

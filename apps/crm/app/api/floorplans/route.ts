@@ -28,7 +28,7 @@ const createSchema = z.object({
   name: z.string().min(1),
   contact_id: z.string().min(1),
   project_id: z.string().optional().nullable(),
-  image_url: z.string().url().or(z.string().startsWith("/")),
+  image_url: z.string(),
   markers: z.array(markerSchema).default([]),
 });
 

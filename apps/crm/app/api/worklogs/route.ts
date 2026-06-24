@@ -29,6 +29,7 @@ const createSchema = z.object({
   contact_id: z.string().nullable().optional(),
   project_id: z.string().nullable().optional(),
   ticket_id: z.string().nullable().optional(),
+  serviced_item_ids: z.array(z.string()).optional(),
   one_time_contact_name: z.string().nullable().optional(),
   one_time_contact_phone: z.string().nullable().optional(),
 });
@@ -103,6 +104,7 @@ export async function POST(req: Request) {
         items: b.items,
         travel_km: b.travel_km ?? null,
         notes: b.notes ?? null,
+        serviced_item_ids: b.serviced_item_ids ?? [],
         pdf_url: null,
       });
       return NextResponse.json(serializeForJson(doc.toObject()), { status: 201 });

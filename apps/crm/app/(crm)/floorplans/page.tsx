@@ -410,18 +410,34 @@ export default function FloorplansPage() {
               </Select>
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="fp-url">Alaprajz kép URL *</Label>
+              <Label htmlFor="fp-file">Alaprajz fájl feltöltése *</Label>
               <Input
-                id="fp-url"
-                value={newImageUrl}
-                onChange={(e) => setNewImageUrl(e.target.value)}
-                placeholder="https://..."
+                id="fp-file"
+                type="file"
+                accept="image/png, image/jpeg, image/webp"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) {
+                    setNewImageUrl("");
+                    return;
+                  }
+                  if (file.size > 3 * 1024 * 1024) {
+                    alert("A fájl mérete nem haladhatja meg a 3 MB-ot.");
+                    e.target.value = "";
+                    return;
+                  }
+                  const reader = new FileReader();
+                  reader.onload = (evt) => {
+                    setNewImageUrl(evt.target?.result as string);
+                  };
+                  reader.readAsDataURL(file);
+                }}
               />
             </div>
           </div>
           <p className="text-xs text-[var(--color-text-muted)]">
-            💡 Tipp: Tölts fel alaprajzképet valamelyik külső tárhely szolgáltatásba (pl.
-            Google Drive, Imgur), majd add meg a közvetlen URL-t.
+            💡 Támogatott formátumok: JPG, PNG, WEBP. Maximum méret: 3 MB. A fájl
+            közvetlenül a rendszerben kerül tárolásra.
           </p>
           <div className="flex justify-end gap-3">
             <Button variant="ghost" onClick={() => setCreating(false)}>

@@ -304,6 +304,7 @@ export interface Worklog {
   travel_km: number | null;
   notes: string | null;
   pdf_url: string | null;
+  serviced_item_ids?: string[];
   is_archived?: boolean;
   archived_at?: Date | null;
   archive_reason?: string | null;

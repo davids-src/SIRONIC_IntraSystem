@@ -28,6 +28,9 @@ const warrantyCardSchema = defineSchema(
     },
     pdf_url: { type: String, default: null },
     created_by: { type: String, required: true },
+    is_archived: { type: Boolean, default: false },
+    archived_at: { type: Date, default: null },
+    archive_reason: { type: String, default: null },
   },
   ts,
 );

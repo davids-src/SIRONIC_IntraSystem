@@ -28,6 +28,7 @@ const worklogSchema = defineSchema(
     travel_km: { type: Number, default: null },
     notes: { type: String, default: null },
     pdf_url: { type: String, default: null },
+    serviced_item_ids: { type: [String], default: [] },
     checklist_items: [
       {
         item_id: { type: String, required: true },

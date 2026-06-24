@@ -18,6 +18,10 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     { module: "secret", action: "admin", scope: "global" },
     { module: "warranty", action: "admin", scope: "global" },
     { module: "weekly_plan", action: "admin", scope: "global" },
+    { module: "checklist", action: "admin", scope: "global" },
+    { module: "project_expense", action: "admin", scope: "global" },
+    { module: "maintenance_plan", action: "admin", scope: "global" },
+    { module: "floorplan", action: "admin", scope: "global" },
   ],
   "crm.staff": [
     { module: "dashboard", action: "view", scope: "global" },
@@ -47,6 +51,10 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     { module: "warranty", action: "generate_pdf", scope: "global" },
     { module: "settings", action: "view", scope: "global" },
     { module: "weekly_plan", action: "write", scope: "global" },
+    { module: "checklist", action: "write", scope: "global" },
+    { module: "project_expense", action: "write", scope: "global" },
+    { module: "maintenance_plan", action: "write", scope: "global" },
+    { module: "floorplan", action: "write", scope: "global" },
   ],
 
   "partner.admin": [
