@@ -34,6 +34,28 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
     delete patch.tenantId;
     delete patch.worklog_number;
     return await withDb(async () => {
+      if (patch.status === "finalized") {
+        const currentDoc = await WorklogModel.findOne({
+          _id: id,
+          tenantId: actor.tenantId,
+        }).lean();
+        if (!currentDoc) {
+          return NextResponse.json({ error: "Not found" }, { status: 404 });
+        }
+        const checklist =
+          (patch.checklist_items as any[]) || (currentDoc as any).checklist_items || [];
+        const uncompletedRequired = checklist.filter(
+          (item: any) => item.is_required && !item.is_completed,
+        );
+        if (uncompletedRequired.length > 0) {
+          return NextResponse.json(
+            {
+              error: `Nem véglegesíthető. Kötelező checklist elemek nincsenek kész: ${uncompletedRequired.map((i: any) => i.text).join(", ")}`,
+            },
+            { status: 400 },
+          );
+        }
+      }
       const doc = await WorklogModel.findOneAndUpdate(
         { _id: id, tenantId: actor.tenantId },
         { $set: patch },

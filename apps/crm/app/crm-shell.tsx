@@ -5,6 +5,7 @@ import { AppShell } from "@crm/ui";
 import type { NavItem, SidebarUser } from "@crm/ui";
 import { signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
+import { SpotlightSearch } from "@/components/SpotlightSearch";
 
 import {
   LayoutDashboard,
@@ -24,6 +25,10 @@ import {
   Users,
   FileOutput,
   Calendar,
+  Wrench,
+  CheckSquare,
+  Activity,
+  Map,
 } from "lucide-react";
 
 const crmNavItems: NavItem[] = [
@@ -45,12 +50,30 @@ const crmNavItems: NavItem[] = [
     href: "/projects",
     icon: <FolderKanban size={16} />,
   },
+  {
+    key: "floorplans",
+    label: "Alaprajzok (BIM)",
+    href: "/floorplans",
+    icon: <Map size={16} />,
+  },
   { key: "tickets", label: "Ticketek", href: "/tickets", icon: <Ticket size={16} /> },
+  {
+    key: "maintenance",
+    label: "Preventív karbantartás",
+    href: "/maintenance",
+    icon: <Activity size={16} />,
+  },
   {
     key: "worklogs",
     label: "Munkalapok",
     href: "/worklogs",
     icon: <ClipboardList size={16} />,
+  },
+  {
+    key: "checklists",
+    label: "Checklisták",
+    href: "/checklists",
+    icon: <CheckSquare size={16} />,
   },
   {
     key: "weekly-plans",
@@ -83,6 +106,12 @@ const crmNavItems: NavItem[] = [
     label: "Raktár",
     href: "/inventory",
     icon: <ShoppingCart size={16} />,
+  },
+  {
+    key: "tools",
+    label: "Eszközök",
+    href: "/tools",
+    icon: <Wrench size={16} />,
   },
   {
     key: "delivery-notes",
@@ -131,31 +160,34 @@ export function CrmShell({
   }
 
   return (
-    <AppShell
-      sidebar={{
-        appName: "SIRONIC CRM",
-        appIcon: <ShieldCheck size={20} />,
-        navItems: crmNavItems,
-        currentPath: "",
-        user: sidebarUser,
-      }}
-      topbar={{
-        breadcrumb: "SIRONIC CRM",
-        notificationCount: 0,
-        userInitials: sidebarUser.avatarInitials,
-        userMenuItems: [
-          { label: "Profil", onClick: () => {} },
-          { label: "Beállítások", onClick: () => {} },
-          {
-            label: "Kijelentkezés",
-            onClick: () => {
-              void signOut({ callbackUrl: "/login" });
+    <>
+      <AppShell
+        sidebar={{
+          appName: "SIRONIC CRM",
+          appIcon: <ShieldCheck size={20} />,
+          navItems: crmNavItems,
+          currentPath: "",
+          user: sidebarUser,
+        }}
+        topbar={{
+          breadcrumb: "SIRONIC CRM",
+          notificationCount: 0,
+          userInitials: sidebarUser.avatarInitials,
+          userMenuItems: [
+            { label: "Profil", onClick: () => {} },
+            { label: "Beállítások", onClick: () => {} },
+            {
+              label: "Kijelentkezés",
+              onClick: () => {
+                void signOut({ callbackUrl: "/login" });
+              },
             },
-          },
-        ],
-      }}
-    >
-      {children}
-    </AppShell>
+          ],
+        }}
+      >
+        {children}
+      </AppShell>
+      <SpotlightSearch />
+    </>
   );
 }

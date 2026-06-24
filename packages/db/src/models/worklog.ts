@@ -28,6 +28,16 @@ const worklogSchema = defineSchema(
     travel_km: { type: Number, default: null },
     notes: { type: String, default: null },
     pdf_url: { type: String, default: null },
+    checklist_items: [
+      {
+        item_id: { type: String, required: true },
+        text: { type: String, required: true },
+        is_required: { type: Boolean, default: false },
+        is_completed: { type: Boolean, default: false },
+        completed_at: { type: Date, default: null },
+        completed_by: { type: String, default: null },
+      },
+    ],
     is_archived: { type: Boolean, default: false },
     archived_at: { type: Date, default: null },
     archive_reason: { type: String, default: null },

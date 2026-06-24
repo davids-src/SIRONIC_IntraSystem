@@ -33,7 +33,12 @@ export type PermissionModule =
   | "secret"
   | "warranty"
   | "settings"
-  | "weekly_plan";
+  | "weekly_plan"
+  | "tools"
+  | "checklist"
+  | "project_expense"
+  | "maintenance_plan"
+  | "floorplan";
 
 /** CRM app login roles only (subset of RoleKey). */
 export type CrmRoleKey = "crm.admin" | "crm.staff";
@@ -842,6 +847,195 @@ export interface WeeklyPlan {
   is_archived?: boolean;
   archived_at?: Date | null;
   archive_reason?: string | null;
+  created_by: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TOOL TRACKING / ESZKÖZÖK MODULE
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type ToolStatus =
+  | "in_warehouse"
+  | "checked_out"
+  | "maintenance"
+  | "lost"
+  | "retired";
+export type ToolCondition = "new" | "good" | "fair" | "poor";
+
+export interface Tool {
+  _id: string;
+  tenantId: string;
+  name: string;
+  brand?: string;
+  model_number?: string;
+  serial_number?: string;
+  status: ToolStatus;
+  assigned_to?: string; // User ID (actor.actorId)
+  condition: ToolCondition;
+  notes?: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type ToolTransactionType =
+  | "check_out"
+  | "check_in"
+  | "maintenance_start"
+  | "maintenance_end"
+  | "mark_lost"
+  | "retire";
+
+export interface ToolTransaction {
+  _id: string;
+  tenantId: string;
+  tool_id: string;
+  actor_id: string;
+  type: ToolTransactionType;
+  target_user_id?: string;
+  notes?: string;
+  created_at: Date;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHECKLIST TEMPLATES – DINAMIKUS MUNKALAP ELLENŐRZŐLISTÁK
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ChecklistTemplateItem {
+  item_id: string;
+  text: string;
+  is_required: boolean;
+  order: number;
+}
+
+export interface ChecklistTemplate {
+  _id: string;
+  tenantId: string;
+  name: string;
+  description?: string;
+  category?: string;
+  items: ChecklistTemplateItem[];
+  is_active: boolean;
+  created_by: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface WorklogChecklistItem {
+  item_id: string;
+  text: string;
+  is_required: boolean;
+  is_completed: boolean;
+  completed_at?: Date | null;
+  completed_by?: string | null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PROJECT EXPENSE – KIKÜLDETÉSI ÉS ÚTIKÖLTSÉG MODUL
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type ExpenseType =
+  | "fuel"
+  | "parking"
+  | "toll"
+  | "accommodation"
+  | "material"
+  | "other";
+
+export interface ProjectExpense {
+  _id: string;
+  tenantId: string;
+  project_id: string;
+  worklog_id?: string | null;
+  expense_type: ExpenseType;
+  description?: string;
+  amount: number;
+  currency: string;
+  receipt_image_url?: string | null;
+  recorded_by: string;
+  date: Date | string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECRET SHARE – EGYSZERI BIZTONSÁGOS MEGOSZTÁSI LINKEK
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface SecretShare {
+  _id: string;
+  tenantId: string;
+  secret_id: string;
+  token: string;
+  expires_at: Date | string;
+  view_count_limit: number;
+  view_count: number;
+  viewed_at?: Date | null;
+  ip_address_log: string[];
+  created_by: string;
+  created_at: Date;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAINTENANCE PLAN – SLA PREVENTÍV KARBANTARTÁS ÜTEMEZŐ
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface MaintenancePlan {
+  _id: string;
+  tenantId: string;
+  title: string;
+  contact_id: string;
+  project_id?: string | null;
+  frequency_months: number;
+  next_due_date: Date | string;
+  last_generated_at?: Date | null;
+  is_active: boolean;
+  template_title: string;
+  template_description?: string;
+  template_category: string;
+  template_priority: "low" | "medium" | "high" | "critical";
+  template_assigned_to?: string | null;
+  advance_days: number;
+  created_by: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FLOORPLAN – BIM / VIZUÁLIS HÁLÓZAT-TÉRKÉPEZÉS
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type MarkerType =
+  | "camera"
+  | "ap"
+  | "switch"
+  | "rack"
+  | "socket"
+  | "sensor"
+  | "router"
+  | "server"
+  | "other";
+
+export interface FloorplanMarker {
+  marker_id: string;
+  x_percent: number;
+  y_percent: number;
+  label?: string;
+  ticket_id?: string | null;
+  asset_id?: string | null;
+  marker_type: MarkerType;
+  description?: string;
+}
+
+export interface Floorplan {
+  _id: string;
+  tenantId: string;
+  contact_id: string;
+  project_id?: string | null;
+  name: string;
+  image_url: string;
+  markers: FloorplanMarker[];
   created_by: string;
   created_at: Date;
   updated_at: Date;

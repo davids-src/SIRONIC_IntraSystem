@@ -26,6 +26,7 @@ import type {
   CompanyDetails,
   PriceListItem,
   StockItemWithProduct,
+  ChecklistTemplate,
 } from "@crm/types";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 import {
@@ -109,6 +110,8 @@ function WorklogFormContent({ id }: { id: string }) {
   const [technicianName, setTechnicianName] = useState("");
   const [clientName, setClientName] = useState("");
   const [items, setItems] = useState<WorklogItem[]>([emptyItem()]);
+  const [checklistTemplates, setChecklistTemplates] = useState<ChecklistTemplate[]>([]);
+  const [checklistItems, setChecklistItems] = useState<any[]>([]);
 
   const [showPricesOnPdf, setShowPricesOnPdf] = useState(true);
   const [showItemPicker, setShowItemPicker] = useState(false);
@@ -122,7 +125,7 @@ function WorklogFormContent({ id }: { id: string }) {
     const ac = new AbortController();
     (async () => {
       try {
-        const [cList, uList, sList, pList, stList] = await Promise.all([
+        const [cList, uList, sList, pList, stList, chList] = await Promise.all([
           apiJson<Contact[]>("/api/contacts", { signal: ac.signal }),
           apiJson<unknown[]>("/api/crm-users", { signal: ac.signal }),
           apiJson<Settings>("/api/settings", { signal: ac.signal }),
@@ -130,11 +133,15 @@ function WorklogFormContent({ id }: { id: string }) {
           apiJson<StockItemWithProduct[]>("/api/warehouse/stock", {
             signal: ac.signal,
           }).catch(() => []),
+          apiJson<ChecklistTemplate[]>("/api/checklists", { signal: ac.signal }).catch(
+            () => [],
+          ),
         ]);
         setContacts(cList);
         setCompanyDetails(sList.company_details || null);
         setPriceList(pList);
         setStockItems(stList);
+        setChecklistTemplates(chList || []);
         setCrmUsers(
           uList.map((row) => {
             const u = row as CrmUser;
@@ -175,6 +182,7 @@ function WorklogFormContent({ id }: { id: string }) {
         setNotes(w.notes ?? "");
         setClientName(w.client_name ?? "");
         setItems(w.items.length ? w.items : [emptyItem()]);
+        setChecklistItems((w as any).checklist_items || []);
         setLoadErr(null);
       } catch {
         if (!ac.signal.aborted) {
@@ -223,6 +231,7 @@ function WorklogFormContent({ id }: { id: string }) {
       travel_km,
       notes: notes.trim() || null,
       contact_id: contactId.trim() || null,
+      checklist_items: checklistItems,
     };
   }, [
     travelKm,
@@ -237,6 +246,7 @@ function WorklogFormContent({ id }: { id: string }) {
     description,
     notes,
     contactId,
+    checklistItems,
   ]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -286,6 +296,7 @@ function WorklogFormContent({ id }: { id: string }) {
       setNotes(w.notes ?? "");
       setClientName(w.client_name ?? "");
       setItems(w.items.length ? w.items : [emptyItem()]);
+      setChecklistItems((w as any).checklist_items || []);
     } catch (err) {
       setLoadErr(err instanceof ApiError ? err.message : "Véglegesítés sikertelen.");
     } finally {
@@ -577,6 +588,129 @@ function WorklogFormContent({ id }: { id: string }) {
               rows={2}
               className="resize-none"
             />
+          </div>
+        </div>
+
+        {/* Section 2.5: Munkalap Checklist (Ellenőrzőlista) */}
+        <div
+          className="rounded-xl border p-6 flex flex-col gap-4"
+          style={{
+            background: "var(--color-bg-card)",
+            borderColor: "var(--color-border-subtle)",
+          }}
+        >
+          <div
+            className="flex items-center justify-between border-b pb-2"
+            style={{ borderColor: "var(--color-border-subtle)" }}
+          >
+            <div className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+              Munkavégzési Checklist
+            </div>
+            {!disabled && checklistTemplates.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Label
+                  htmlFor="wl-template-apply"
+                  className="text-xs text-[var(--color-text-muted)]"
+                >
+                  Sablon alkalmazása:
+                </Label>
+                <select
+                  id="wl-template-apply"
+                  className="bg-[var(--color-bg-secondary)] border border-[var(--color-border-default)] rounded px-2 py-1 text-xs text-[var(--color-text-primary)] outline-none cursor-pointer"
+                  defaultValue=""
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val) {
+                      const tmpl = checklistTemplates.find((t) => t._id === val);
+                      if (tmpl) {
+                        const items = tmpl.items.map((it) => ({
+                          item_id: it.item_id,
+                          text: it.text,
+                          is_required: it.is_required,
+                          is_completed: false,
+                          completed_at: null,
+                          completed_by: null,
+                        }));
+                        setChecklistItems(items);
+                      }
+                      e.target.value = "";
+                    }
+                  }}
+                >
+                  <option value="">-- Sablon választása --</option>
+                  {checklistTemplates.map((t) => (
+                    <option key={t._id} value={t._id}>
+                      {t.name} ({t.items?.length || 0} db)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2.5 mt-2">
+            {checklistItems.map((item) => (
+              <div
+                key={item.item_id}
+                className="flex items-center justify-between p-3 rounded-lg border bg-[var(--color-bg-secondary)]"
+                style={{ borderColor: "var(--color-border-subtle)" }}
+              >
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={item.is_completed}
+                    disabled={disabled}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setChecklistItems((prev) =>
+                        prev.map((it) => {
+                          if (it.item_id === item.item_id) {
+                            return {
+                              ...it,
+                              is_completed: checked,
+                              completed_at: checked ? new Date().toISOString() : null,
+                              completed_by: checked
+                                ? technicianName || "Technikus"
+                                : null,
+                            };
+                          }
+                          return it;
+                        }),
+                      );
+                    }}
+                    className="rounded border-[var(--color-border-default)] text-[var(--color-accent-primary)] focus:ring-0 cursor-pointer h-4 w-4"
+                  />
+                  <span
+                    className={`text-sm ${item.is_completed ? "line-through text-[var(--color-text-muted)]" : "text-white"}`}
+                  >
+                    {item.text}
+                  </span>
+                  {item.is_required && (
+                    <Badge
+                      variant="error"
+                      style={{ fontSize: "10px", padding: "1px 6px" }}
+                    >
+                      K&#246;telez&#337;
+                    </Badge>
+                  )}
+                </div>
+                {item.is_completed && item.completed_by && (
+                  <span className="text-[11px] text-[var(--color-text-muted)]">
+                    Kész: {item.completed_by} (
+                    {new Date(item.completed_at).toLocaleTimeString("hu-HU", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                    )
+                  </span>
+                )}
+              </div>
+            ))}
+            {checklistItems.length === 0 && (
+              <div className="text-center py-4 text-sm text-[var(--color-text-muted)] border border-dashed border-[var(--color-border-default)] rounded-lg">
+                Nincs checklist hozzárendelve ehhez a munkalaphoz.
+              </div>
+            )}
           </div>
         </div>
 

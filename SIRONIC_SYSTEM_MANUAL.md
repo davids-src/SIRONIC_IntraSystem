@@ -247,3 +247,65 @@ A fizikai leltár eredményeinek rögzítése és a rendszerkészletek aszinkron
 ---
 
 _Minden uj adatbazis mezo, uj API parameter vagy UI gomb bevezetese eseten ezt a dokumentumot ertelemszeruen, ugyanilyen melysegben, logikailag vezetve kell boviteni!_
+
+---
+
+### 4.10. Szerszám- és Gépkövetés (Tool Tracking) Módszertana
+
+Nagy- és közepes értékű fizikai eszközök (szerszámok, mérőkészülékek, gépek, berendezések) életciklusának és mozgásának nyilvántartása, multi-tenant adatizoláltságban.
+
+#### Adatbázis entitások (`packages/db/src/models/tool.ts`)
+
+**Tool (Eszköz törzs):**
+
+| Mező            | Típus     | Leírás                                                                                |
+| --------------- | --------- | ------------------------------------------------------------------------------------- |
+| `tenantId`      | `String`  | Multi-tenant szűrő mező (index), kötelező                                             |
+| `name`          | `String`  | Eszköz megnevezése (kötelező)                                                         |
+| `brand`         | `String?` | Gyártó / Márka                                                                        |
+| `model_number`  | `String?` | Típusszám / Modell                                                                    |
+| `serial_number` | `String?` | Sorozatszám / Gyári szám (index a gyors kereséshez)                                   |
+| `status`        | `String`  | Aktuális státusz: `in_warehouse` / `checked_out` / `maintenance` / `lost` / `retired` |
+| `assigned_to`   | `String?` | Kiadás esetén a CRM felhasználó `actorId`-ja                                          |
+| `condition`     | `String`  | Fizikai állapot: `new` / `good` / `fair` / `poor`                                     |
+| `notes`         | `String?` | Szabad szöveges megjegyzés                                                            |
+
+**ToolTransaction (Tranzakciós napló):**
+
+| Mező             | Típus      | Leírás                                                                                                 |
+| ---------------- | ---------- | ------------------------------------------------------------------------------------------------------ |
+| `tenantId`       | `String`   | Multi-tenant szűrő mező (index)                                                                        |
+| `tool_id`        | `ObjectId` | Hivatkozás a Tool entitásra                                                                            |
+| `actor_id`       | `String`   | A műveletet végrehajtó CRM felhasználó                                                                 |
+| `type`           | `String`   | Esemény típusa: `check_out`, `check_in`, `maintenance_start`, `maintenance_end`, `mark_lost`, `retire` |
+| `target_user_id` | `String?`  | Kiadásnál: a kiadás célszemélyének `actorId`-ja                                                        |
+| `notes`          | `String?`  | Kiadási / visszavételi megjegyzés                                                                      |
+| `created_at`     | `Date`     | Esemény időbélyege                                                                                     |
+
+#### API végpontok
+
+- `GET /api/tools` – Eszközök listázása, opcionálisan `?status=&assigned_to=` szűrőkkel. RBAC: `tools.view.global`.
+- `POST /api/tools` – Új eszköz felvétele. RBAC: `tools.write.global`.
+- `GET /api/tools/:id` – Eszköz adatai + teljes tranzakciós napló (utolsó 50 bejegyzés). RBAC: `tools.view.global`.
+- `PATCH /api/tools/:id` – Eszköz módosítása. Az intelligens állapot-detektáló logika automatikusan naplóz tranzakciót, ha:
+  - `assigned_to` mezőt kitöltik → `check_out` tranzakció + `status = checked_out`
+  - `assigned_to` törlésre kerül → `check_in` tranzakció + `status = in_warehouse`
+  - `status` `maintenance`-re változik → `maintenance_start`
+  - `status` maintenance-ből `in_warehouse`-ba vált → `maintenance_end`
+  - `status = lost` → `mark_lost`
+  - `status = retired` → `retire`
+- `DELETE /api/tools/:id` – Végleges törlés (és összes tranzakcióbejegyzés törlése). RBAC: `tools.admin.global`.
+
+#### UI munkafolyamat (`apps/crm/app/(crm)/tools/page.tsx`)
+
+- **Főnézet:** Táblázatos lista keresés (név, márka, gyári szám, munkatárs), státusz- és állapotszűrők, KPI összesítők (összes, kiadva, szervizben, elveszett).
+- **Kiadás (Checkout) modal:** Eszköz kiválasztása után a munkatárs (dropdown a CRM felhasználókból) és opcionális megjegyzés megadása. A mentésnél a rendszer az API-n át automatikusan `checked_out` állapotra állítja az eszközt.
+- **Visszavétel (Check-in) modal:** A visszahozott fizikai állapot rögzítése (állapot dropdown), és visszavételi megjegyzés. A rendszer `in_warehouse` státuszra állítja a visszavett eszközt.
+- **Tranzakciós napló (History) modal:** Időrendbeli timeline nézet az összes mozgási eseményről (ki adta ki, mikor, kinek, milyen megjegyzéssel). Az actor- és target-userID-k felolvasódnak a CRM felhasználók listájából, emberbarát névként jelennek meg.
+- **Hozzáadás / Szerkesztés modal:** Eszköz teljes adatlapjának kezelése (megnevezés, márka, típus, sorozatszám, állapot, megjegyzés).
+- **Oldalsáv navigáció:** Az „Eszközök" menüpont a `Wrench` ikonnal, a Raktár menüpont alatt, a `crm-shell.tsx`-ben van regisztrálva.
+
+#### Jogosultságok (`packages/types/src/index.ts`, RBAC)
+
+- `tools` modul hozzáadva a `PermissionModule` típushoz.
+- Minimum `view` + `write` szükséges az alapfunkciókhoz, `admin` szükséges a végleges törléshez.
