@@ -8,6 +8,14 @@ import {
 } from "@crm/db";
 import { guard, handleApiError, requireCrmAuth, withDb } from "@/lib/api-helpers";
 
+const lineSchema = z.object({
+  price_list_item_id: z.string().nullable().optional(),
+  description: z.string(),
+  quantity: z.number(),
+  unit: z.string(),
+  net_unit_price: z.number().optional(),
+});
+
 const createSchema = z.object({
   title: z.string().min(1),
   work_summary: z.string(),
@@ -20,6 +28,8 @@ const createSchema = z.object({
   work_period_end: z.coerce.date().nullable().optional(),
   total_hours: z.number().nullable().optional(),
   offer_id: z.string().nullable().optional(),
+  rejection_reason: z.string().nullable().optional(),
+  lines: z.array(lineSchema).optional(),
 });
 
 export async function GET(req: Request) {
@@ -93,6 +103,8 @@ export async function POST(req: Request) {
         client_signature: null,
         signed_at: null,
         pdf_url: null,
+        rejection_reason: b.rejection_reason ?? null,
+        lines: b.lines ?? [],
       });
       return NextResponse.json(serializeForJson(doc.toObject()), { status: 201 });
     });

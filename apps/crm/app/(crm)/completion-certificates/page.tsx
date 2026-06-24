@@ -14,6 +14,8 @@ import {
   CheckCircle,
   Archive,
   RotateCcw,
+  XCircle,
+  Coins,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -146,7 +148,26 @@ export default function CompletionCertificatesPage() {
     draft: rows.filter((c) => c.status === "draft").length,
     sent: rows.filter((c) => c.status === "sent").length,
     accepted: rows.filter((c) => c.status === "accepted").length,
+    rejected: rows.filter((c) => c.status === "rejected").length,
   };
+
+  const signedValue = rows
+    .filter((c) => c.status === "accepted")
+    .reduce((sum, c) => {
+      const lineSum = c.lines
+        ? c.lines.reduce((s, l) => s + l.quantity * (l.net_unit_price || 0), 0)
+        : 0;
+      return sum + lineSum;
+    }, 0);
+
+  const pendingValue = rows
+    .filter((c) => c.status === "sent")
+    .reduce((sum, c) => {
+      const lineSum = c.lines
+        ? c.lines.reduce((s, l) => s + l.quantity * (l.net_unit_price || 0), 0)
+        : 0;
+      return sum + lineSum;
+    }, 0);
 
   const columns: Column<CertificateRow>[] = [
     {
@@ -312,28 +333,46 @@ export default function CompletionCertificatesPage() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
           gap: "16px",
         }}
       >
         {[
           {
-            label: "Piszkozat",
-            count: counts.draft,
-            icon: <FileText size={16} />,
-            color: "#6b7280",
+            label: "Aláírt Igazolások Értéke",
+            value: `${signedValue.toLocaleString("hu-HU")} Ft`,
+            icon: <Coins size={16} />,
+            color: "#22c55e",
           },
           {
-            label: "Aláírásra vár",
-            count: counts.sent,
-            icon: <Clock size={16} />,
+            label: "Függőben lévő Érték",
+            value: `${pendingValue.toLocaleString("hu-HU")} Ft`,
+            icon: <Coins size={16} />,
             color: "#f59e0b",
           },
           {
             label: "Aláírva",
-            count: counts.accepted,
+            value: String(counts.accepted),
             icon: <CheckCircle size={16} />,
             color: "#22c55e",
+          },
+          {
+            label: "Aláírásra vár",
+            value: String(counts.sent),
+            icon: <Clock size={16} />,
+            color: "#f59e0b",
+          },
+          {
+            label: "Elutasítva",
+            value: String(counts.rejected),
+            icon: <XCircle size={16} />,
+            color: "#f87171",
+          },
+          {
+            label: "Piszkozat",
+            value: String(counts.draft),
+            icon: <FileText size={16} />,
+            color: "#6b7280",
           },
         ].map((stat) => (
           <Card key={stat.label} className="p-4">
@@ -366,7 +405,7 @@ export default function CompletionCertificatesPage() {
                 lineHeight: 1,
               }}
             >
-              {stat.count}
+              {stat.value}
             </div>
           </Card>
         ))}

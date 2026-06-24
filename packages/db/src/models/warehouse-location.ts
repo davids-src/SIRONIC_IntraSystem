@@ -10,6 +10,7 @@ const warehouseLocationSchema = defineSchema(
     tenantId: { type: String, required: true, index: true },
     code: { type: String, required: true },
     name: { type: String, required: true },
+    type: { type: String, enum: ["main", "car", "scrap", "shelf"], default: "shelf" },
     description: { type: String, default: null },
   },
   ts,

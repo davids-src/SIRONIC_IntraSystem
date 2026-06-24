@@ -10,10 +10,12 @@ import { guard, handleApiError, requireCrmAuth, withDb } from "@/lib/api-helpers
 
 const addStockSchema = z.object({
   price_list_item_id: z.string().min(1),
-  quantity: z.number().positive(),
+  quantity: z.number().nonnegative(),
   warehouse_location: z.string().nullable().optional(),
   low_stock_threshold: z.number().nullable().optional(),
   notes: z.string().nullable().optional(),
+  serial_numbers: z.array(z.string()).optional(),
+  quantity_allocated: z.number().optional(),
 });
 
 /**
@@ -84,23 +86,36 @@ export async function POST(req: Request) {
         );
       }
 
+      const location = b.warehouse_location || null;
+      const qty =
+        b.serial_numbers && b.serial_numbers.length > 0
+          ? b.serial_numbers.length
+          : b.quantity;
+      const serials = b.serial_numbers || [];
+
       // Upsert stock item
       const stockItem = await StockItemModel.findOneAndUpdate(
-        { tenantId: actor.tenantId, price_list_item_id: b.price_list_item_id },
         {
-          $inc: { quantity_in_stock: b.quantity },
+          tenantId: actor.tenantId,
+          price_list_item_id: b.price_list_item_id,
+          warehouse_location: location,
+        },
+        {
+          $inc: { quantity_in_stock: qty },
+          $addToSet: { serial_numbers: { $each: serials } },
           $set: {
-            ...(b.warehouse_location !== undefined && {
-              warehouse_location: b.warehouse_location,
-            }),
             ...(b.low_stock_threshold !== undefined && {
               low_stock_threshold: b.low_stock_threshold,
             }),
             ...(b.notes !== undefined && { notes: b.notes }),
+            ...(b.quantity_allocated !== undefined && {
+              quantity_allocated: b.quantity_allocated,
+            }),
           },
           $setOnInsert: {
             tenantId: actor.tenantId,
             price_list_item_id: b.price_list_item_id,
+            warehouse_location: location,
           },
         },
         { upsert: true, new: true },
@@ -111,7 +126,8 @@ export async function POST(req: Request) {
         tenantId: actor.tenantId,
         price_list_item_id: b.price_list_item_id,
         type: "in",
-        quantity: b.quantity,
+        quantity: qty,
+        serial_numbers: serials,
         reference_type: "manual",
         reference_id: null,
         notes: b.notes ?? null,

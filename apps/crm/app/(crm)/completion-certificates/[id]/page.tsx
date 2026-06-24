@@ -83,6 +83,11 @@ export default function CompletionCertificateFormPage({
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSuccess, setEmailSuccess] = useState(false);
 
+  // Expanded fields
+  const [lines, setLines] = useState<any[]>([]);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [priceList, setPriceList] = useState<any[]>([]);
+
   // Import states
   const [sourceType, setSourceType] = useState<"offer" | "worklog" | "project" | "none">(
     "none",
@@ -97,6 +102,11 @@ export default function CompletionCertificateFormPage({
     // Always load settings (for PDF)
     apiJson<Settings>("/api/settings")
       .then((s) => setCompanyDetails(s.company_details ?? null))
+      .catch(() => {});
+
+    // Load price list items
+    apiJson<any[]>("/api/price-list")
+      .then((res) => setPriceList(res))
       .catch(() => {});
 
     if (isNew) return;
@@ -121,6 +131,8 @@ export default function CompletionCertificateFormPage({
         setPeriodEnd(
           c.work_period_end ? c.work_period_end.toISOString().slice(0, 10) : "",
         );
+        setLines(c.lines ?? []);
+        setRejectionReason(c.rejection_reason ?? "");
         setLoadErr(null);
       } catch {
         if (!ac.signal.aborted) setLoadErr("Az igazolás nem tölthető be.");
@@ -151,6 +163,7 @@ export default function CompletionCertificateFormPage({
             offer_id: sourceType === "offer" ? sourceId : null,
             worklog_ids: sourceType === "worklog" ? [sourceId] : [],
             project_id: sourceType === "project" ? sourceId : null,
+            lines,
           },
         );
         router.replace(`/completion-certificates/${String(created._id)}`);
@@ -178,9 +191,13 @@ export default function CompletionCertificateFormPage({
           total_hours: totalHours.trim() === "" ? null : Number.parseFloat(totalHours),
           work_period_start: periodStart ? new Date(periodStart) : null,
           work_period_end: periodEnd ? new Date(periodEnd) : null,
+          lines,
         },
       );
-      setDoc(parseCc(raw));
+      const parsed = parseCc(raw);
+      setDoc(parsed);
+      setLines(parsed.lines ?? []);
+      setRejectionReason(parsed.rejection_reason ?? "");
       setEmailSuccess(false);
     } catch (e) {
       setLoadErr(e instanceof ApiError ? e.message : "Mentés sikertelen.");
@@ -244,6 +261,17 @@ export default function CompletionCertificateFormPage({
         .map((l: any) => `- ${l.description} (${l.quantity} ${l.unit})`)
         .join("\n");
       setWorkSummary(`Elvégzett feladatok és tételek az ajánlat alapján:\n\n${summary}`);
+      if (selected.lines && Array.isArray(selected.lines)) {
+        setLines(
+          selected.lines.map((l: any) => ({
+            price_list_item_id: l.price_list_item_id ?? null,
+            description: l.description,
+            quantity: l.quantity,
+            unit: l.unit,
+            net_unit_price: l.net_unit_price ?? 0,
+          })),
+        );
+      }
     } else if (sourceType === "worklog") {
       setTitle(`Teljesítési igazolás - ${selected.worklog_number}`);
       const summary = selected.items
@@ -254,6 +282,17 @@ export default function CompletionCertificateFormPage({
       );
       if (selected.client_name) setClientName(selected.client_name);
       if (selected.work_date) setPeriodStart(selected.work_date.substring(0, 10));
+      if (selected.items && Array.isArray(selected.items)) {
+        setLines(
+          selected.items.map((it: any) => ({
+            price_list_item_id: it.price_list_item_id ?? null,
+            description: it.description,
+            quantity: it.quantity,
+            unit: it.unit,
+            net_unit_price: it.unit_price ?? 0,
+          })),
+        );
+      }
     } else if (sourceType === "project") {
       setTitle(`Teljesítési igazolás - ${selected.project_number}`);
       const tasks =
@@ -396,6 +435,13 @@ export default function CompletionCertificateFormPage({
         </div>
       )}
 
+      {rejectionReason && (
+        <Card className="p-4 bg-red-950/20 border-red-900/50 text-red-200">
+          <h4 className="text-sm font-bold text-red-400 mb-1">Ügyfél által elutasítva</h4>
+          <p className="text-sm italic">&quot;{rejectionReason}&quot;</p>
+        </Card>
+      )}
+
       {!isNew && doc && (
         <div className="flex items-center gap-2">
           <span className="text-sm text-[var(--color-text-muted)]">Állapot:</span>
@@ -465,7 +511,140 @@ export default function CompletionCertificateFormPage({
           onChange={(e) => setWorkSummary(e.target.value)}
           rows={5}
         />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        {/* Itemized Lines Editor */}
+        <div className="pt-4 border-t border-[var(--color-border-subtle)] space-y-4">
+          <h3 className="text-sm font-bold text-[var(--color-text-secondary)]">
+            Igazolt tételek / anyagok listája (Opcionális)
+          </h3>
+          {lines.length === 0 ? (
+            <p className="text-sm text-[var(--color-text-muted)] italic">
+              Nincsenek egyedileg megadott tételek. Adj hozzá kézzel vagy válassz az
+              árlistából.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {lines.map((line, idx) => (
+                <div
+                  key={idx}
+                  className="flex flex-col md:flex-row gap-3 items-end border-b pb-3 md:border-0 md:pb-0"
+                >
+                  <div className="flex-1 min-w-[200px]">
+                    <Label className="text-xs">Megnevezés *</Label>
+                    <Input
+                      value={line.description}
+                      onChange={(e) => {
+                        const newLines = [...lines];
+                        newLines[idx].description = e.target.value;
+                        setLines(newLines);
+                      }}
+                      placeholder="Tétel leírása..."
+                    />
+                  </div>
+                  <div className="w-24">
+                    <Label className="text-xs">Mennyiség</Label>
+                    <Input
+                      type="number"
+                      value={line.quantity}
+                      onChange={(e) => {
+                        const newLines = [...lines];
+                        newLines[idx].quantity = Number(e.target.value) || 0;
+                        setLines(newLines);
+                      }}
+                    />
+                  </div>
+                  <div className="w-24">
+                    <Label className="text-xs">Egység</Label>
+                    <Input
+                      value={line.unit}
+                      onChange={(e) => {
+                        const newLines = [...lines];
+                        newLines[idx].unit = e.target.value;
+                        setLines(newLines);
+                      }}
+                      placeholder="db, óra..."
+                    />
+                  </div>
+                  <div className="w-28">
+                    <Label className="text-xs">Nettó egységár (Ft)</Label>
+                    <Input
+                      type="number"
+                      value={line.net_unit_price}
+                      onChange={(e) => {
+                        const newLines = [...lines];
+                        newLines[idx].net_unit_price = Number(e.target.value) || 0;
+                        setLines(newLines);
+                      }}
+                    />
+                  </div>
+                  <Button
+                    variant="ghost"
+                    className="text-red-500 hover:text-red-700 p-2"
+                    onClick={() => {
+                      setLines(lines.filter((_, i) => i !== idx));
+                    }}
+                  >
+                    Törlés
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-2 pt-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setLines([
+                  ...lines,
+                  {
+                    price_list_item_id: null,
+                    description: "",
+                    quantity: 1,
+                    unit: "db",
+                    net_unit_price: 0,
+                  },
+                ]);
+              }}
+            >
+              + Új tétel manuálisan
+            </Button>
+            {priceList.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Select
+                  onValueChange={(val) => {
+                    const item = priceList.find((p) => p._id === val);
+                    if (item) {
+                      setLines([
+                        ...lines,
+                        {
+                          price_list_item_id: item._id,
+                          description: item.name,
+                          quantity: 1,
+                          unit: item.unit || "db",
+                          net_unit_price: item.net_unit_price || 0,
+                        },
+                      ]);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Tallózás az árlistából..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {priceList.map((p) => (
+                      <SelectItem key={p._id} value={p._id}>
+                        {p.name} ({p.net_unit_price} Ft)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-[var(--color-border-subtle)]">
           <Input
             type="date"
             label="Munkaidőszak kezdete"
@@ -604,23 +783,162 @@ export default function CompletionCertificateFormPage({
                     borderRadius: "6px",
                     backgroundColor: "#f9fafb",
                     whiteSpace: "pre-wrap",
+                    marginBottom: "20px",
                   }}
                 >
                   {doc.work_summary}
                 </div>
 
-                {doc.signed_at && (
+                {doc.lines && doc.lines.length > 0 && (
+                  <div style={{ marginTop: "20px", marginBottom: "20px" }}>
+                    <h4
+                      style={{
+                        fontWeight: 700,
+                        fontSize: "12px",
+                        marginBottom: "8px",
+                        borderBottom: "1px solid #e5e7eb",
+                        paddingBottom: "4px",
+                      }}
+                    >
+                      Igazolt tételek / anyagok
+                    </h4>
+                    <table
+                      style={{
+                        width: "100%",
+                        fontSize: "11px",
+                        borderCollapse: "collapse",
+                      }}
+                    >
+                      <thead>
+                        <tr style={{ backgroundColor: "#f3f4f6", textAlign: "left" }}>
+                          <th
+                            style={{
+                              padding: "6px 8px",
+                              borderBottom: "1px solid #e5e7eb",
+                            }}
+                          >
+                            Megnevezés
+                          </th>
+                          <th
+                            style={{
+                              padding: "6px 8px",
+                              borderBottom: "1px solid #e5e7eb",
+                              width: "80px",
+                              textAlign: "right",
+                            }}
+                          >
+                            Mennyiség
+                          </th>
+                          <th
+                            style={{
+                              padding: "6px 8px",
+                              borderBottom: "1px solid #e5e7eb",
+                              width: "60px",
+                            }}
+                          >
+                            Egység
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {doc.lines.map((l, idx) => (
+                          <tr key={idx} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                            <td style={{ padding: "6px 8px" }}>{l.description}</td>
+                            <td
+                              style={{
+                                padding: "6px 8px",
+                                textAlign: "right",
+                                fontWeight: 600,
+                              }}
+                            >
+                              {l.quantity}
+                            </td>
+                            <td style={{ padding: "6px 8px", color: "#4b5563" }}>
+                              {l.unit}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {doc.client_signature ? (
                   <div
                     style={{
-                      marginTop: "24px",
-                      borderTop: "1px solid #e5e7eb",
-                      paddingTop: "16px",
+                      marginTop: "40px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-end",
                     }}
                   >
-                    <p style={{ fontSize: "12px", color: "#6b7280" }}>
-                      Aláírva: {fmtDate(doc.signed_at)} — {doc.client_name || ""}
-                    </p>
+                    <div>
+                      <p style={{ fontSize: "10px", color: "#9ca3af", margin: 0 }}>
+                        Teljesítésigazolás kiállítója:
+                      </p>
+                      <div
+                        style={{
+                          borderBottom: "1px solid #ccc",
+                          width: "180px",
+                          height: "40px",
+                        }}
+                      ></div>
+                      <p
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: 600,
+                          marginTop: "4px",
+                          marginBottom: 0,
+                        }}
+                      >
+                        Sironic Kft.
+                      </p>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <p style={{ fontSize: "10px", color: "#9ca3af", margin: 0 }}>
+                        Vevő általi elfogadás és aláírás:
+                      </p>
+                      <div style={{ marginTop: "4px" }}>
+                        <img
+                          src={doc.client_signature}
+                          alt="Aláírás"
+                          style={{ maxHeight: "60px", maxWidth: "180px" }}
+                        />
+                      </div>
+                      <p
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: 600,
+                          marginTop: "4px",
+                          marginBottom: 0,
+                        }}
+                      >
+                        {doc.client_name || "Vevő képviselője"}
+                      </p>
+                      {doc.client_title && (
+                        <p style={{ fontSize: "10px", color: "#4b5563", margin: 0 }}>
+                          {doc.client_title}
+                        </p>
+                      )}
+                      <p style={{ fontSize: "10px", color: "#9ca3af", margin: 0 }}>
+                        Dátum: {fmtDate(doc.signed_at)}
+                      </p>
+                    </div>
                   </div>
+                ) : (
+                  doc.signed_at && (
+                    <div
+                      style={{
+                        marginTop: "24px",
+                        borderTop: "1px solid #e5e7eb",
+                        paddingTop: "16px",
+                      }}
+                    >
+                      <p style={{ fontSize: "12px", color: "#6b7280" }}>
+                        Aláírva: {fmtDate(doc.signed_at)} — {doc.client_name || ""}
+                      </p>
+                    </div>
+                  )
                 )}
               </div>
             </UnifiedPdfTemplate>

@@ -12,10 +12,12 @@ const stockTransactionSchema = defineSchema(
     price_list_item_id: { type: String, required: true, index: true },
     type: {
       type: String,
-      enum: ["in", "out", "adjustment"],
+      enum: ["in", "out", "adjustment", "transfer"],
       required: true,
     },
     quantity: { type: Number, required: true },
+    serial_numbers: { type: [String], default: [] },
+    to_warehouse_location: { type: String, default: null },
     reference_type: {
       type: String,
       enum: ["worklog", "offer", "invoice", "purchase_order", "manual"],

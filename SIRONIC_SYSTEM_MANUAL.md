@@ -90,7 +90,10 @@ Ezek a mezok a schema definicioban `required: false` jelzessel szerepelnek, es *
 ### 3.4. Raktár és Készlet (Warehouse, PriceListItem, StockItem)
 
 - **PriceListItem:** Raktározható (`product`) vagy virtuális (`service`, `labor`) tételek. Titkos mezője a `purchase_records` (beszállítói adatok). A kódgenerálás Prefix-alapú (pl. "HW-").
-- **UI/UX:** A Raktár nézet bal oldalán a Raktárhelyek (fa-struktúra szerű mappa-nézet) listája, jobb oldalon a szűrt Készlet (StockItems) táblázata látható. A bevételezés egy több-lépéses (Wizard) modál ablakban történik.
+- **StockItem:** `price_list_item_id` alapú készlet-nyilvántartás. A fizikai készlet (`quantity_in_stock`) mellett tartalmazza a lefoglalt készletet (`quantity_allocated`) is. A szabad készletet a `quantity_in_stock - quantity_allocated` képlet határozza meg. A foglalási történet (projektek száma, lefoglalt db, leírások) a `notes` mezőben halmozódik auditálható formában.
+- **UI/UX:** A Raktár nézet bal oldalán a Raktárhelyek (fa-struktúra szerű mappa-nézet) listája, jobb oldalon a szűrt Készlet (StockItems) táblázata látható. A bevételezés egy több-lépéses (Wizard) modál ablakban történik. A készletfoglalás a sorok melletti foglalás (User) gombra kattintva, egy modális ablakon keresztül érhető el.
+- **Leltározási modul:** A raktári navigációból nyitható meg. Egy tárhely (`warehouse_location`) kiválasztása után betölti a hozzárendelt összes cikket. A fizikai darabszám bevitelekor a rendszer automatikusan számolja az eltérést (különbözetet) a várt mennyiséghez képest, és lehetőséget ad az eltérés indoklásának megadására. A lezárás gombra kattintva a készlet korrigálásra kerül, és tranzakciós naplóbejegyzés készül.
+- **Raktár Műszerfal (Dashboard):** A raktár főoldalán megjelenő KPI mutatók (teljes készletérték, alacsony készletszintű cikkek száma, aktív RMA ügyek, tárhelyek száma), tárhely-készletérték eloszlások (százalékos csíkkal, kiemelve a legnagyobb értékű tárhelyet), kritikus szintű cikkek listája, elfekvő készletek (Dead Stock - 90 napja nem mozgó tételek) listája és a legutóbbi tranzakciók táblázata.
 
 ### 3.5. Heti tervek (WeeklyPlan)
 
@@ -153,12 +156,24 @@ Számlafüggetlen, önálló dokumentum.
 
 ### 4.4. Teljesítésigazolások (Completion Certificates) Munkafolyamata
 
-Egy vagy több Hibajegy és Munkalap pénzügyi lezárása.
+Egy vagy több hibajegy, munkalap, projekt vagy egyedi tételek pénzügyi és műszaki lezárása.
 
-1. CRM API összekapcsolja a rekordokat: Egy `CompletionCertificate` dokumentumba felveszi a `worklog_ids` és `ticket_ids` tömböket.
-2. E-mail integráció (`packages/emails`): Az állapot `sent`-re váltásakor egy renderelt React-email sablon kimegy az ügyfélnek, benne egy Magic Linkkel, ami a Partner Portál megfelelő azonosítójú igazolásához viszi.
-3. **Portál UI:** Az ügyfél a Portálon egy letisztult, csak-olvasható összefoglaló asztalt (Table) lát a teljesített tételekről. Belső, CRM specifikus adatok (beszerzési árak, technikai belső kommentek) le vannak szűrve az API oldalon!
-4. **Aláírási folyamat:** Ha rákattint az "Elfogadás és Aláírás" gombra, egy Dialog ablak nyílik a Signature Paddal. Aláírja, rányom a "Véglegesítés" gombra. Az aláírás Base64 adatként utazik (`PATCH /api/certificates/:id`). A payload méretét a Zod limitálja a túlcsordulás (Payload Too Large) támadások ellen. A rendszer elmenti az IP címet, időbélyeget, és az állapot `accepted`-re vált. A kártya a CRM-ben azonnal zöld pipát kap (Real-time érzet a `SWR` vagy `React Query` refetch mechanizmusa miatt).
+1. **Adatok importálása és tételes sorok kezelése:**
+   - A teljesítésigazolás összeállításakor a belső munkatársak importálhatnak adatokat meglévő forrásokból: Ajánlatokból (automatikus tétel- és cím-importálás), Munkalapokból (felhasznált anyagok és munkadíjak átemelése tételes sorokként), illetve Projektekből.
+   - A rendszer támogatja az egyedi tételes line-itemeket (`lines`), amelyeknél megadható a megnevezés, mennyiség, egység, valamint a nettó egységár. A tételek manuálisan is felvihetők, vagy a beépített árlistából (`PriceListItem`) tallózhatók.
+2. **E-mail értesítés és kiküldés:**
+   - A teljesítésigazolás státuszának `sent`-re állításakor egy renderelt React-email sablon kimegy a megadott vevői kapcsolattartónak. Az e-mail tartalmaz egy egyedi hozzáférési linket (Magic Link), amely a Partner Portál megfelelő részletező oldalára irányítja az ügyfelet.
+3. **Partner Portál jóváhagyási felület (Sign-off Portal):**
+   - Az ügyfél a portálon egy letisztult, esztétikus táblázatban látja a teljesített tételeket, az egységárakat és a nettó végösszeget. A belső CRM-specifikus adatok (pl. beszerzési árak, belső adminisztratív jegyzetek) le vannak szűrve az API szinten.
+   - **Elfogadás:** Az ügyfél megadja az aláíró nevét, beosztását, és egy HTML5 Canvas alapú, reszponzív (egér és érintőképernyő-támogatással rendelkező) Signature Pad mezőbe rajzolja az aláírását. A küldéskor a rendszer Base64 formátumú PNG képként (`client_signature`), az aláírás időbélyegével (`signed_at`), valamint a státusz `accepted`-re állításával menti el az adatokat.
+   - **Elutasítás:** Amennyiben a teljesítés nem elfogadható, az ügyfél megadja az elutasítás okát (`rejection_reason`), amivel a státusz `rejected` lesz. A megadott indoklás azonnal megjelenik a CRM-ben a dokumentum tetején piros figyelmeztető kártyaként, lehetővé téve a gyors korrekciót.
+4. **PDF Generálás és Hitelesítés:**
+   - A `html2pdf.js` könyvtár segítségével a frontend a háttérben legenerálja az igazolást. Az aláírt bizonylaton automatikusan megjelenik a vevő képviselőjének hiteles digitális aláírásképe, a beosztása, a dátum, valamint a kiállító hitelesítő adatai.
+5. **Pénzügyi Műszerfal (Dashboard):**
+   - A teljesítésigazolások listájának tetején egy vizuális dashboard jeleníti meg a kulcsfontosságú pénzügyi és mennyiségi mutatókat (KPI):
+     - **Aláírt Igazolások Értéke (Ft):** Az összes elfogadott (`accepted`) igazolás nettó végösszege.
+     - **Függőben lévő Érték (Ft):** Az aláírásra kiküldött (`sent`) igazolások nettó összege.
+     - **Statisztikai darabszámok:** Az egyes státuszokban (Aláírt, Aláírásra vár, Elutasítva, Piszkozat) lévő bizonylatok darabszáma.
 
 ### 4.5. Pénzügyi Szinkronizáció (Billingo Integráció)
 
@@ -203,6 +218,31 @@ A belső munkatársak heti feladatainak hatékony követésére és menedzselés
    - A Kanban kártyákon ezek a kapcsolatok közvetlen hivatkozásként jelennek meg, lehetővé téve a gyors navigációt az érintett modulok részletes nézeteire.
 3. **Soft-delete (Archiválás):**
    - Törlés gombra kattintva a rendszer egy megerősítő modálban bekéri az archiválás okát (`archive_reason`), majd a dokumentumot soft-delete módon archiválja (`is_archived: true`, `archived_at: Date.now()`). Az archivált tervek elrejthetők a tábláról, de a szűrősávban lévő "Archiváltak" toggle segítségével bármikor visszakereshetők és visszaállíthatók.
+
+### 4.8. Készletfoglalás (Stock Allocation) Működési Folyamata
+
+A projektekhez való készletfoglalás tranzakció- és adatkonzisztencia-védett munkafolyamatot követ.
+
+1. **API Szint (`PATCH /api/warehouse/stock/[price_list_item_id]`):**
+   - Ellenőrzi a jogosultságot (`price_list` modul, `write` akció).
+   - Ellenőrzi, hogy a kért lefoglalandó mennyiség (`quantity_allocated`) nem haladja-e meg a fizikai készletet (`quantity_in_stock`). Ha igen, a kérés hibával elutasításra kerül (`400 Bad Request`).
+   - Atomi módon frissíti a `quantity_allocated` és a `notes` mezőket. A `notes` mező a korábbi megjegyzések megtartásával egy új sorban hozzáfűzi a foglalás adatait: `[FOGLALÁS: X db - Projekt: Y - Dátum: Z - Megjegyzés: W]`.
+2. **Frontend UI és Számítások:**
+   - A szabadon rendelkezésre álló készlet (Available Stock) kiszámítása dinamikusan történik: `quantity_in_stock - quantity_allocated`.
+   - A Szállítólevél készítésekor vagy bevételezéskor a rendszer a szabad készletet veszi alapul, megelőzve az over-allocation és a túlfoglalás problémáját.
+
+### 4.9. Leltározás (Inventory Taking) Működési Folyamata
+
+A fizikai leltár eredményeinek rögzítése és a rendszerkészletek aszinkron korrekciója.
+
+1. **Tárhely szerinti lekérdezés (`GET /api/warehouse/stock?location=[code]`):**
+   - Betölti a megadott helyen tárolt összes `StockItem`-et, és a hozzájuk társított termékadatokat (`PriceListItem`).
+2. **Leltári ív rögzítése (`POST /api/warehouse/inventory-taking`):**
+   - A leltározás során a felhasználó minden tételnél rögzíti a tényleges fizikai mennyiséget (`physical_qty`) és az eltérés indoklását (`notes`).
+   - A backend tranzakciós sessionben végrehajtja a korrekciókat:
+     - Minden megváltozott tételnél frissíti a `StockItem.quantity_in_stock` értékét a tényleges fizikai mennyiségre.
+     - Létrehoz egy `StockTransaction` bejegyzést `type: "adjustment"`, `reference_type: "inventory_taking"`, `reference_id: <audit_id>` adatokkal, rögzítve az eltérés mértékét (pozitív/negatív darabszám).
+     - Hozzáadja a leltár adatait az audit loghoz (`InventoryAuditModel`), lezárt (`completed`) státusszal és a leltár lezárójának adataival.
 
 ---
 

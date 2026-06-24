@@ -14,6 +14,7 @@ const patchSchema = z.object({
   warehouse_location: z.string().nullable().optional(),
   low_stock_threshold: z.number().nullable().optional(),
   notes: z.string().nullable().optional(),
+  quantity_allocated: z.number().optional(),
 });
 
 const adjustSchema = z.object({
@@ -39,8 +40,13 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
     const b = parsed.data;
 
     return await withDb(async () => {
+      const isObjectId = /^[0-9a-fA-F]{24}$/.test(price_list_item_id);
+      const query = isObjectId
+        ? { tenantId: actor.tenantId, _id: price_list_item_id }
+        : { tenantId: actor.tenantId, price_list_item_id };
+
       const doc = await StockItemModel.findOneAndUpdate(
-        { tenantId: actor.tenantId, price_list_item_id },
+        query,
         {
           $set: {
             ...(b.warehouse_location !== undefined && {
@@ -50,6 +56,9 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
               low_stock_threshold: b.low_stock_threshold,
             }),
             ...(b.notes !== undefined && { notes: b.notes }),
+            ...(b.quantity_allocated !== undefined && {
+              quantity_allocated: b.quantity_allocated,
+            }),
           },
         },
         { new: true },
@@ -75,10 +84,12 @@ export async function DELETE(_req: Request, ctx: RouteCtx) {
     guard(actor, { module: "price_list", action: "admin", scope: "global" });
 
     return await withDb(async () => {
-      const res = await StockItemModel.deleteOne({
-        tenantId: actor.tenantId,
-        price_list_item_id,
-      });
+      const isObjectId = /^[0-9a-fA-F]{24}$/.test(price_list_item_id);
+      const query = isObjectId
+        ? { tenantId: actor.tenantId, _id: price_list_item_id }
+        : { tenantId: actor.tenantId, price_list_item_id };
+
+      const res = await StockItemModel.deleteOne(query);
       if (res.deletedCount === 0) {
         return NextResponse.json({ error: "Nem található." }, { status: 404 });
       }

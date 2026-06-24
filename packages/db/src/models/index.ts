@@ -20,3 +20,5 @@ export { DeliveryNoteModel } from "./delivery-note";
 export { SecretModel } from "./secret";
 export { WarrantyCardModel } from "./warranty-card";
 export { WeeklyPlanModel } from "./weekly-plan";
+export { InventoryTakingModel } from "./inventory-taking";
+export { RmaCaseModel } from "./rma-case";

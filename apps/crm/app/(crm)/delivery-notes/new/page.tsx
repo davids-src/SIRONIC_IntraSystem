@@ -91,8 +91,8 @@ export default function NewDeliveryNotePage() {
           ? {
               ...l,
               price_list_item_id: sItem.price_list_item_id,
-              name: sItem.product.name,
-              unit: sItem.product.unit,
+              name: sItem.product?.name || "",
+              unit: sItem.product?.unit || "db",
             }
           : l,
       ),
@@ -258,8 +258,9 @@ export default function NewDeliveryNotePage() {
                     <SelectItem value="__empty__">Válassz terméket…</SelectItem>
                     {stockItems.map((s) => (
                       <SelectItem key={s._id} value={s.price_list_item_id}>
-                        {s.product.item_number} – {s.product.name} (készlet:{" "}
-                        {s.quantity_in_stock} {s.product.unit})
+                        {s.product?.item_number || "—"} –{" "}
+                        {s.product?.name || "Ismeretlen cikk"} (készlet:{" "}
+                        {s.quantity_in_stock} {s.product?.unit || "db"})
                       </SelectItem>
                     ))}
                   </SelectContent>

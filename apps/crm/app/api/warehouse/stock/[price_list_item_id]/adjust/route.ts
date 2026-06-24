@@ -8,6 +8,7 @@ type RouteCtx = { params: Promise<{ price_list_item_id: string }> };
 const adjustSchema = z.object({
   new_quantity: z.number().min(0),
   notes: z.string().nullable().optional(),
+  serial_numbers: z.array(z.string()).optional(),
 });
 
 /**
@@ -25,35 +26,46 @@ export async function POST(req: Request, ctx: RouteCtx) {
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
-    const { new_quantity, notes } = parsed.data;
+    const { new_quantity, notes, serial_numbers } = parsed.data;
 
     return await withDb(async () => {
-      const existing = (await StockItemModel.findOne({
-        tenantId: actor.tenantId,
-        price_list_item_id,
-      }).lean()) as any;
+      const isObjectId = /^[0-9a-fA-F]{24}$/.test(price_list_item_id);
+      const query = isObjectId
+        ? { tenantId: actor.tenantId, _id: price_list_item_id }
+        : { tenantId: actor.tenantId, price_list_item_id };
+
+      const existing = (await StockItemModel.findOne(query).lean()) as any;
       if (!existing) {
         return NextResponse.json({ error: "Nem található." }, { status: 404 });
       }
 
-      const diff = new_quantity - existing.quantity_in_stock;
+      const finalQty =
+        serial_numbers && serial_numbers.length > 0
+          ? serial_numbers.length
+          : new_quantity;
+      const diff = finalQty - existing.quantity_in_stock;
 
       const doc = (await StockItemModel.findOneAndUpdate(
-        { tenantId: actor.tenantId, price_list_item_id },
-        { $set: { quantity_in_stock: new_quantity } },
+        query,
+        {
+          $set: {
+            quantity_in_stock: finalQty,
+            ...(serial_numbers !== undefined && { serial_numbers }),
+          },
+        },
         { new: true },
       ).lean()) as any;
 
       // Log adjustment transaction
       await StockTransactionModel.create({
         tenantId: actor.tenantId,
-        price_list_item_id,
+        price_list_item_id: existing.price_list_item_id,
         type: "adjustment",
         quantity: diff,
+        serial_numbers: serial_numbers || [],
         reference_type: "manual",
         reference_id: null,
-        notes:
-          notes ?? `Leltári korrekció: ${existing.quantity_in_stock} → ${new_quantity}`,
+        notes: notes ?? `Leltári korrekció: ${existing.quantity_in_stock} → ${finalQty}`,
         created_by: actor.actorId,
       });
 

@@ -308,6 +308,14 @@ export interface Worklog {
 
 export type CompletionCertificateStatus = "draft" | "sent" | "accepted" | "rejected";
 
+export interface CompletionCertificateLine {
+  price_list_item_id: string | null;
+  description: string;
+  quantity: number;
+  unit: string;
+  net_unit_price: number;
+}
+
 export interface CompletionCertificate {
   _id: string;
   certificate_number: string;
@@ -333,6 +341,8 @@ export interface CompletionCertificate {
   is_archived?: boolean;
   archived_at?: Date | null;
   archive_reason?: string | null;
+  rejection_reason: string | null;
+  lines: CompletionCertificateLine[];
   created_at: Date;
   updated_at: Date;
 }
@@ -618,6 +628,8 @@ export interface StockItem {
   tenantId: string;
   price_list_item_id: string;
   quantity_in_stock: number;
+  quantity_allocated: number;
+  serial_numbers: string[];
   low_stock_threshold: number | null;
   warehouse_location: string | null;
   notes: string | null;
@@ -627,8 +639,10 @@ export interface StockItem {
 
 /** Raktárkilétel adataival együtt (API válasz) */
 export interface StockItemWithProduct extends StockItem {
-  product: PriceListItem;
+  product: PriceListItem | null;
 }
+
+export type WarehouseLocationType = "main" | "car" | "scrap" | "shelf";
 
 /** Fizikai raktárhely (polc, terület, stb.) */
 export interface WarehouseLocation {
@@ -636,12 +650,13 @@ export interface WarehouseLocation {
   tenantId: string;
   code: string;
   name: string;
+  type: WarehouseLocationType;
   description: string | null;
   created_at: Date;
   updated_at: Date;
 }
 
-export type StockTransactionType = "in" | "out" | "adjustment";
+export type StockTransactionType = "in" | "out" | "adjustment" | "transfer";
 export type StockTransactionRef =
   | "worklog"
   | "offer"
@@ -656,10 +671,55 @@ export interface StockTransaction {
   price_list_item_id: string;
   type: StockTransactionType;
   quantity: number;
+  serial_numbers: string[];
+  to_warehouse_location: string | null;
   reference_type: StockTransactionRef;
   reference_id: string | null;
   notes: string | null;
   created_by: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface InventoryTakingItem {
+  price_list_item_id: string;
+  expected_qty: number;
+  physical_qty: number;
+  diff_qty: number;
+  notes: string | null;
+}
+
+export interface InventoryTaking {
+  _id: string;
+  tenantId: string;
+  warehouse_location: string;
+  status: "draft" | "completed";
+  created_by: string;
+  items: InventoryTakingItem[];
+  completed_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type RmaCaseStatus =
+  | "received"
+  | "sent_to_supplier"
+  | "replaced"
+  | "repaired"
+  | "scrapped"
+  | "returned_to_client";
+
+export interface RmaCase {
+  _id: string;
+  tenantId: string;
+  rma_number: string;
+  price_list_item_id: string;
+  serial_number: string | null;
+  quantity: number;
+  contact_id: string;
+  supplier_name: string | null;
+  status: RmaCaseStatus;
+  notes: string | null;
   created_at: Date;
   updated_at: Date;
 }

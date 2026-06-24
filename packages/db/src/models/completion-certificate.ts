@@ -2,6 +2,17 @@ import { defineSchema } from "./schema-def";
 import { getModel } from "./get-model";
 import { ts } from "./timestamps";
 
+const completionCertificateLineSchema = defineSchema(
+  {
+    price_list_item_id: { type: String, default: null },
+    description: { type: String, required: true },
+    quantity: { type: Number, required: true },
+    unit: { type: String, required: true },
+    net_unit_price: { type: Number, default: 0 },
+  },
+  { _id: false },
+);
+
 const completionCertificateSchema = defineSchema(
   {
     certificate_number: { type: String, required: true },
@@ -32,6 +43,8 @@ const completionCertificateSchema = defineSchema(
     is_archived: { type: Boolean, default: false },
     archived_at: { type: Date, default: null },
     archive_reason: { type: String, default: null },
+    rejection_reason: { type: String, default: null },
+    lines: { type: [completionCertificateLineSchema], default: [] },
   },
   ts,
 );

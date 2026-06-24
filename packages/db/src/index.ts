@@ -27,4 +27,6 @@ export {
   SecretModel,
   WarrantyCardModel,
   WeeklyPlanModel,
+  InventoryTakingModel,
+  RmaCaseModel,
 } from "./models";

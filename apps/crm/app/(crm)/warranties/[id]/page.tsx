@@ -93,30 +93,30 @@ function buildPdfHtml(data: PdfData): string {
   const linesRows = warranty.lines
     .map(
       (l, i) => `
-    <tr style="border-bottom:1px solid #e5e7eb;">
-      <td style="padding:10px 12px;font-size:13px;">${i + 1}.</td>
-      <td style="padding:10px 12px;font-size:13px;font-weight:600;">${l.name}</td>
-      <td style="padding:10px 12px;font-size:13px;font-family:monospace;">${l.serial_number ?? "—"}</td>
-      <td style="padding:10px 12px;font-size:13px;text-align:center;">${l.warranty_years} év</td>
-      <td style="padding:10px 12px;font-size:13px;">${fmtDate(l.warranty_start)}</td>
-      <td style="padding:10px 12px;font-size:13px;font-weight:600;color:#1d4ed8;">${fmtDate(l.warranty_end)}</td>
+    <tr>
+      <td style="text-align: center; font-weight: 600; color: #94a3b8;">${i + 1}.</td>
+      <td style="font-weight: 600; color: #0f172a;">${l.name}</td>
+      <td><span class="serial-number">${l.serial_number ?? "—"}</span></td>
+      <td style="text-align: center;"><span class="years-badge">${l.warranty_years} év</span></td>
+      <td style="color: #475569;">${fmtDate(l.warranty_start)}</td>
+      <td style="font-weight: 700; color: #2563eb;">${fmtDate(l.warranty_end)}</td>
     </tr>`,
     )
     .join("");
 
-  // Jogi szöveg sorai (sortörések kezelése)
+  // Parse legal text
   const legalHtml = legalNotice
     .split("\n")
     .map((line) => {
       const trimmed = line.trim();
-      if (!trimmed) return "<br/>";
+      if (!trimmed) return "";
       if (/^\d+\./.test(trimmed)) {
-        return `<h3 style="font-size:13px;font-weight:700;margin:14px 0 6px;color:#111827;">${trimmed}</h3>`;
+        return `<h3>${trimmed}</h3>`;
       }
       if (trimmed.startsWith("-")) {
-        return `<li style="font-size:12px;margin:3px 0 3px 18px;color:#374151;">${trimmed.slice(1).trim()}</li>`;
+        return `<li>${trimmed.slice(1).trim()}</li>`;
       }
-      return `<p style="font-size:12px;margin:4px 0;color:#374151;line-height:1.6;">${trimmed}</p>`;
+      return `<p>${trimmed}</p>`;
     })
     .join("");
 
@@ -125,67 +125,146 @@ function buildPdfHtml(data: PdfData): string {
 <html lang="hu">
 <head>
   <meta charset="UTF-8"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; background: #fff; color: #111827; }
-    .page { width: 210mm; min-height: 297mm; padding: 18mm 16mm; page-break-after: always; }
+    body { font-family: 'Inter', sans-serif; background: #ffffff; color: #1e293b; -webkit-font-smoothing: antialiased; }
+    .page { width: 210mm; min-height: 297mm; padding: 20mm; page-break-after: always; position: relative; }
     .page:last-child { page-break-after: auto; }
+    
+    /* Header */
+    .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 24px; border-bottom: 2px solid #f1f5f9; margin-bottom: 32px; }
+    .brand-title { font-size: 28px; font-weight: 800; color: #0f172a; letter-spacing: -0.03em; line-height: 1; }
+    .brand-subtitle { font-size: 11px; font-weight: 600; color: #64748b; margin-top: 8px; text-transform: uppercase; letter-spacing: 0.08em; }
+    .brand-info { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+    
+    .doc-title-container { text-align: right; }
+    .doc-title { font-size: 26px; font-weight: 800; color: #2563eb; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1; }
+    .doc-number { font-size: 14px; font-weight: 700; color: #334155; margin-top: 8px; background: #f8fafc; padding: 6px 12px; border-radius: 8px; display: inline-block; border: 1px solid #e2e8f0; }
+    
+    /* Dates */
+    .dates-container { display: flex; justify-content: flex-end; gap: 20px; margin-top: 12px; }
+    .date-block { text-align: right; }
+    .date-label { font-size: 10px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
+    .date-value { font-size: 12px; font-weight: 600; color: #0f172a; margin-top: 2px; }
+
+    /* Entities Section */
+    .entities { display: flex; justify-content: space-between; margin-bottom: 40px; gap: 24px; }
+    .entity-box { flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+    .entity-box.beneficiary { background: #f0fdf4; border-color: #bbf7d0; box-shadow: 0 4px 20px rgba(34,197,94,0.05); }
+    .entity-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; color: #64748b; display: flex; align-items: center; gap: 6px; }
+    .entity-box.beneficiary .entity-label { color: #16a34a; }
+    .entity-name { font-size: 16px; font-weight: 800; color: #0f172a; margin-bottom: 6px; }
+    .entity-detail { font-size: 12px; color: #475569; line-height: 1.6; }
+    
+    /* Table */
+    .section-title { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #0f172a; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .table-wrapper { border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; margin-bottom: 32px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
     table { width: 100%; border-collapse: collapse; }
-    thead th { background: #f3f4f6; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:#6b7280; padding:10px 12px; text-align:left; }
+    thead th { background: #f8fafc; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; padding: 16px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    tbody td { padding: 16px; font-size: 13px; color: #334155; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:nth-child(even) { background-color: #fafaf9; }
+    .serial-number { font-family: monospace; font-size: 12px; color: #475569; background: #f1f5f9; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0; }
+    .years-badge { background: #eff6ff; color: #2563eb; font-weight: 800; font-size: 12px; padding: 6px 12px; border-radius: 20px; display: inline-block; border: 1px solid #bfdbfe; }
+    
+    /* Notes */
+    .notes-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 20px; margin-bottom: 32px; border-left: 4px solid #f59e0b; }
+    .notes-label { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #b45309; margin-bottom: 8px; letter-spacing: 0.05em; }
+    .notes-content { font-size: 13px; color: #92400e; line-height: 1.6; font-style: italic; }
+    
+    /* Signatures */
+    .signatures { display: flex; justify-content: space-between; margin-top: 70px; padding: 0 30px; }
+    .signature-block { width: 35%; text-align: center; }
+    .signature-line { border-top: 1px dashed #94a3b8; margin-bottom: 10px; padding-top: 10px; }
+    .signature-title { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; }
+    .signature-name { font-size: 14px; font-weight: 800; color: #0f172a; margin-top: 6px; }
+    
+    /* Footer */
+    .footer { position: absolute; bottom: 20mm; left: 20mm; right: 20mm; border-top: 1px solid #f1f5f9; padding-top: 16px; display: flex; justify-content: space-between; align-items: center; }
+    .footer-text { font-size: 10px; color: #94a3b8; font-weight: 500; }
+    .timestamp { font-family: monospace; font-size: 9px; color: #cbd5e1; }
+    
+    /* Legal text page */
+    .legal-header { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 20px; border-bottom: 2px solid #f1f5f9; margin-bottom: 30px; }
+    .legal-title { font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.02em; }
+    .legal-content h3 { font-size: 14px; font-weight: 800; color: #0f172a; margin: 24px 0 10px; }
+    .legal-content p { font-size: 12px; color: #475569; line-height: 1.8; margin-bottom: 12px; text-align: justify; }
+    .legal-content li { font-size: 12px; color: #475569; line-height: 1.8; margin-left: 24px; margin-bottom: 8px; }
   </style>
 </head>
 <body>
 
 <!-- ══════════════ OLDAL 1: JÓTÁLLÁSI JEGY ══════════════ -->
 <div class="page">
-  <div style="font-size:9px; color:#9ca3af; text-align:right; margin-bottom:10px; font-family:monospace;">
-    Generálva: ${new Intl.DateTimeFormat("hu-HU", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date())} – Hiteles digitális másolat
-  </div>
-  <!-- Fejléc -->
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1d4ed8;padding-bottom:16px;margin-bottom:24px;">
+  <!-- Header -->
+  <div class="header">
     <div>
-      <div style="font-size:26px;font-weight:800;color:#1d4ed8;letter-spacing:-0.5px;">SIROTECH</div>
-      <div style="font-size:11px;color:#6b7280;margin-top:2px;">${co?.headquarters ?? "8000 Székesfehérvár, Lövölde utca 24 4/15"}</div>
-      <div style="font-size:11px;color:#6b7280;">${co?.email ?? "hello@sironic.hu"} ${co?.phone ? "| " + co.phone : ""}</div>
-      <div style="font-size:11px;color:#6b7280;">Adószám: ${co?.tax_number ?? "33056151-2-07"}</div>
+      <div class="brand-title">SIROTECH</div>
+      <div class="brand-subtitle">Biztonságtechnika & IT</div>
+      <div class="brand-info" style="margin-top: 12px;">${co?.headquarters ?? "8000 Székesfehérvár, Lövölde utca 24 4/15"}</div>
+      <div class="brand-info">${co?.email ?? "hello@sironic.hu"} ${co?.phone ? "• " + co.phone : ""}</div>
+      <div class="brand-info">Adószám: ${co?.tax_number ?? "33056151-2-07"}</div>
     </div>
-    <div style="text-align:right;">
-      <div style="font-size:22px;font-weight:700;color:#111827;">JÓTÁLLÁSI JEGY</div>
-      <div style="font-size:16px;font-weight:600;color:#1d4ed8;margin-top:4px;font-family:monospace;">${warranty.warranty_number}</div>
-      <div style="font-size:12px;color:#6b7280;margin-top:6px;">Kiállítva: ${fmtDate(warranty.issue_date)}</div>
-      ${warranty.invoice_number ? `<div style="font-size:12px;color:#6b7280;">Számla: ${warranty.invoice_number}</div>` : ""}
+    <div class="doc-title-container">
+      <div class="doc-title">Jótállási Jegy</div>
+      <div class="doc-number">${warranty.warranty_number}</div>
+      <div class="dates-container">
+        <div class="date-block">
+          <div class="date-label">Kiállítva</div>
+          <div class="date-value">${fmtDate(warranty.issue_date)}</div>
+        </div>
+        ${
+          warranty.invoice_number
+            ? `
+        <div class="date-block">
+          <div class="date-label">Számlaszám</div>
+          <div class="date-value">${warranty.invoice_number}</div>
+        </div>`
+            : ""
+        }
+      </div>
     </div>
   </div>
 
   <!-- Kiállító / Partner adatok -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px;">
-    <div style="background:#f9fafb;border-radius:8px;padding:16px;">
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:8px;">Kiállító</div>
-      <div style="font-size:14px;font-weight:700;">${co?.name ?? "SIROTECH Kft."}</div>
-      <div style="font-size:12px;color:#374151;margin-top:2px;">${co?.headquarters ?? "8000 Székesfehérvár, Lövölde utca 24 4/15"}</div>
-      <div style="font-size:12px;color:#374151;">${co?.email ?? "hello@sironic.hu"}</div>
+  <div class="entities">
+    <div class="entity-box">
+      <div class="entity-label">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+        Kiállító (Szolgáltató)
+      </div>
+      <div class="entity-name">${co?.name ?? "SIROTECH Kft."}</div>
+      <div class="entity-detail">${co?.headquarters ?? "8000 Székesfehérvár, Lövölde utca 24 4/15"}</div>
+      <div class="entity-detail">${co?.email ?? "hello@sironic.hu"}</div>
     </div>
-    <div style="background:#eff6ff;border-radius:8px;padding:16px;border:1px solid #bfdbfe;">
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1d4ed8;margin-bottom:8px;">Jótállás Jogosultja</div>
-      <div style="font-size:14px;font-weight:700;">${contact?.name ?? "—"}</div>
-      ${contact?.address ? `<div style="font-size:12px;color:#374151;margin-top:2px;">${contact.address.zip} ${contact.address.city}, ${contact.address.street}</div>` : ""}
-      ${contact?.email ? `<div style="font-size:12px;color:#374151;">${contact.email}</div>` : ""}
-      ${contact?.phone ? `<div style="font-size:12px;color:#374151;">${contact.phone}</div>` : ""}
+    <div class="entity-box beneficiary">
+      <div class="entity-label">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        Jótállás Jogosultja (Ügyfél)
+      </div>
+      <div class="entity-name">${contact?.name ?? "—"}</div>
+      ${contact?.address ? `<div class="entity-detail">${contact.address.zip} ${contact.address.city}, ${contact.address.street}</div>` : ""}
+      ${contact?.email ? `<div class="entity-detail">${contact.email}</div>` : ""}
+      ${contact?.phone ? `<div class="entity-detail">${contact.phone}</div>` : ""}
     </div>
   </div>
 
   <!-- Tételek táblázat -->
-  <div style="margin-bottom:28px;">
-    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#374151;margin-bottom:10px;">Jótállással érintett termékek</div>
-    <table style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+  <div class="section-title">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+    Jótállással érintett termékek és eszközök
+  </div>
+  <div class="table-wrapper">
+    <table>
       <thead>
         <tr>
-          <th style="width:36px;">#</th>
-          <th>Termék neve</th>
-          <th>Gyártási szám</th>
-          <th style="text-align:center;">Időtartam</th>
-          <th>Jótállás kezdete</th>
-          <th>Lejárat</th>
+          <th style="width: 50px; text-align: center;">#</th>
+          <th>Termék megnevezése</th>
+          <th>Gyári / Sorozatszám</th>
+          <th style="text-align: center;">Időtartam</th>
+          <th>Kezdete</th>
+          <th>Lejárata</th>
         </tr>
       </thead>
       <tbody>${linesRows}</tbody>
@@ -195,42 +274,45 @@ function buildPdfHtml(data: PdfData): string {
   ${
     warranty.notes
       ? `
-  <div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:12px;margin-bottom:24px;">
-    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#92400e;margin-bottom:4px;">Megjegyzés</div>
-    <div style="font-size:12px;color:#78350f;">${warranty.notes}</div>
+  <div class="notes-box">
+    <div class="notes-label">Kiegészítő Megjegyzés</div>
+    <div class="notes-content">${warranty.notes}</div>
   </div>`
       : ""
   }
 
   <!-- Lábléc aláírás -->
-  <div style="position:absolute;bottom:18mm;left:16mm;right:16mm;">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px;">
-      <div style="border-top:1px solid #9ca3af;padding-top:8px;">
-        <div style="font-size:11px;color:#6b7280;">Kiállító aláírása, bélyegzője</div>
-        <div style="font-size:12px;margin-top:4px;">${co?.name ?? "SIROTECH Kft."}</div>
-      </div>
-      <div style="border-top:1px solid #9ca3af;padding-top:8px;">
-        <div style="font-size:11px;color:#6b7280;">Átvevő aláírása</div>
-        <div style="font-size:12px;margin-top:4px;">&nbsp;</div>
-      </div>
+  <div class="signatures">
+    <div class="signature-block">
+      <div class="signature-line"></div>
+      <div class="signature-title">Kiállító hivatalos aláírása</div>
+      <div class="signature-name">${co?.name ?? "SIROTECH Kft."}</div>
     </div>
-    <div style="font-size:10px;color:#9ca3af;text-align:center;margin-top:16px;">
-      A jótállási jegy 2. oldala a vonatkozó jogszabályi tájékoztatót tartalmazza.
+    <div class="signature-block">
+      <div class="signature-line"></div>
+      <div class="signature-title">Átvevő / Ügyfél aláírása</div>
+      <div class="signature-name">&nbsp;</div>
     </div>
   </div>
 
+  <!-- Footer -->
+  <div class="footer">
+    <div class="timestamp">HIT-DIGITAL-COPY-ID: ${Math.random().toString(36).substring(2, 10).toUpperCase()} • ${new Intl.DateTimeFormat("hu-HU", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date())}</div>
+    <div class="footer-text">A jótállási jegy 2. oldala a vonatkozó jogszabályi tájékoztatót tartalmazza.</div>
+  </div>
 </div>
 
 <!-- ══════════════ OLDAL 2: JOGI TÁJÉKOZTATÓ ══════════════ -->
 <div class="page">
-  <div style="border-bottom:3px solid #1d4ed8;padding-bottom:12px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
-    <div style="font-size:18px;font-weight:700;color:#1d4ed8;">Jótállási Tájékoztató és Jogi Feltételek</div>
-    <div style="font-size:11px;color:#9ca3af;font-family:monospace;">${warranty.warranty_number}</div>
+  <div class="legal-header">
+    <div class="legal-title">Jótállási Tájékoztató és Jogi Feltételek</div>
+    <div class="doc-number" style="margin-top:0;">${warranty.warranty_number}</div>
   </div>
-  <div style="line-height:1.7;">${legalHtml}</div>
-  <div style="position:absolute;bottom:18mm;left:16mm;right:16mm;border-top:1px solid #e5e7eb;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
-    <div style="font-size:10px;color:#9ca3af;">${co?.name ?? "SIROTECH Kft."} | ${co?.headquarters ?? "8000 Székesfehérvár, Lövölde utca 24 4/15"}</div>
-    <div style="font-size:10px;color:#9ca3af;">2. oldal / 2</div>
+  <div class="legal-content">${legalHtml}</div>
+  
+  <div class="footer">
+    <div class="footer-text">${co?.name ?? "SIROTECH Kft."} • ${co?.headquarters ?? "8000 Székesfehérvár, Lövölde utca 24 4/15"}</div>
+    <div class="footer-text">2. oldal / 2</div>
   </div>
 </div>
 

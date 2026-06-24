@@ -6,6 +6,7 @@ import { guard, handleApiError, requireCrmAuth, withDb } from "@/lib/api-helpers
 const createSchema = z.object({
   code: z.string().min(1).max(20),
   name: z.string().min(1),
+  type: z.enum(["main", "car", "scrap", "shelf"]).default("shelf"),
   description: z.string().nullable().optional(),
 });
 
@@ -62,6 +63,7 @@ export async function POST(req: Request) {
         tenantId: actor.tenantId,
         code: b.code,
         name: b.name,
+        type: b.type,
         description: b.description ?? null,
       });
       return NextResponse.json(serializeForJson(doc.toObject()), { status: 201 });

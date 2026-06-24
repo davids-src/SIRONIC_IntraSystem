@@ -81,6 +81,12 @@ erDiagram
         string status
         string[] worklog_ids
         string[] ticket_ids
+        object[] lines
+        string rejection_reason
+        string client_name
+        string client_title
+        string client_signature
+        date signed_at
     }
 
     PriceListItem {
@@ -105,6 +111,7 @@ erDiagram
         string tenantId
         string price_list_item_id FK
         number quantity_in_stock
+        number quantity_allocated
         number low_stock_threshold
         string warehouse_location
         string notes
@@ -114,9 +121,9 @@ erDiagram
         string _id PK
         string tenantId
         string price_list_item_id FK
-        string type "in, out, adjustment"
+        string type "in, out, adjustment, transfer"
         number quantity
-        string reference_type "worklog, offer, invoice, purchase_order, manual"
+        string reference_type "worklog, offer, invoice, purchase_order, manual, delivery_note, inventory_taking"
         string reference_id
         string notes
         string created_by
@@ -204,8 +211,13 @@ Jegyen vagy projekten (függetlenül is) végzett konkrét tényleges cselekvés
 
 - **Legfontosabb mezők:**
   - `worklog_ids`, `ticket_ids`: Miket foglal magában az igazolás.
-  - `status`: `draft`, `sent`, `accepted`, `rejected`.
-  - `client_signature`: Aláírás és elfogadás adatai.
+  - `status`: `draft` (piszkozat), `sent` (aláírásra kiküldve), `accepted` (elfogadva/aláírva), `rejected` (elutasítva).
+  - `lines`: Egyedi tételes sorok listája (megnevezés, mennyiség, egység, nettó egységár).
+  - `rejection_reason`: Az elutasítás indoklása, amennyiben a státusz `rejected`.
+  - `client_name`: Az igazolást aláíró vevői képviselő neve.
+  - `client_title`: Az aláíró beosztása/megnevezése.
+  - `client_signature`: base64 formátumú aláíráskép a digitális aláírófelületről.
+  - `signed_at`: Az elfogadás/aláírás pontos időpontja.
 
 ### 6. PriceListItem (Árlista tétel)
 
@@ -256,6 +268,7 @@ Az árlistában szereplő termékek (`PriceListItem`) aktuális raktári készle
 - **Legfontosabb mezők:**
   - `price_list_item_id`: Csatolás az árlista tételhez.
   - `quantity_in_stock`: Jelenleg raktáron lévő fizikai mennyiség.
+  - `quantity_allocated`: Projektek számára lefoglalt mennyiség.
   - `low_stock_threshold`: Alacsony készlet figyelmeztetési küszöbérték.
   - `warehouse_location`: Hivatkozás a raktárhely (`WarehouseLocation`) kódjára.
 
@@ -265,9 +278,9 @@ A raktárkészlet változásait (bevételezés, kivételezés, leltárkorrekció
 
 - **Legfontosabb mezők:**
   - `price_list_item_id`: Érintett termék árlistás azonosítója.
-  - `type`: Tranzakció jellege (`in` = bevételezés, `out` = kiadás/kivétel, `adjustment` = korrekció).
+  - `type`: Tranzakció jellege (`in` = bevételezés, `out` = kiadás/kivétel, `adjustment` = korrekció, `transfer` = áthelyezés).
   - `quantity`: Mozgatott mennyiség.
-  - `reference_type`: Bizonylat / forrás típusa (`worklog`, `offer`, `invoice`, `purchase_order`, `manual`).
+  - `reference_type`: Bizonylat / forrás típusa (`worklog`, `offer`, `invoice`, `purchase_order`, `manual`, `delivery_note`, `inventory_taking`).
   - `reference_id`: Kapcsolódó bizonylat azonosítója.
   - `notes`: Megjegyzés (pl. megrendelő száma, szállítólevél száma).
   - `created_by`: Tranzakciót végrehajtó felhasználó azonosítója.
