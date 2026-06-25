@@ -19,6 +19,14 @@ const checklistCreateSchema = z.object({
   completed: z.boolean().optional(),
 });
 
+const requiredItemCreateSchema = z.object({
+  price_list_item_id: z.string().min(1),
+  name: z.string().min(1),
+  unit: z.string().min(1),
+  required_quantity: z.number().nonnegative(),
+  reserved_quantity: z.number().nonnegative().optional(),
+});
+
 const createSchema = z.object({
   name: z.string().min(1),
   description: z.string(),
@@ -37,6 +45,7 @@ const createSchema = z.object({
   assigned_to: z.string().nullable().optional(),
   phases: z.array(phaseSchema).optional(),
   checklist: z.array(checklistCreateSchema).optional(),
+  required_items: z.array(requiredItemCreateSchema).optional(),
 });
 
 export async function GET(req: Request) {
@@ -121,6 +130,13 @@ export async function POST(req: Request) {
         phases,
         staging_links: [],
         checklist,
+        required_items: (b.required_items ?? []).map((ri) => ({
+          price_list_item_id: ri.price_list_item_id,
+          name: ri.name,
+          unit: ri.unit,
+          required_quantity: ri.required_quantity,
+          reserved_quantity: ri.reserved_quantity ?? 0,
+        })),
         notes: b.notes ?? null,
         contract_warning_dismissed: false,
       });

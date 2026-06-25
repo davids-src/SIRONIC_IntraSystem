@@ -27,6 +27,15 @@ const projectSchema = defineSchema(
     phases: [projectPhaseSchema],
     staging_links: [stagingLinkSchema],
     checklist: [checklistItemSchema],
+    required_items: [
+      {
+        price_list_item_id: { type: String, required: true },
+        name: { type: String, required: true },
+        unit: { type: String, required: true },
+        required_quantity: { type: Number, required: true, default: 0 },
+        reserved_quantity: { type: Number, required: true, default: 0 },
+      },
+    ],
     notes: { type: String, default: null },
     contract_warning_dismissed: { type: Boolean, required: true },
     is_archived: { type: Boolean, default: false },

@@ -5,6 +5,7 @@ import {
   StockTransactionModel,
   DeliveryNoteModel,
   PriceListItemModel,
+  ProjectModel,
   formatNumber,
   nextCounterValue,
   serializeForJson,
@@ -51,7 +52,7 @@ export async function POST(_req: Request, ctx: RouteCtx) {
       });
 
       if (hasProduct) {
-        // Create auto-generated delivery note in draft status
+        // Create auto-generated delivery note
         const n = await nextCounterValue(actor.tenantId, "delivery_note");
         const delivery_number = formatNumber("SZL", n);
 
@@ -62,17 +63,88 @@ export async function POST(_req: Request, ctx: RouteCtx) {
           unit: it.unit,
         }));
 
+        const isProjectBound = !!doc.project_id;
+        const deliveryNoteStatus = isProjectBound ? "issued" : "draft";
+
         await DeliveryNoteModel.create({
           tenantId: actor.tenantId,
           delivery_number,
           contact_id: doc.contact_id || "",
           project_id: doc.project_id || null,
-          status: "draft",
+          status: deliveryNoteStatus,
           issue_date: new Date(),
           lines: deliveryLines,
           notes: `Automatizáltan generálva a ${doc.worklog_number} munkalapból.`,
           created_by: actor.actorId ?? "system",
         });
+
+        // If project bound, immediately deduct stock of type 'product' and release allocation
+        if (isProjectBound) {
+          const project = await ProjectModel.findOne({
+            _id: doc.project_id,
+            tenantId: actor.tenantId,
+          });
+
+          for (const line of deliveryLines) {
+            try {
+              const item = priceListMap.get(line.price_list_item_id);
+              if (item && (item as any).type !== "product") {
+                continue;
+              }
+
+              // Deduct from quantity_in_stock
+              await StockItemModel.findOneAndUpdate(
+                { tenantId: actor.tenantId, price_list_item_id: line.price_list_item_id },
+                { $inc: { quantity_in_stock: -line.quantity } },
+                { upsert: true },
+              );
+
+              // Calculate reservation deductions
+              let usedFromReservation = 0;
+              if (project && project.required_items) {
+                const reqItem = project.required_items.find(
+                  (ri: any) => ri.price_list_item_id === line.price_list_item_id,
+                );
+                if (reqItem && reqItem.reserved_quantity > 0) {
+                  usedFromReservation = Math.min(
+                    line.quantity,
+                    reqItem.reserved_quantity,
+                  );
+                  reqItem.reserved_quantity -= usedFromReservation;
+                }
+              }
+
+              if (usedFromReservation > 0) {
+                // Reduce the total allocated quantity on the StockItem
+                await StockItemModel.findOneAndUpdate(
+                  {
+                    tenantId: actor.tenantId,
+                    price_list_item_id: line.price_list_item_id,
+                  },
+                  { $inc: { quantity_allocated: -usedFromReservation } },
+                );
+              }
+
+              // Log transaction
+              await StockTransactionModel.create({
+                tenantId: actor.tenantId,
+                price_list_item_id: line.price_list_item_id,
+                type: "out",
+                quantity: line.quantity,
+                reference_type: "worklog",
+                reference_id: String(doc._id),
+                notes: `Projekt munkalap alapján (SZL: ${delivery_number})`,
+                created_by: actor.actorId ?? "system",
+              });
+            } catch (err) {
+              console.error("Hiba a raktár levonásakor (projekt):", err);
+            }
+          }
+
+          if (project) {
+            await project.save();
+          }
+        }
       } else {
         // Fallback: original stock deduction logic for non-delivery note items (e.g. services / other)
         for (const item of linkedItems) {

@@ -407,6 +407,14 @@ export interface ChecklistItem {
   note: string | null;
 }
 
+export interface ProjectRequiredItem {
+  price_list_item_id: string;
+  name: string;
+  unit: string;
+  required_quantity: number;
+  reserved_quantity: number;
+}
+
 export interface Project {
   _id: string;
   project_number: string;
@@ -427,6 +435,7 @@ export interface Project {
   phases: ProjectPhase[];
   staging_links: StagingLink[];
   checklist: ChecklistItem[];
+  required_items?: ProjectRequiredItem[];
   notes: string | null;
   contract_warning_dismissed: boolean;
   is_archived?: boolean;

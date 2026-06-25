@@ -4,6 +4,7 @@ import {
   PriceListItemModel,
   StockItemModel,
   StockTransactionModel,
+  ProjectModel,
   serializeForJson,
 } from "@crm/db";
 import { guard, handleApiError, requireCrmAuth, withDb } from "@/lib/api-helpers";
@@ -15,6 +16,8 @@ const patchSchema = z.object({
   low_stock_threshold: z.number().nullable().optional(),
   notes: z.string().nullable().optional(),
   quantity_allocated: z.number().optional(),
+  project_id: z.string().nullable().optional(),
+  allocate_quantity: z.number().optional(),
 });
 
 const adjustSchema = z.object({
@@ -44,6 +47,77 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
       const query = isObjectId
         ? { tenantId: actor.tenantId, _id: price_list_item_id }
         : { tenantId: actor.tenantId, price_list_item_id };
+
+      let pliId = price_list_item_id;
+      if (isObjectId) {
+        const si = (await StockItemModel.findOne({
+          tenantId: actor.tenantId,
+          _id: price_list_item_id,
+        }).lean()) as any;
+        if (si) {
+          pliId = String(si.price_list_item_id);
+        }
+      }
+
+      if (b.project_id && b.allocate_quantity && b.allocate_quantity > 0) {
+        const project = await ProjectModel.findOne({
+          _id: b.project_id,
+          tenantId: actor.tenantId,
+        });
+
+        if (!project) {
+          return NextResponse.json({ error: "Projekt nem található." }, { status: 404 });
+        }
+
+        if (!project.required_items) {
+          project.required_items = [];
+        }
+
+        let reqItem = project.required_items.find(
+          (ri: any) => ri.price_list_item_id === pliId,
+        );
+
+        if (reqItem) {
+          reqItem.reserved_quantity += b.allocate_quantity;
+        } else {
+          const pli = (await PriceListItemModel.findOne({
+            _id: pliId,
+            tenantId: actor.tenantId,
+          }).lean()) as any;
+
+          project.required_items.push({
+            price_list_item_id: pliId,
+            name: pli ? pli.name : "Ismeretlen termék",
+            unit: pli ? pli.unit : "db",
+            required_quantity: 0,
+            reserved_quantity: b.allocate_quantity,
+          });
+        }
+
+        await project.save();
+
+        const doc = await StockItemModel.findOneAndUpdate(
+          query,
+          {
+            $inc: { quantity_allocated: b.allocate_quantity },
+            ...(b.notes !== undefined && { notes: b.notes }),
+          },
+          { new: true, upsert: true },
+        ).lean();
+
+        await StockTransactionModel.create({
+          tenantId: actor.tenantId,
+          price_list_item_id: pliId,
+          type: "transfer",
+          quantity: b.allocate_quantity,
+          reference_type: "manual",
+          reference_id: String(project._id),
+          notes: `Foglalás a ${project.name} projekthez.`,
+          created_by: actor.actorId ?? "system",
+        });
+
+        return NextResponse.json(serializeForJson(doc));
+      }
 
       const doc = await StockItemModel.findOneAndUpdate(
         query,

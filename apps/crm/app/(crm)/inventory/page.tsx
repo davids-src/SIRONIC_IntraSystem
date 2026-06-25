@@ -34,6 +34,7 @@ import type {
   InventoryTaking,
   RmaCase,
   Contact,
+  Project,
 } from "@crm/types";
 
 interface StockTransactionWithProduct extends StockTransaction {
@@ -65,6 +66,7 @@ export default function InventoryPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [categories, setCategories] = useState<ItemCategory[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
 
   // Dashboard Data State
   const [dashboardData, setDashboardData] = useState<{
@@ -159,6 +161,7 @@ export default function InventoryPage() {
   // Form States - Allocate
   const [allocateQty, setAllocateQty] = useState(0);
   const [allocateNotes, setAllocateNotes] = useState("");
+  const [allocateProjectId, setAllocateProjectId] = useState("");
 
   // Form States - RMA
   const [rmaProductId, setRmaProductId] = useState("");
@@ -283,11 +286,12 @@ export default function InventoryPage() {
 
   const loadMetadataOptions = useCallback(async () => {
     try {
-      const [rPrice, rSup, rSet, rContacts] = await Promise.all([
+      const [rPrice, rSup, rSet, rContacts, rProjects] = await Promise.all([
         fetch("/api/price-list"),
         fetch("/api/suppliers"),
         fetch("/api/settings"),
         fetch("/api/contacts"),
+        fetch("/api/projects"),
       ]);
       if (rPrice.ok) {
         const data = await rPrice.json();
@@ -298,6 +302,9 @@ export default function InventoryPage() {
       }
       if (rContacts.ok) {
         setContacts(await rContacts.json());
+      }
+      if (rProjects.ok) {
+        setProjects(await rProjects.json());
       }
       if (rSet.ok) {
         const sData: Settings = await rSet.json();
@@ -595,7 +602,8 @@ export default function InventoryPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          quantity_allocated: allocateQty,
+          project_id: allocateProjectId || null,
+          allocate_quantity: allocateQty,
           notes: allocateNotes
             ? `${showAllocateModal.notes || ""}\n[Foglalás: ${allocateQty} db - ${allocateNotes.trim()}]`
             : showAllocateModal.notes,
@@ -607,6 +615,7 @@ export default function InventoryPage() {
       setShowAllocateModal(null);
       setAllocateQty(0);
       setAllocateNotes("");
+      setAllocateProjectId("");
       void loadStock();
     } catch {
       alert("Hiba történt a foglalás során.");
@@ -2474,12 +2483,41 @@ export default function InventoryPage() {
               </div>
 
               <div>
-                <Label htmlFor="allocate-notes">Projekt / Megjegyzés *</Label>
+                <Label htmlFor="allocate-project">Projekt *</Label>
+                <select
+                  id="allocate-project"
+                  className="w-full h-10 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-card)] px-3 text-sm text-white"
+                  value={allocateProjectId}
+                  onChange={(e) => {
+                    const pid = e.target.value;
+                    setAllocateProjectId(pid);
+                    const selected = projects.find((p) => p._id === pid);
+                    if (selected) {
+                      setAllocateNotes(
+                        `Foglalás a ${selected.project_number} (${selected.name}) projekthez.`,
+                      );
+                    }
+                  }}
+                  required
+                >
+                  <option value="">Válassz projektet...</option>
+                  {projects
+                    .filter((p) => p.status !== "closed" && !p.is_archived)
+                    .map((p) => (
+                      <option key={p._id} value={p._id}>
+                        {p.project_number} - {p.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div>
+                <Label htmlFor="allocate-notes">Megjegyzés *</Label>
                 <InputControl
                   id="allocate-notes"
                   value={allocateNotes}
                   onChange={(e) => setAllocateNotes(e.target.value)}
-                  placeholder="Pl. PRJ-2026-003, SF Biztonsági Kamera kiépítés..."
+                  placeholder="Pl. Egyéb megjegyzés..."
                   required
                 />
               </div>

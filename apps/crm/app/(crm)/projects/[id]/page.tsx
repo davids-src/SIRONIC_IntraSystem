@@ -24,6 +24,7 @@ import {
   Clock,
   User,
   CalendarDays,
+  Trash2,
 } from "lucide-react";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 
@@ -50,6 +51,11 @@ function parseProject(raw: unknown): Project {
       ...c,
       completed_at: c.completed_at ? new Date(String(c.completed_at)) : null,
     })),
+    required_items: ((p["required_items"] as Project["required_items"]) ?? []).map(
+      (ri) => ({
+        ...ri,
+      }),
+    ),
   };
 }
 
@@ -70,6 +76,16 @@ export default function ProjectDetailPage({
   const [certCount, setCertCount] = useState(0);
   const [contractCount, setContractCount] = useState(0);
   const [totalLoggedHours, setTotalLoggedHours] = useState(0);
+  const [closing, setClosing] = useState(false);
+  const [priceList, setPriceList] = useState<any[]>([]);
+  const [loadingPriceList, setLoadingPriceList] = useState(false);
+  const [showItemPicker, setShowItemPicker] = useState(false);
+  const [itemSearch, setItemSearch] = useState("");
+  const [showReserveModal, setShowReserveModal] = useState<any | null>(null);
+  const [reserveQty, setReserveQty] = useState(0);
+  const [stockItemDoc, setStockItemDoc] = useState<any | null>(null);
+  const [loadingStockInfo, setLoadingStockInfo] = useState(false);
+  const [reservingStock, setReservingStock] = useState(false);
 
   const reload = useCallback(async () => {
     try {
@@ -212,6 +228,186 @@ export default function ProjectDetailPage({
     }
   };
 
+  const loadPriceList = async () => {
+    if (priceList.length > 0) return;
+    setLoadingPriceList(true);
+    try {
+      const res = await apiJson<any[]>("/api/price-list");
+      setPriceList(res.filter((p: any) => p.is_active && p.type === "product"));
+    } catch (e) {
+      console.error("Nem sikerült betölteni az árlistát:", e);
+    } finally {
+      setLoadingPriceList(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "shopping_list") {
+      void loadPriceList();
+    }
+  }, [activeTab]);
+
+  const handleAddItem = async (pli: any) => {
+    if (!project) return;
+    const qtyStr = window.prompt(`Mennyi szükséges a termékből (${pli.unit})?`, "1");
+    if (qtyStr === null) return;
+    const qty = Number(qtyStr);
+    if (isNaN(qty) || qty <= 0) {
+      alert("Érvénytelen mennyiség.");
+      return;
+    }
+
+    const currentItems = project.required_items ?? [];
+    if (currentItems.some((it) => it.price_list_item_id === pli._id)) {
+      alert("Ez a tétel már szerepel a listán.");
+      return;
+    }
+
+    const updated = [
+      ...currentItems,
+      {
+        price_list_item_id: pli._id,
+        name: pli.name,
+        unit: pli.unit,
+        required_quantity: qty,
+        reserved_quantity: 0,
+      },
+    ];
+
+    try {
+      await apiJsonBody(`/api/projects/${id}`, "PATCH", {
+        required_items: updated,
+      });
+      void reload();
+    } catch {
+      alert("Nem sikerült menteni a bevásárlólistát.");
+    }
+  };
+
+  const handleEditItemQty = async (pliId: string, currentQty: number, unit: string) => {
+    if (!project) return;
+    const qtyStr = window.prompt(`Új szükséges mennyiség (${unit}):`, String(currentQty));
+    if (qtyStr === null) return;
+    const qty = Number(qtyStr);
+    if (isNaN(qty) || qty < 0) {
+      alert("Érvénytelen mennyiség.");
+      return;
+    }
+
+    const updated = (project.required_items ?? []).map((it) => {
+      if (it.price_list_item_id === pliId) {
+        return { ...it, required_quantity: qty };
+      }
+      return it;
+    });
+
+    try {
+      await apiJsonBody(`/api/projects/${id}`, "PATCH", {
+        required_items: updated,
+      });
+      void reload();
+    } catch {
+      alert("Nem sikerült módosítani a mennyiséget.");
+    }
+  };
+
+  const handleRemoveItem = async (pliId: string) => {
+    if (!project) return;
+    if (!window.confirm("Biztosan törölni szeretné ezt a tételt a bevásárlólistáról?"))
+      return;
+
+    const updated = (project.required_items ?? []).filter(
+      (it) => it.price_list_item_id !== pliId,
+    );
+
+    try {
+      await apiJsonBody(`/api/projects/${id}`, "PATCH", {
+        required_items: updated,
+      });
+      void reload();
+    } catch {
+      alert("Nem sikerült törölni a tételt.");
+    }
+  };
+
+  const handleOpenReserveModal = async (item: any) => {
+    setLoadingStockInfo(true);
+    setShowReserveModal(item);
+    setReserveQty(0);
+    setStockItemDoc(null);
+    try {
+      const res = await apiJson<any[]>("/api/warehouse/stock");
+      const found = res.find((s) => s.price_list_item_id === item.price_list_item_id);
+      if (found) {
+        setStockItemDoc(found);
+      } else {
+        setStockItemDoc(null);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingStockInfo(false);
+    }
+  };
+
+  const handleReserveSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!showReserveModal) return;
+    if (reserveQty <= 0) {
+      alert("Kérjük, adjon meg érvényes mennyiséget!");
+      return;
+    }
+    setReservingStock(true);
+    try {
+      const itemId = stockItemDoc
+        ? stockItemDoc._id
+        : showReserveModal.price_list_item_id;
+      const res = await fetch(`/api/warehouse/stock/${itemId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_id: id,
+          allocate_quantity: reserveQty,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      alert("Sikeres készletfoglalás!");
+      setShowReserveModal(null);
+      void reload();
+    } catch {
+      alert("Hiba történt a foglalás során. Ellenőrizze a raktárkészletet.");
+    } finally {
+      setReservingStock(false);
+    }
+  };
+
+  const closeProject = async () => {
+    if (
+      !window.confirm(
+        "Biztosan le akarja zárni a projektet? Ez elküldi az összes dokumentumot a partnernek e-mailben.",
+      )
+    ) {
+      return;
+    }
+    setClosing(true);
+    try {
+      const res = await fetch(`/api/projects/${id}/close`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        throw new Error("Hiba történt a lezárás során");
+      }
+      alert(
+        "A projekt sikeresen lezárva! A záró dokumentumok listáját elküldtük a partnernek.",
+      );
+      void reload();
+    } catch (err) {
+      alert("Hiba a lezárás során. Kérjük, próbálja újra.");
+    } finally {
+      setClosing(false);
+    }
+  };
+
   if (loadError || !project) {
     return (
       <div className="flex flex-col gap-4 p-6">
@@ -238,6 +434,7 @@ export default function ProjectDetailPage({
 
   const tabs = [
     { id: "overview", label: "Áttekintés", icon: <FolderKanban size={15} /> },
+    { id: "shopping_list", label: "Bevásárlólista", icon: <ClipboardList size={15} /> },
     { id: "checklist", label: "Anyaggyűjtés", icon: <CheckCircle2 size={15} /> },
     { id: "staging", label: "Staging linkek", icon: <LinkIcon size={15} /> },
     { id: "contracts", label: "Szerződések", icon: <FileSignature size={15} /> },
@@ -336,6 +533,17 @@ export default function ProjectDetailPage({
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
+            {project.status !== "closed" && (
+              <Button
+                variant="secondary"
+                className="bg-amber-600 hover:bg-amber-700 text-white border-none"
+                onClick={closeProject}
+                disabled={closing}
+              >
+                <CheckCircle2 size={15} style={{ marginRight: "6px" }} />{" "}
+                {closing ? "Lezárás..." : "Projekt lezárása"}
+              </Button>
+            )}
             <Button
               variant="primary"
               onClick={() => router.push(`/projects/${project._id}/edit`)}
@@ -701,6 +909,125 @@ export default function ProjectDetailPage({
           </div>
         )}
 
+        {/* Shopping List */}
+        {activeTab === "shopping_list" && (
+          <div className="flex flex-col gap-6">
+            <Card className="p-6 flex flex-col gap-4">
+              <div className="flex items-center justify-between gap-4 border-b border-[var(--color-border-subtle)] pb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-white">
+                    Projekt bevásárlólista / Anyagigény
+                  </h3>
+                  <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+                    A projekthez szükséges eszközök, anyagok, és a raktárból lefoglalt
+                    mennyiségek kezelése.
+                  </p>
+                </div>
+                <Button
+                  variant="primary"
+                  onClick={() => setShowItemPicker(true)}
+                  disabled={project.status === "closed"}
+                >
+                  <Plus size={15} className="mr-1.5" /> Új tétel hozzáadása
+                </Button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-[var(--color-border-subtle)] text-[var(--color-text-muted)] text-xs font-semibold uppercase tracking-wider">
+                      <th className="py-3 px-4">Tétel neve</th>
+                      <th className="py-3 px-4 text-center">Egység</th>
+                      <th className="py-3 px-4 text-right">Szükséges mennyiség</th>
+                      <th className="py-3 px-4 text-right">Lefoglalt mennyiség</th>
+                      <th className="py-3 px-4 text-center">Státusz</th>
+                      <th className="py-3 px-4 text-right">Műveletek</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(project.required_items ?? []).map((item) => {
+                      const isFullyReserved =
+                        item.reserved_quantity >= item.required_quantity;
+                      const hasReservation = item.reserved_quantity > 0;
+                      return (
+                        <tr
+                          key={item.price_list_item_id}
+                          className="border-b border-[var(--color-border-subtle)] hover:bg-[var(--color-bg-secondary)] transition-colors text-sm text-white"
+                        >
+                          <td className="py-3.5 px-4 font-medium">{item.name}</td>
+                          <td className="py-3.5 px-4 text-center text-[var(--color-text-secondary)]">
+                            {item.unit}
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-mono">
+                            {item.required_quantity}
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-mono text-amber-500 font-semibold">
+                            {item.reserved_quantity}
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            {isFullyReserved ? (
+                              <Badge variant="success">Lefoglalva</Badge>
+                            ) : hasReservation ? (
+                              <Badge variant="warning">Részben lefoglalva</Badge>
+                            ) : (
+                              <Badge variant="default">Nincs foglalás</Badge>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex justify-end gap-2">
+                              {project.status !== "closed" && (
+                                <>
+                                  <Button
+                                    variant="secondary"
+                                    className="h-8 px-2.5 text-xs text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
+                                    onClick={() => handleOpenReserveModal(item)}
+                                  >
+                                    Foglalás
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    className="h-8 px-2.5 text-xs"
+                                    onClick={() =>
+                                      handleEditItemQty(
+                                        item.price_list_item_id,
+                                        item.required_quantity,
+                                        item.unit,
+                                      )
+                                    }
+                                  >
+                                    Módosít
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    className="h-8 w-8 shrink-0 p-0 text-[var(--color-status-error)]"
+                                    onClick={() =>
+                                      handleRemoveItem(item.price_list_item_id)
+                                    }
+                                  >
+                                    <Trash2 size={14} />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {(project.required_items ?? []).length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-gray-500 italic">
+                          A bevásárlólista jelenleg üres. Adjon hozzá tételeket a fenti
+                          gombbal.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </div>
+        )}
+
         {/* Anyaggyűjtés */}
         {activeTab === "checklist" && (
           <div
@@ -967,6 +1294,237 @@ export default function ProjectDetailPage({
           </div>
         )}
       </div>
+
+      {showItemPicker && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.6)",
+            zIndex: 100,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: "16px",
+          }}
+        >
+          <Card className="p-6 w-full max-w-lg flex flex-col max-h-[80vh]">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold text-white">
+                Termék hozzáadása az árlistából
+              </h2>
+              <Button variant="ghost" onClick={() => setShowItemPicker(false)}>
+                Bezár
+              </Button>
+            </div>
+
+            <input
+              placeholder="Keresés név vagy cikkszám alapján..."
+              className="w-full h-10 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-card)] px-3 text-sm text-white mb-4"
+              value={itemSearch}
+              onChange={(e) => setItemSearch(e.target.value)}
+            />
+
+            <div className="overflow-y-auto flex-1 flex flex-col gap-2">
+              {priceList
+                .filter(
+                  (p) =>
+                    p.name.toLowerCase().includes(itemSearch.toLowerCase()) ||
+                    (p.item_number &&
+                      p.item_number.toLowerCase().includes(itemSearch.toLowerCase())),
+                )
+                .map((p) => {
+                  const alreadyAdded = (project.required_items ?? []).some(
+                    (ri) => ri.price_list_item_id === p._id,
+                  );
+                  return (
+                    <div
+                      key={p._id}
+                      className="flex justify-between items-center p-3 border border-[var(--color-border-subtle)] rounded-lg"
+                    >
+                      <div className="min-w-0 flex-1 pr-2">
+                        <div className="font-semibold text-white truncate">{p.name}</div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          {p.item_number} •{" "}
+                          {new Intl.NumberFormat("hu-HU", {
+                            style: "currency",
+                            currency: "HUF",
+                            maximumFractionDigits: 0,
+                          }).format(p.net_price)}{" "}
+                          / {p.unit}
+                        </div>
+                      </div>
+                      <Button
+                        variant={alreadyAdded ? "ghost" : "secondary"}
+                        disabled={alreadyAdded}
+                        onClick={() => {
+                          setShowItemPicker(false);
+                          setItemSearch("");
+                          void handleAddItem(p);
+                        }}
+                      >
+                        {alreadyAdded ? "Hozzáadva" : "Kiválaszt"}
+                      </Button>
+                    </div>
+                  );
+                })}
+              {priceList.length === 0 && (
+                <div className="text-gray-500 text-center py-4">
+                  Nincs termék az árlistában.
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {showReserveModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.6)",
+            zIndex: 100,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: "16px",
+          }}
+        >
+          <Card className="p-6 w-full max-w-md flex flex-col gap-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-bold text-white">
+                Készletfoglalás a projekthez
+              </h2>
+              <button
+                onClick={() => setShowReserveModal(null)}
+                className="text-gray-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="text-sm text-[var(--color-text-secondary)] flex flex-col gap-1.5">
+              <div>
+                Termék: <strong className="text-white">{showReserveModal.name}</strong>
+              </div>
+              <div>
+                Igényelt mennyiség:{" "}
+                <strong className="text-white">
+                  {showReserveModal.required_quantity} {showReserveModal.unit}
+                </strong>
+              </div>
+              <div>
+                Jelenleg lefoglalva a projektnek:{" "}
+                <strong className="text-white">
+                  {showReserveModal.reserved_quantity} {showReserveModal.unit}
+                </strong>
+              </div>
+              <div className="border-t border-[var(--color-border-subtle)] my-2"></div>
+              {loadingStockInfo ? (
+                <div className="text-gray-400 italic">Raktárkészlet lekérdezése...</div>
+              ) : stockItemDoc ? (
+                <>
+                  <div>
+                    Raktárhely:{" "}
+                    <strong className="text-white">
+                      {stockItemDoc.warehouse_location || "Nincs megadva"}
+                    </strong>
+                  </div>
+                  <div>
+                    Raktáron összesen:{" "}
+                    <strong className="text-white">
+                      {stockItemDoc.quantity_in_stock} {showReserveModal.unit}
+                    </strong>
+                  </div>
+                  <div>
+                    Ebből másnak lefoglalva:{" "}
+                    <strong className="text-white">
+                      {stockItemDoc.quantity_allocated || 0} {showReserveModal.unit}
+                    </strong>
+                  </div>
+                  <div>
+                    Szabadon elérhető:{" "}
+                    <strong className="text-white">
+                      {Math.max(
+                        0,
+                        stockItemDoc.quantity_in_stock -
+                          (stockItemDoc.quantity_allocated || 0),
+                      )}{" "}
+                      {showReserveModal.unit}
+                    </strong>
+                  </div>
+                </>
+              ) : (
+                <div className="text-[var(--color-status-error)] italic font-semibold">
+                  Ez a termék jelenleg nincs raktáron!
+                </div>
+              )}
+            </div>
+
+            {!loadingStockInfo &&
+            stockItemDoc &&
+            Math.max(
+              0,
+              stockItemDoc.quantity_in_stock - (stockItemDoc.quantity_allocated || 0),
+            ) > 0 ? (
+              <form onSubmit={handleReserveSubmit} className="flex flex-col gap-4">
+                <div>
+                  <label
+                    htmlFor="reserve-qty"
+                    className="block text-xs font-semibold text-gray-300 uppercase mb-1"
+                  >
+                    Foglalni kívánt mennyiség *
+                  </label>
+                  <input
+                    id="reserve-qty"
+                    type="number"
+                    min={1}
+                    max={Math.max(
+                      0,
+                      stockItemDoc.quantity_in_stock -
+                        (stockItemDoc.quantity_allocated || 0),
+                    )}
+                    value={String(reserveQty || "")}
+                    onChange={(e) => setReserveQty(Number(e.target.value))}
+                    className="w-full h-10 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-card)] px-3 text-sm text-white"
+                    required
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 mt-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setShowReserveModal(null)}
+                  >
+                    Mégsem
+                  </Button>
+                  <Button type="submit" variant="primary" disabled={reservingStock}>
+                    {reservingStock ? "Foglalás..." : "Foglalás rögzítése"}
+                  </Button>
+                </div>
+              </form>
+            ) : !loadingStockInfo ? (
+              <div className="flex justify-end gap-3 mt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setShowReserveModal(null)}
+                >
+                  Bezár
+                </Button>
+              </div>
+            ) : null}
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

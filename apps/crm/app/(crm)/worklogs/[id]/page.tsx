@@ -100,6 +100,10 @@ function WorklogFormContent({ id }: { id: string }) {
   const [emailSuccess, setEmailSuccess] = useState(false);
 
   const [contactId, setContactId] = useState("");
+  const [projectId, setProjectId] = useState("");
+  const [targetType, setTargetType] = useState<"partner" | "project">("partner");
+  const [projects, setProjects] = useState<any[]>([]);
+  const [selectedProjectDoc, setSelectedProjectDoc] = useState<any | null>(null);
   const [category, setCategory] = useState("");
   const [workDate, setWorkDate] = useState(new Date().toISOString().split("T")[0]);
   const [workStart, setWorkStart] = useState("08:00");
@@ -128,7 +132,7 @@ function WorklogFormContent({ id }: { id: string }) {
     const ac = new AbortController();
     (async () => {
       try {
-        const [cList, uList, sList, pList, stList, chList] = await Promise.all([
+        const [cList, uList, sList, pList, stList, chList, prList] = await Promise.all([
           apiJson<Contact[]>("/api/contacts", { signal: ac.signal }),
           apiJson<unknown[]>("/api/crm-users", { signal: ac.signal }),
           apiJson<Settings>("/api/settings", { signal: ac.signal }),
@@ -139,12 +143,14 @@ function WorklogFormContent({ id }: { id: string }) {
           apiJson<ChecklistTemplate[]>("/api/checklists", { signal: ac.signal }).catch(
             () => [],
           ),
+          apiJson<any[]>("/api/projects", { signal: ac.signal }).catch(() => []),
         ]);
         setContacts(cList);
         setCompanyDetails(sList.company_details || null);
         setPriceList(pList);
         setStockItems(stList);
         setChecklistTemplates(chList || []);
+        setProjects(prList.filter((p: any) => p.status !== "closed"));
         setCrmUsers(
           uList.map((row) => {
             const u = row as CrmUser;
@@ -160,8 +166,13 @@ function WorklogFormContent({ id }: { id: string }) {
   }, []);
 
   useEffect(() => {
-    const fromUrl = searchParams.get("contact_id")?.trim();
-    if (isNew && fromUrl) setContactId(fromUrl);
+    const fromContact = searchParams.get("contact_id")?.trim();
+    const fromProject = searchParams.get("project_id")?.trim();
+    if (isNew && fromContact) setContactId(fromContact);
+    if (isNew && fromProject) {
+      setProjectId(fromProject);
+      setTargetType("project");
+    }
   }, [isNew, searchParams]);
 
   useEffect(() => {
@@ -174,6 +185,9 @@ function WorklogFormContent({ id }: { id: string }) {
         setWorklogNumber(w.worklog_number);
         setStatus(w.status);
         setContactId(w.contact_id ?? "");
+        const pid = (w as any).project_id ?? "";
+        setProjectId(pid);
+        if (pid) setTargetType("project");
         setCategory(w.work_category);
         setTechnicianName(w.technician_name);
         setWorkDate(w.work_date.toISOString().split("T")[0]);
@@ -210,6 +224,16 @@ function WorklogFormContent({ id }: { id: string }) {
       .catch(() => setContactInventory([]));
     return () => ac.abort();
   }, [contactId]);
+
+  // Keep selectedProjectDoc in sync with projectId
+  useEffect(() => {
+    if (!projectId) {
+      setSelectedProjectDoc(null);
+      return;
+    }
+    const found = projects.find((p: any) => p._id === projectId);
+    setSelectedProjectDoc(found ?? null);
+  }, [projectId, projects]);
 
   const buildPayload = useCallback(() => {
     const travelParsed = travelKm.trim() === "" ? null : Number(travelKm);
@@ -249,6 +273,7 @@ function WorklogFormContent({ id }: { id: string }) {
       travel_km,
       notes: notes.trim() || null,
       contact_id: contactId.trim() || null,
+      project_id: targetType === "project" && projectId ? projectId : null,
       checklist_items: checklistItems,
       serviced_item_ids: servicedItemIds,
     };
@@ -265,6 +290,8 @@ function WorklogFormContent({ id }: { id: string }) {
     description,
     notes,
     contactId,
+    projectId,
+    targetType,
     checklistItems,
     servicedItemIds,
   ]);
@@ -463,6 +490,99 @@ function WorklogFormContent({ id }: { id: string }) {
           }}
         >
           <SectionHeader title="Alapadatok" />
+
+          {/* Target type toggle */}
+          {!disabled && (
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                Rögzítés módja:
+              </span>
+              <div className="flex rounded-lg overflow-hidden border border-[var(--color-border-subtle)]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTargetType("partner");
+                    setProjectId("");
+                  }}
+                  className="px-4 py-1.5 text-sm font-medium transition-colors"
+                  style={{
+                    background:
+                      targetType === "partner"
+                        ? "var(--color-accent-primary)"
+                        : "var(--color-bg-secondary)",
+                    color: targetType === "partner" ? "#fff" : "var(--color-text-muted)",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  Partnerre
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTargetType("project")}
+                  className="px-4 py-1.5 text-sm font-medium transition-colors"
+                  style={{
+                    background:
+                      targetType === "project"
+                        ? "var(--color-accent-primary)"
+                        : "var(--color-bg-secondary)",
+                    color: targetType === "project" ? "#fff" : "var(--color-text-muted)",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  Projekthez
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Project selector (only when project mode) */}
+          {targetType === "project" && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="wl-project">Projekt *</Label>
+              <Select
+                value={projectId || "__empty__"}
+                onValueChange={(v) => setProjectId(v === "__empty__" ? "" : v)}
+                disabled={disabled}
+              >
+                <SelectTrigger id="wl-project" className="w-full">
+                  <SelectValue placeholder="-- Projekt --" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__empty__">-- Projekt --</SelectItem>
+                  {projects.map((p: any) => (
+                    <SelectItem key={p._id} value={p._id}>
+                      {p.name} {p.project_number ? `(${p.project_number})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedProjectDoc && (
+                <div className="mt-1 flex flex-wrap gap-4 text-xs text-[var(--color-text-muted)]">
+                  {selectedProjectDoc.description && (
+                    <span>{selectedProjectDoc.description}</span>
+                  )}
+                  {selectedProjectDoc.status && (
+                    <span>
+                      Állapot:{" "}
+                      <strong className="text-[var(--color-text-primary)]">
+                        {selectedProjectDoc.status}
+                      </strong>
+                    </span>
+                  )}
+                  {(selectedProjectDoc.required_items ?? []).length > 0 && (
+                    <span>
+                      Bevásárlólista:{" "}
+                      <strong className="text-amber-400">
+                        {selectedProjectDoc.required_items.length} tétel
+                      </strong>
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Row 1: Szervezet | Munkavégzés típusa | Technikus */}
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -802,6 +922,72 @@ function WorklogFormContent({ id }: { id: string }) {
             </div>
           </div>
         )}
+
+        {/* Project shopping list quick-add */}
+        {targetType === "project" &&
+          selectedProjectDoc &&
+          (selectedProjectDoc.required_items ?? []).length > 0 &&
+          !disabled && (
+            <div
+              className="rounded-xl border p-5 flex flex-col gap-3"
+              style={{
+                background: "rgba(245,158,11,0.05)",
+                borderColor: "rgba(245,158,11,0.3)",
+              }}
+            >
+              <div
+                className="text-xs font-semibold uppercase tracking-wider"
+                style={{ color: "#f59e0b" }}
+              >
+                Projekt bevásárlólista – Gyors hozzáadás
+              </div>
+              <p className="text-xs text-[var(--color-text-muted)]">
+                Az alábbi tételek a projekthez előre fel lettek véve. Kattintsd rájuk,
+                hogy felkerüljenek a munkalap anyagaiba.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {(selectedProjectDoc.required_items as any[]).map((ri: any) => {
+                  const alreadyAdded = items.some(
+                    (it) => it.price_list_item_id === ri.price_list_item_id,
+                  );
+                  return (
+                    <button
+                      key={ri.price_list_item_id}
+                      type="button"
+                      disabled={alreadyAdded}
+                      onClick={() => {
+                        setItems((prev) => [
+                          ...prev.filter(
+                            (it) => it.description.trim() !== "" || it.price_list_item_id,
+                          ),
+                          {
+                            description: ri.name,
+                            quantity: ri.required_quantity || 1,
+                            unit: ri.unit || "db",
+                            unit_price: null,
+                            price_list_item_id: ri.price_list_item_id,
+                          },
+                        ]);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
+                      style={{
+                        background: alreadyAdded
+                          ? "rgba(245,158,11,0.05)"
+                          : "rgba(245,158,11,0.15)",
+                        border: "1px solid rgba(245,158,11,0.3)",
+                        color: alreadyAdded ? "var(--color-text-muted)" : "#f59e0b",
+                        cursor: alreadyAdded ? "default" : "pointer",
+                        textDecoration: alreadyAdded ? "line-through" : "none",
+                      }}
+                    >
+                      {alreadyAdded ? "✓" : <Plus size={12} />}
+                      {ri.name} ({ri.required_quantity} {ri.unit})
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
         {/* Section 3: tételek (szerviz / anyag) */}
         <div

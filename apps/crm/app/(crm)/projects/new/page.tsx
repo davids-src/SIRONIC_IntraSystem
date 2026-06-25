@@ -17,7 +17,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Save, Plus, Trash2, GripVertical } from "lucide-react";
-import type { Contact } from "@crm/types";
+import type { Contact, PriceListItem } from "@crm/types";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 
 type CrmUserRow = {
@@ -50,14 +50,28 @@ export default function NewProjectPage() {
   const [checklist, setChecklist] = useState<
     { label: string; category: string; required: boolean }[]
   >([]);
+  const [priceList, setPriceList] = useState<PriceListItem[]>([]);
+  const [requiredItems, setRequiredItems] = useState<
+    {
+      price_list_item_id: string;
+      name: string;
+      unit: string;
+      required_quantity: number;
+    }[]
+  >([]);
+  const [showItemPicker, setShowItemPicker] = useState(false);
+  const [itemSearch, setItemSearch] = useState("");
 
   useEffect(() => {
     const ac = new AbortController();
     (async () => {
       try {
-        const [cRows, uRows] = await Promise.all([
+        const [cRows, uRows, pRows] = await Promise.all([
           apiJson<unknown[]>("/api/contacts", { signal: ac.signal }),
           apiJson<CrmUserRow[]>("/api/crm-users", { signal: ac.signal }),
+          apiJson<PriceListItem[]>("/api/price-list", { signal: ac.signal }).catch(
+            () => [],
+          ),
         ]);
         const parsed = cRows.map((r) => {
           const x = r as Record<string, unknown>;
@@ -69,9 +83,12 @@ export default function NewProjectPage() {
         });
         setContacts(parsed);
         setUsers(uRows);
+        setPriceList(pRows.filter((p) => p.is_active && p.type === "product"));
       } catch {
         if (!ac.signal.aborted) {
-          setLoadErr("Nem sikerült betölteni az ügyfeleket vagy a munkatársakat.");
+          setLoadErr(
+            "Nem sikerült betölteni az ügyfeleket, munkatársakat vagy az árlistát.",
+          );
         }
       }
     })();
@@ -164,6 +181,7 @@ export default function NewProjectPage() {
         portal_visible: portalVisible,
         phases: phasesPayload,
         checklist: checklistPayload,
+        required_items: requiredItems,
       };
       const created = await apiJsonBody<{ _id: string }>("/api/projects", "POST", body);
       router.push(`/projects/${created._id}`);
@@ -485,6 +503,71 @@ export default function NewProjectPage() {
           </div>
         </Card>
 
+        <Card className="flex flex-col gap-4 p-6">
+          <div className="flex flex-row items-center justify-between gap-4 border-b border-[var(--color-border-subtle)] pb-2">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
+              Bevásárlólista / Szükséges anyagok
+            </h3>
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-8 px-2 text-sm"
+              onClick={() => setShowItemPicker(true)}
+            >
+              <Plus size={14} className="mr-1" /> Termék hozzáadása
+            </Button>
+          </div>
+
+          <p className="text-sm text-[var(--color-text-secondary)]">
+            Válasszon ki termékeket az árlistából és adja meg a tervezett mennyiséget.
+          </p>
+
+          <div className="flex flex-col gap-2">
+            {requiredItems.map((item, idx) => (
+              <div
+                key={idx}
+                className="flex flex-row items-center gap-3 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-secondary)] p-2"
+              >
+                <div className="min-w-0 flex-1 text-sm font-medium text-white px-2">
+                  {item.name} ({item.unit})
+                </div>
+                <div className="w-32 shrink-0">
+                  <Input
+                    type="number"
+                    min={0.01}
+                    step="any"
+                    value={item.required_quantity || ""}
+                    onChange={(e) => {
+                      const newItems = [...requiredItems];
+                      const current = newItems[idx];
+                      if (current)
+                        current.required_quantity = Number(e.target.value) || 0;
+                      setRequiredItems(newItems);
+                    }}
+                    placeholder="Mennyiség"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="h-9 w-9 shrink-0 p-0 text-[var(--color-status-error)]"
+                  onClick={() =>
+                    setRequiredItems(requiredItems.filter((_, i) => i !== idx))
+                  }
+                >
+                  <Trash2 size={16} />
+                </Button>
+              </div>
+            ))}
+
+            {requiredItems.length === 0 && (
+              <p className="text-sm text-gray-500 italic text-center py-4">
+                Még nincsenek tételek hozzáadva.
+              </p>
+            )}
+          </div>
+        </Card>
+
         <div className="sticky bottom-4 z-10 flex flex-row items-center justify-end gap-3 rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-card)] p-4 shadow-xl">
           <Button type="button" variant="ghost" onClick={() => router.back()}>
             Mégse
@@ -495,6 +578,95 @@ export default function NewProjectPage() {
           </Button>
         </div>
       </form>
+
+      {showItemPicker && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.6)",
+            zIndex: 100,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: "16px",
+          }}
+        >
+          <Card className="p-6 w-full max-w-lg flex flex-col max-h-[80vh]">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold text-white">Hozzáadás árlistából</h2>
+              <Button variant="ghost" onClick={() => setShowItemPicker(false)}>
+                Bezár
+              </Button>
+            </div>
+
+            <Input
+              placeholder="Keresés név vagy cikkszám alapján..."
+              value={itemSearch}
+              onChange={(e) => setItemSearch(e.target.value)}
+            />
+
+            <div className="mt-4 overflow-y-auto flex-1 flex flex-col gap-2">
+              {priceList
+                .filter(
+                  (p) =>
+                    p.name.toLowerCase().includes(itemSearch.toLowerCase()) ||
+                    (p.item_number &&
+                      p.item_number.toLowerCase().includes(itemSearch.toLowerCase())),
+                )
+                .map((p) => {
+                  const alreadyAdded = requiredItems.some(
+                    (ri) => ri.price_list_item_id === p._id,
+                  );
+                  return (
+                    <div
+                      key={p._id}
+                      className="flex justify-between items-center p-3 border border-[var(--color-border-subtle)] rounded-lg"
+                    >
+                      <div className="min-w-0 flex-1 pr-2">
+                        <div className="font-semibold text-white truncate">{p.name}</div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          {p.item_number} •{" "}
+                          {new Intl.NumberFormat("hu-HU", {
+                            style: "currency",
+                            currency: "HUF",
+                            maximumFractionDigits: 0,
+                          }).format(p.net_price)}{" "}
+                          / {p.unit}
+                        </div>
+                      </div>
+                      <Button
+                        variant={alreadyAdded ? "ghost" : "secondary"}
+                        disabled={alreadyAdded}
+                        onClick={() => {
+                          setRequiredItems([
+                            ...requiredItems,
+                            {
+                              price_list_item_id: p._id,
+                              name: p.name,
+                              unit: p.unit,
+                              required_quantity: 1,
+                            },
+                          ]);
+                          setShowItemPicker(false);
+                          setItemSearch("");
+                        }}
+                      >
+                        {alreadyAdded ? "Hozzáadva" : "Kiválaszt"}
+                      </Button>
+                    </div>
+                  );
+                })}
+              {priceList.length === 0 && (
+                <div className="text-gray-500 text-center py-4">Nincs találat.</div>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
