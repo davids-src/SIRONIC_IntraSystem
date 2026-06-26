@@ -36,6 +36,11 @@ export default function NewOrganizationPage() {
   const [country, setCountry] = useState("Magyarország");
   const [notes, setNotes] = useState("");
 
+  // Pricing profile state
+  const [partnerRole, setPartnerRole] = useState<string>("client");
+  const [clientCategory, setClientCategory] = useState<string>("smb");
+  const [pricingContractType, setPricingContractType] = useState<string>("occasional");
+
   // Invite dialog state
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [createdId, setCreatedId] = useState<string | null>(null);
@@ -75,6 +80,9 @@ export default function NewOrganizationPage() {
           city: city.trim(),
           country: country.trim(),
         },
+        partner_role: partnerRole,
+        client_category: clientCategory,
+        pricing_contract_type: pricingContractType,
       });
       const newContact = raw as Contact;
       setCreatedId(newContact._id);
@@ -246,6 +254,57 @@ export default function NewOrganizationPage() {
             onChange={(e) => setCountry(e.target.value)}
             className="col-span-2"
           />
+        </div>
+      </Card>
+
+      <Card className="p-6 space-y-4">
+        <h3 className="text-lg font-bold text-[var(--color-text-primary)]">
+          Árképzési Beállítások (Opcionális)
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="partner-role">Partner Szerepköre</Label>
+            <Select value={partnerRole} onValueChange={setPartnerRole}>
+              <SelectTrigger id="partner-role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="client">Ügyfél (Megrendelő)</SelectItem>
+                <SelectItem value="subcontractor_employer">Alvállalkozó</SelectItem>
+                <SelectItem value="supplier">Beszállító</SelectItem>
+                <SelectItem value="mixed">Vegyes (Ügyfél és Alvállalkozó)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="client-category">Ügyfél Kategória</Label>
+            <Select value={clientCategory} onValueChange={setClientCategory}>
+              <SelectTrigger id="client-category">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="individual">Magánszemély (B2C)</SelectItem>
+                <SelectItem value="smb">Kis- és középvállalkozás (KKV)</SelectItem>
+                <SelectItem value="enterprise">Nagyvállalat / Prémium</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="pricing-contract-type">Szerződés Típusa</Label>
+            <Select value={pricingContractType} onValueChange={setPricingContractType}>
+              <SelectTrigger id="pricing-contract-type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="occasional">Eseti (Nincs keretszerződés)</SelectItem>
+                <SelectItem value="6month">6 hónapos keretszerződés</SelectItem>
+                <SelectItem value="1year">1 éves keretszerződés</SelectItem>
+                <SelectItem value="2year">2 éves keretszerződés</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </Card>
 

@@ -309,3 +309,32 @@ Nagy- és közepes értékű fizikai eszközök (szerszámok, mérőkészüléke
 
 - `tools` modul hozzáadva a `PermissionModule` típushoz.
 - Minimum `view` + `write` szükséges az alapfunkciókhoz, `admin` szükséges a végleges törléshez.
+
+---
+
+### 4.11. Szolgáltatás Árlista és Dinamikus Árképzési Motor (Service Pricing Engine)
+
+A rendszer dedikált motort tartalmaz a szolgáltatások (szellemi termékek, munkadíjak, kiszállások) dinamikus, partner-specifikus árazásához. Míg a fizikai termékek ára fix vagy készletfüggő, a szolgáltatások ára a partner profiljától (ügyfél kategória, szerződés típusa, szerepkör) és a szolgáltatás kategóriájától függően folyamatosan kalkulálódik.
+
+#### Adatbázis entitások és kapcsolatok
+
+- **PricingSettings (`packages/db/src/models/pricing-settings.ts`)**: Globális szorzótáblázat (multiplier matrix). Különböző kombinációk (pl. `enterprise`, `subcontractor_presence`) határozzák meg, hogy a szolgáltatások alapárát milyen szorzóval (pl. `0.85` vagy `1.2`) kell módosítani.
+- **ServiceCategory & ServiceSubCategory**: A szolgáltatások logikai csoportosítása, fa-struktúrába rendezése (pl. IT üzemeltetés -> Szerver karbantartás).
+- **ServicePriceListItem (`packages/db/src/models/service-price-list-item.ts`)**: Egy konkrét szolgáltatás definiálása. Tartalmazza az alap belső elszámolási árat (`internal_base_price`), amire a szorzók rátapadnak, és opciós sürgősségi felárakat (`urgency_multipliers`).
+- **Contact (Partner Profil bővítés)**: A Partnerek adatlapján új mezők definiálják a partner árazási profilját: `partner_role` (ügyfél, alvállalkozó, beszállító, vegyes), `client_category` (magánszemély, kkv, enterprise), `pricing_contract_type` (eseti, 6 havi, 1 éves, 2 éves).
+
+#### Dinamikus Árképzési Algoritmus és Frontend Mátrix (`ServicePriceTable`)
+
+A szolgáltatások árképzése kettős logikát követ:
+
+1. **Frontend Mátrix Táblázat (Excel-szerű UI)**: A `/service-price-list` főoldalon egy teljes hierarchiájú, kinyitott fa-struktúrájú táblázat jelenik meg. A frontend oldal letölti a globális `PricingSettings` szorzóit, és a kliens komponens (`ServiceItemRow`) futásidőben kalkulálja ki az összes oszlop (pl. KKV 1 év, Magánszemély, Nagyvállalat) adott árát. Nem történik API hívás soronként, az UI azonnali visszajelzést ad. Ha a szűrősávban (PartnerPricePanel) egy partnert kiválasztanak, a rendszer a partner profilja (`partner_role`, `client_category`, `pricing_contract_type`) alapján meghatározza a kulcsot (pl. `smb_1year`), és egy extra oszlopban megjeleníti a számított árat.
+2. **Szerveroldali Snapshot API (`GET /api/service-price-list/:id/calculated-price`)**: Bár az árazás vizuálisan a frontenden jelenik meg, az üzleti logikát és a dokumentumokhoz csatolt "befagyasztott" állapotképet (price_snapshot) a szerver állítja elő. Amikor egy ajánlatba vagy munkalapra tétel kerül, a frontend ezen a végponton keresztül (query paraméterekkel, pl. `contact_id`, `urgency`) biztosítja, hogy az árképzés hiteles, és beépüljön a dokumentumba.
+
+#### Snapshot (Fetch-and-Freeze) Logika a Dokumentumokban
+
+Hogy a kiállított ajánlatok, munkalapok és teljesítési igazolások utólag ne változzanak meg egy esetleges globális árváltozás vagy partner-kategória váltás esetén, a rendszer az ún. **fetch-and-freeze** mintát alkalmazza.
+
+- Minden dokumentum (`OfferLine`, `WorklogItem`, `CompletionCertificateLine`) kibővült a `service_price_list_item_id` és `price_snapshot` mezőkkel.
+- A tétel felvitelekor a rendszer lekéri az adott pillanatban érvényes árat és a snapshotot az API-tól, és elmenti a dokumentumba.
+- Későbbi megtekintéskor vagy letöltéskor (PDF generálás) szigorúan a dokumentumba ágyazott `price_snapshot.calculated_price` vagy a rögzített `unit_price` érvényesül.
+- Ez az adatintegritás biztosítja a jogi és pénzügyi nyomonkövethetőséget.

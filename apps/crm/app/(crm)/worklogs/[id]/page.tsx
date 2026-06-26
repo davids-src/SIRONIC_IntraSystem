@@ -122,9 +122,12 @@ function WorklogFormContent({ id }: { id: string }) {
 
   const [showPricesOnPdf, setShowPricesOnPdf] = useState(true);
   const [showItemPicker, setShowItemPicker] = useState(false);
+  const [showServicePicker, setShowServicePicker] = useState(false);
   const [priceList, setPriceList] = useState<PriceListItem[]>([]);
+  const [servicePriceList, setServicePriceList] = useState<any[]>([]);
   const [stockItems, setStockItems] = useState<StockItemWithProduct[]>([]);
   const [itemSearch, setItemSearch] = useState("");
+  const [serviceSearch, setServiceSearch] = useState("");
 
   const disabled = status !== "draft";
 
@@ -132,22 +135,27 @@ function WorklogFormContent({ id }: { id: string }) {
     const ac = new AbortController();
     (async () => {
       try {
-        const [cList, uList, sList, pList, stList, chList, prList] = await Promise.all([
-          apiJson<Contact[]>("/api/contacts", { signal: ac.signal }),
-          apiJson<unknown[]>("/api/crm-users", { signal: ac.signal }),
-          apiJson<Settings>("/api/settings", { signal: ac.signal }),
-          apiJson<PriceListItem[]>("/api/price-list", { signal: ac.signal }),
-          apiJson<StockItemWithProduct[]>("/api/warehouse/stock", {
-            signal: ac.signal,
-          }).catch(() => []),
-          apiJson<ChecklistTemplate[]>("/api/checklists", { signal: ac.signal }).catch(
-            () => [],
-          ),
-          apiJson<any[]>("/api/projects", { signal: ac.signal }).catch(() => []),
-        ]);
+        const [cList, uList, sList, pList, stList, chList, prList, spList] =
+          await Promise.all([
+            apiJson<Contact[]>("/api/contacts", { signal: ac.signal }),
+            apiJson<unknown[]>("/api/crm-users", { signal: ac.signal }),
+            apiJson<Settings>("/api/settings", { signal: ac.signal }),
+            apiJson<PriceListItem[]>("/api/price-list", { signal: ac.signal }),
+            apiJson<StockItemWithProduct[]>("/api/warehouse/stock", {
+              signal: ac.signal,
+            }).catch(() => []),
+            apiJson<ChecklistTemplate[]>("/api/checklists", { signal: ac.signal }).catch(
+              () => [],
+            ),
+            apiJson<any[]>("/api/projects", { signal: ac.signal }).catch(() => []),
+            apiJson<any[]>("/api/service-price-list", { signal: ac.signal }).catch(
+              () => [],
+            ),
+          ]);
         setContacts(cList);
         setCompanyDetails(sList.company_details || null);
         setPriceList(pList);
+        setServicePriceList(spList || []);
         setStockItems(stList);
         setChecklistTemplates(chList || []);
         setProjects(prList.filter((p: any) => p.status !== "closed"));
@@ -246,6 +254,8 @@ function WorklogFormContent({ id }: { id: string }) {
         unit: (it.unit || "db").trim() || "db",
         unit_price: it.unit_price,
         price_list_item_id: it.price_list_item_id,
+        service_price_list_item_id: it.service_price_list_item_id,
+        price_snapshot: it.price_snapshot,
       }));
     const lineItems =
       cleanedItems.length > 0
@@ -257,6 +267,8 @@ function WorklogFormContent({ id }: { id: string }) {
               unit: "db",
               unit_price: null,
               price_list_item_id: null,
+              service_price_list_item_id: null,
+              price_snapshot: null,
             },
           ];
 
@@ -410,6 +422,41 @@ function WorklogFormContent({ id }: { id: string }) {
       {title}
     </div>
   );
+
+  const addServiceItem = async (service: any) => {
+    try {
+      const payload: any = {
+        partnerId: contactId === "__none__" ? null : contactId,
+      };
+      if (service.category_id) {
+        payload.categoryId = service.category_id;
+      }
+      const calcData = await apiJsonBody<{
+        calculatedPrice: number;
+        snapshot: any;
+      }>(`/api/service-price-list/${service._id}/calculated-price`, "POST", payload);
+
+      const newItem = {
+        description: service.name,
+        quantity: 1,
+        unit: service.unit,
+        unit_price: calcData.calculatedPrice,
+        price_list_item_id: null,
+        service_price_list_item_id: service._id,
+        price_snapshot: calcData.snapshot,
+      };
+
+      if (items.length === 1 && items[0]?.description === "") {
+        setItems([newItem]);
+      } else {
+        setItems((prev) => [...prev, newItem]);
+      }
+      setShowServicePicker(false);
+      setServiceSearch("");
+    } catch (e) {
+      alert("Hiba történt az árkalkuláció során.");
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -1031,6 +1078,19 @@ function WorklogFormContent({ id }: { id: string }) {
                     border: "1px solid var(--color-border-default)",
                     cursor: "pointer",
                   }}
+                  onClick={() => setShowServicePicker(true)}
+                >
+                  <Plus size={13} /> + Szolgáltatás hozzáadása
+                </button>
+                <button
+                  type="button"
+                  className="text-xs flex items-center gap-1 px-3 py-1.5 rounded-md"
+                  style={{
+                    background: "var(--color-bg-secondary)",
+                    color: "var(--color-accent-primary)",
+                    border: "1px solid var(--color-border-default)",
+                    cursor: "pointer",
+                  }}
                   onClick={() => setItems((prev) => [...prev, emptyItem()])}
                 >
                   <Plus size={13} /> + Egyedi anyag
@@ -1586,6 +1646,114 @@ function WorklogFormContent({ id }: { id: string }) {
                   );
                 })}
               {priceList.length === 0 && (
+                <div
+                  style={{
+                    color: "var(--color-text-muted)",
+                    textAlign: "center",
+                    padding: "20px",
+                  }}
+                >
+                  Nincs találat.
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {showServicePicker && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.6)",
+            zIndex: 100,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Card
+            style={{
+              padding: "24px",
+              width: "100%",
+              maxWidth: "600px",
+              maxHeight: "80vh",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "16px",
+              }}
+            >
+              <h2 style={{ margin: 0 }}>Hozzáadás szolgáltatások közül</h2>
+              <Button variant="ghost" onClick={() => setShowServicePicker(false)}>
+                Bezár
+              </Button>
+            </div>
+
+            <Input
+              placeholder="Keresés..."
+              value={serviceSearch}
+              onChange={(e) => setServiceSearch(e.target.value)}
+              style={{ marginBottom: "16px" }}
+            />
+
+            <div
+              style={{
+                overflowY: "auto",
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+              }}
+            >
+              {servicePriceList
+                .filter(
+                  (p) =>
+                    p.name.toLowerCase().includes(serviceSearch.toLowerCase()) ||
+                    p.sku?.toLowerCase().includes(serviceSearch.toLowerCase()),
+                )
+                .map((p) => {
+                  return (
+                    <div
+                      key={p._id}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "12px",
+                        border: "1px solid var(--color-border-subtle)",
+                        borderRadius: "8px",
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{p.name}</div>
+                        <div
+                          style={{
+                            fontSize: "12px",
+                            color: "var(--color-text-muted)",
+                            marginTop: "4px",
+                          }}
+                        >
+                          {p.sku}
+                        </div>
+                      </div>
+                      <Button variant="secondary" onClick={() => addServiceItem(p)}>
+                        Kiválaszt
+                      </Button>
+                    </div>
+                  );
+                })}
+              {servicePriceList.length === 0 && (
                 <div
                   style={{
                     color: "var(--color-text-muted)",

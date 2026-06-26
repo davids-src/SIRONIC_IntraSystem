@@ -7,6 +7,7 @@ import {
   ProjectModel,
   TicketModel,
   WorklogModel,
+  WarrantyCardModel,
   serializeForJson,
 } from "@crm/db";
 import { guard, handleApiError, requireCrmAuth, withDb } from "@/lib/api-helpers";
@@ -32,6 +33,21 @@ function relTimeHu(d: Date): string {
   return `${Math.floor(sec / 86400)} napja`;
 }
 
+/** Utolsó 7 nap napokra bontott aktivitás száma a heatmap-hez */
+function buildWeeklyActivity(dates: Date[]): { day: string; count: number }[] {
+  const now = new Date();
+  const days: { day: string; count: number }[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const label = new Intl.DateTimeFormat("hu-HU", { weekday: "short" }).format(d);
+    const dayStr = d.toISOString().slice(0, 10);
+    const count = dates.filter((dt) => dt.toISOString().slice(0, 10) === dayStr).length;
+    days.push({ day: label, count });
+  }
+  return days;
+}
+
 export async function GET() {
   try {
     const { actor } = await requireCrmAuth();
@@ -44,18 +60,29 @@ export async function GET() {
         contacts.map((c) => [String(c._id), c.name]),
       );
 
+      const now = new Date();
+      const in30d = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      const in60d = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+      const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
       const [
         ticketsOpen,
         projectsActive,
         invoicesDue,
         contractsSent,
         certsSent,
+        worklogsOpen,
+        invoicesOverdue,
+        warrantiesExpiringCount,
         ticketsRecent,
         worklogsRecent,
         contractsRecent,
         certsRecent,
         projectsWithDeadline,
         contractsRenewal,
+        // Heti aktivitás alapadatok
+        ticketsLast7,
+        worklogsLast7,
       ] = await Promise.all([
         TicketModel.countDocuments({
           tenantId,
@@ -68,6 +95,20 @@ export async function GET() {
         }),
         ContractModel.countDocuments({ tenantId, status: "sent" }),
         CompletionCertificateModel.countDocuments({ tenantId, status: "sent" }),
+        // ÚJ: Nyitott (nem lezárt) munkalapok
+        WorklogModel.countDocuments({
+          tenantId,
+          status: { $nin: ["finalized", "cancelled"] },
+        }),
+        // ÚJ: Lejárt (overdue) számlák
+        InvoiceModel.countDocuments({ tenantId, status: "overdue" }),
+        // ÚJ: Lejáró garancia kártyák (30 napon belül)
+        WarrantyCardModel.countDocuments({
+          tenantId,
+          status: "active",
+          is_archived: { $ne: true },
+          "lines.warranty_end": { $lte: in30d, $gte: now },
+        }),
         TicketModel.find({ tenantId }).sort({ updated_at: -1 }).limit(4).lean(),
         WorklogModel.find({ tenantId }).sort({ updated_at: -1 }).limit(3).lean(),
         ContractModel.find({ tenantId }).sort({ updated_at: -1 }).limit(3).lean(),
@@ -85,11 +126,18 @@ export async function GET() {
           .lean(),
         ContractModel.find({
           tenantId,
-          valid_until: { $ne: null },
+          valid_until: { $ne: null, $lte: in60d },
           status: { $nin: ["cancelled"] },
         })
           .sort({ valid_until: 1 })
           .limit(8)
+          .lean(),
+        // Heti aktivitáshoz
+        TicketModel.find({ tenantId, updated_at: { $gte: last7d } })
+          .select("updated_at")
+          .lean(),
+        WorklogModel.find({ tenantId, updated_at: { $gte: last7d } })
+          .select("updated_at")
           .lean(),
       ]);
 
@@ -145,9 +193,7 @@ export async function GET() {
       activity.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
       const recentActivity = activity.slice(0, 8);
 
-      const now = Date.now();
-      const in60d = now + 60 * 24 * 60 * 60 * 1000;
-
+      const nowMs = now.getTime();
       const deadlineRows: {
         sortAt: number;
         id: string;
@@ -162,7 +208,7 @@ export async function GET() {
 
       for (const p of projectsWithDeadline) {
         const dl = p.deadline ? new Date(p.deadline as Date) : null;
-        if (!dl || dl.getTime() < now - 86400000) continue;
+        if (!dl || dl.getTime() < nowMs - 86400000) continue;
         const d = daysFromNow(dl);
         const cn = p.contact_id ? (contactName.get(p.contact_id) ?? "—") : "—";
         deadlineRows.push({
@@ -180,7 +226,7 @@ export async function GET() {
 
       for (const c of contractsRenewal) {
         const vu = c.valid_until ? new Date(c.valid_until as Date) : null;
-        if (!vu || vu.getTime() > in60d) continue;
+        if (!vu) continue;
         const d = daysFromNow(vu);
         const cn = contactName.get(c.contact_id) ?? "—";
         deadlineRows.push({
@@ -242,16 +288,28 @@ export async function GET() {
         });
       }
 
+      // Heti aktivitás heatmap
+      const allDates = [
+        ...ticketsLast7.map((t) => new Date(t.updated_at as Date)),
+        ...worklogsLast7.map((w) => new Date(w.updated_at as Date)),
+      ];
+      const weeklyActivity = buildWeeklyActivity(allDates);
+
       const payload = {
         stats: {
           openTickets: ticketsOpen,
           activeProjects: projectsActive,
           invoicesAwaiting: invoicesDue,
           pendingSignatures: contractsSent + certsSent,
+          // ÚJ statisztikák
+          openWorklogs: worklogsOpen,
+          overdueInvoices: invoicesOverdue,
+          warrantiesExpiringSoon: warrantiesExpiringCount,
         },
         recentActivity,
         upcomingDeadlines,
         pendingSignatures: signatureQueue.slice(0, 12),
+        weeklyActivity,
       };
 
       return NextResponse.json(serializeForJson(payload));

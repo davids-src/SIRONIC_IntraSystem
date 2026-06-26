@@ -1,14 +1,19 @@
 import { defineSchema } from "./schema-def";
+import { priceSnapshotSchema } from "./embedded-schemas";
 import { getModel } from "./get-model";
 import { ts } from "./timestamps";
 
 const completionCertificateLineSchema = defineSchema(
   {
     price_list_item_id: { type: String, default: null },
+    /** Szolgáltatás Árlistából – null ha fizikai termék */
+    service_price_list_item_id: { type: String, default: null },
     description: { type: String, required: true },
     quantity: { type: Number, required: true },
     unit: { type: String, required: true },
     net_unit_price: { type: Number, default: 0 },
+    /** Árképzési snapshot – csak service tételeknél, lefagyasztott */
+    price_snapshot: { type: priceSnapshotSchema, default: null },
   },
   { _id: false },
 );

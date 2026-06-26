@@ -497,6 +497,79 @@ export default function SettingsPage() {
         </Card>
       </Link>
 
+      {/* Pricing Settings link */}
+      <Link href="/settings/pricing" style={{ display: "block", textDecoration: "none" }}>
+        <Card
+          className="p-5"
+          style={{ cursor: "pointer", transition: "box-shadow 0.2s" }}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(0, 0, 0, 0.1)")
+          }
+          onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "none")}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <div
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "8px",
+                  backgroundColor: "var(--accent-badge-bg, #3b0a0a)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {/* Using a simple custom SVG path or a generic icon from lucide-react if imported */}
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--accent-primary, #e53935)"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+                  <line x1="8" y1="10" x2="16" y2="10"></line>
+                  <line x1="8" y1="14" x2="16" y2="14"></line>
+                  <line x1="8" y1="18" x2="16" y2="18"></line>
+                </svg>
+              </div>
+              <div>
+                <h2
+                  style={{
+                    fontSize: "1rem",
+                    fontWeight: 700,
+                    color: "var(--text-primary)",
+                    margin: 0,
+                  }}
+                >
+                  Árképzési Beállítások
+                </h2>
+                <p
+                  style={{
+                    fontSize: "0.875rem",
+                    color: "var(--text-muted)",
+                    margin: "2px 0 0 0",
+                  }}
+                >
+                  Szorzók, óradíjak és overhead kezelése
+                </p>
+              </div>
+            </div>
+            <ChevronRight size={20} style={{ color: "var(--text-muted)" }} />
+          </div>
+        </Card>
+      </Link>
+
       <div
         style={{
           display: "grid",

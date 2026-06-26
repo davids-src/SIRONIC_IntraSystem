@@ -3,14 +3,25 @@ import { z } from "zod";
 import { OfferModel, formatNumber, nextCounterValue, serializeForJson } from "@crm/db";
 import { guard, handleApiError, requireCrmAuth, withDb } from "@/lib/api-helpers";
 
+const priceSnapshotZodSchema = z.object({
+  internal_base_price: z.number(),
+  client_multiplier: z.number(),
+  multiplier_key: z.string(),
+  calculated_price: z.number(),
+  urgency_multiplier: z.number().optional().default(1.0),
+  pricing_settings_captured_at: z.string().nullable().optional(),
+});
+
 const offerLineSchema = z.object({
   price_list_item_id: z.string().nullable().optional(),
+  service_price_list_item_id: z.string().nullable().optional(),
   description: z.string().min(1),
   quantity: z.number().positive(),
   unit: z.string().min(1),
   net_unit_price: z.number(),
   tax_rate: z.number(),
   discount_percent: z.number().min(0).max(100).optional().default(0),
+  price_snapshot: priceSnapshotZodSchema.nullable().optional(),
 });
 
 const createSchema = z.object({
@@ -76,12 +87,14 @@ export async function POST(req: Request) {
     const b = parsed.data;
     const lines = (b.lines ?? []).map((l) => ({
       price_list_item_id: l.price_list_item_id ?? null,
+      service_price_list_item_id: l.service_price_list_item_id ?? null,
       description: l.description,
       quantity: l.quantity,
       unit: l.unit,
       net_unit_price: l.net_unit_price,
       tax_rate: l.tax_rate,
       discount_percent: l.discount_percent ?? 0,
+      price_snapshot: l.price_snapshot ?? null,
     }));
     const totalFromLines = lines.length > 0 ? grossTotalFromLines(lines) : null;
     const total_amount =

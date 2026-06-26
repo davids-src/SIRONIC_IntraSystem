@@ -14,3 +14,8 @@ export function authorizeOrThrow(actor: ActorContext, permission: PermissionChec
     throw new ForbiddenError();
   }
 }
+
+// Pricing Engine exports
+export { mapContactToMultiplierKey } from "./pricing/mapContactToMultiplierKey";
+export { calculateServicePrice } from "./pricing/calculateServicePrice";
+export { checkAndSeedServiceCategories } from "./pricing/checkAndSeedServiceCategories";

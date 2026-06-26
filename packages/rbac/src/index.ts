@@ -22,6 +22,10 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     { module: "project_expense", action: "admin", scope: "global" },
     { module: "maintenance_plan", action: "admin", scope: "global" },
     { module: "floorplan", action: "admin", scope: "global" },
+    // Pricing Engine
+    { module: "service_price_list", action: "admin", scope: "global" },
+    { module: "service_categories", action: "admin", scope: "global" },
+    { module: "pricing_settings", action: "admin", scope: "global" },
   ],
   "crm.staff": [
     { module: "dashboard", action: "view", scope: "global" },
@@ -55,6 +59,9 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     { module: "project_expense", action: "write", scope: "global" },
     { module: "maintenance_plan", action: "write", scope: "global" },
     { module: "floorplan", action: "write", scope: "global" },
+    // Pricing Engine – staff csak olvashat, belső árakat NEM lát (API szinten szűrve)
+    { module: "service_price_list", action: "view", scope: "global" },
+    { module: "service_categories", action: "view", scope: "global" },
   ],
 
   "partner.admin": [

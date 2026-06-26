@@ -36,4 +36,9 @@ export {
   SecretShareModel,
   MaintenancePlanModel,
   FloorplanModel,
+  // Pricing Engine + Service Price List
+  PricingSettingsModel,
+  ServiceCategoryModel,
+  ServiceSubCategoryModel,
+  ServicePriceListItemModel,
 } from "./models";

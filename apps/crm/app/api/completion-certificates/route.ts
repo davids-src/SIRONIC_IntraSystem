@@ -8,12 +8,23 @@ import {
 } from "@crm/db";
 import { guard, handleApiError, requireCrmAuth, withDb } from "@/lib/api-helpers";
 
+const priceSnapshotZodSchema = z.object({
+  internal_base_price: z.number(),
+  client_multiplier: z.number(),
+  multiplier_key: z.string(),
+  calculated_price: z.number(),
+  urgency_multiplier: z.number().optional().default(1.0),
+  pricing_settings_captured_at: z.string().nullable().optional(),
+});
+
 const lineSchema = z.object({
   price_list_item_id: z.string().nullable().optional(),
+  service_price_list_item_id: z.string().nullable().optional(),
   description: z.string(),
   quantity: z.number(),
   unit: z.string(),
   net_unit_price: z.number().optional(),
+  price_snapshot: priceSnapshotZodSchema.nullable().optional(),
 });
 
 const createSchema = z.object({

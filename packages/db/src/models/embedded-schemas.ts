@@ -70,6 +70,19 @@ export const ticketCommentSchema = defineSchema(
   { _id: false },
 );
 
+/** Ár snapshot – létrehozáskor lefagyasztott, soha nem módosul */
+export const priceSnapshotSchema = defineSchema(
+  {
+    internal_base_price: { type: Number, required: true },
+    client_multiplier: { type: Number, required: true },
+    multiplier_key: { type: String, required: true },
+    calculated_price: { type: Number, required: true },
+    urgency_multiplier: { type: Number, default: 1.0 },
+    pricing_settings_captured_at: { type: String, default: null },
+  },
+  { _id: false },
+);
+
 export const worklogItemSchema = defineSchema(
   {
     description: { type: String, required: true },
@@ -77,6 +90,10 @@ export const worklogItemSchema = defineSchema(
     unit: { type: String, required: true },
     unit_price: { type: Number, default: null },
     price_list_item_id: { type: String, default: null },
+    /** Szolgáltatás Árlistából – null ha fizikai termék */
+    service_price_list_item_id: { type: String, default: null },
+    /** Árképzési snapshot – csak service tételeknél, lefagyasztott */
+    price_snapshot: { type: priceSnapshotSchema, default: null },
   },
   { _id: false },
 );

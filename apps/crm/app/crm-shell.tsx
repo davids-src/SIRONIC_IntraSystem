@@ -29,6 +29,7 @@ import {
   CheckSquare,
   Activity,
   Map,
+  Settings2,
 } from "lucide-react";
 
 const crmNavItems: NavItem[] = [
@@ -100,7 +101,18 @@ const crmNavItems: NavItem[] = [
     href: "/completion-certificates",
     icon: <BadgeCheck size={16} />,
   },
-  { key: "price-list", label: "Árlista", href: "/price-list", icon: <Tag size={16} /> },
+  {
+    key: "price-list",
+    label: "Termék Árlista",
+    href: "/price-list",
+    icon: <Tag size={16} />,
+  },
+  {
+    key: "service-price-list",
+    label: "Szolgáltatás Árlista",
+    href: "/service-price-list",
+    icon: <Settings2 size={16} />,
+  },
   {
     key: "inventory",
     label: "Raktár",

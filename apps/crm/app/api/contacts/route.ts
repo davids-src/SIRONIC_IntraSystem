@@ -50,6 +50,11 @@ const createSchema = z.object({
     .enum(["project", "ongoing", "mixed", "one_time"])
     .nullable()
     .optional(),
+  partner_role: z
+    .enum(["client", "subcontractor_employer", "supplier", "mixed"])
+    .optional(),
+  client_category: z.enum(["individual", "smb", "enterprise"]).optional(),
+  pricing_contract_type: z.enum(["occasional", "6month", "1year", "2year"]).optional(),
 });
 
 export async function GET(req: Request) {
@@ -120,6 +125,9 @@ export async function POST(req: Request) {
         },
         active_services: b.active_services ?? [],
         contract_type: b.contract_type ?? null,
+        partner_role: b.partner_role ?? "client",
+        client_category: b.client_category ?? "smb",
+        pricing_contract_type: b.pricing_contract_type ?? "occasional",
       });
       return NextResponse.json(serializeForJson(doc.toObject()), { status: 201 });
     });

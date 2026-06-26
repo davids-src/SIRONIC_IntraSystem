@@ -60,6 +60,7 @@ interface PriceItem {
   tax_percent: number;
   description: string;
   preferred_supplier: string | null;
+  service_price_list_item_id?: string;
 }
 
 interface CartItem {
@@ -67,6 +68,7 @@ interface CartItem {
   qty: number;
   custom_price: number | null; // ha felül akarják bírálni az egységárat
   discount_percent: number; // tételenkénti kedvezmény % (0-100)
+  price_snapshot?: any | null;
 }
 
 // -------------------------------------------------------
@@ -124,13 +126,19 @@ export default function NewOfferPage() {
     tax_rate: 27,
   });
 
+  const [servicePriceList, setServicePriceList] = useState<any[]>([]);
+  const [serviceCategories, setServiceCategories] = useState<any[]>([]);
+  const [pickerTab, setPickerTab] = useState<"product" | "service">("product");
+
   useEffect(() => {
     const ac = new AbortController();
     (async () => {
       try {
-        const [pl, cr] = await Promise.all([
+        const [pl, cr, spl, sc] = await Promise.all([
           apiJson<unknown[]>("/api/price-list", { signal: ac.signal }),
           apiJson<unknown[]>("/api/contacts", { signal: ac.signal }),
+          apiJson<unknown[]>("/api/service-price-list", { signal: ac.signal }),
+          apiJson<unknown[]>("/api/service-categories", { signal: ac.signal }),
         ]);
         setPriceList(pl.map((r) => mapPriceListItem(r as PriceListItem)));
         setContacts(
@@ -143,6 +151,8 @@ export default function NewOfferPage() {
             };
           }),
         );
+        setServicePriceList(spl);
+        setServiceCategories(sc);
         setLoadErr(null);
       } catch {
         if (!ac.signal.aborted) {
@@ -225,6 +235,108 @@ export default function NewOfferPage() {
     }
   };
 
+  const recalculateServiceCartItems = async (
+    contactId: string,
+    currentCart: CartItem[],
+  ) => {
+    if (!contactId) return currentCart;
+    const updated = await Promise.all(
+      currentCart.map(async (c) => {
+        if (c.item.service_price_list_item_id) {
+          try {
+            const res = await apiJson<any>(
+              `/api/service-price-list/${c.item.service_price_list_item_id}/calculated-price?contact_id=${contactId}`,
+            );
+            return {
+              ...c,
+              item: {
+                ...c.item,
+                unit_price: res.total_price,
+              },
+              price_snapshot: {
+                internal_base_price: res.internal_base_price,
+                client_multiplier: res.client_multiplier,
+                multiplier_key: res.multiplier_key,
+                calculated_price: res.total_price,
+                urgency_multiplier: res.urgency_multiplier,
+                pricing_settings_captured_at: res.pricing_settings_captured_at,
+              },
+            };
+          } catch (e) {
+            console.error("Error calculating price for item", c.item._id, e);
+            return c;
+          }
+        }
+        return c;
+      }),
+    );
+    return updated;
+  };
+
+  const handleContactChange = async (contactId: string) => {
+    setHeader((prev) => ({ ...prev, contact_id: contactId }));
+    const updatedCart = await recalculateServiceCartItems(contactId, cart);
+    setCart(updatedCart);
+  };
+
+  const addServiceItem = async (srv: any) => {
+    let unitPrice = 0;
+    let snapshot: any = null;
+    if (header.contact_id) {
+      try {
+        const res = await apiJson<any>(
+          `/api/service-price-list/${srv._id}/calculated-price?contact_id=${header.contact_id}`,
+        );
+        unitPrice = res.total_price;
+        snapshot = {
+          internal_base_price: res.internal_base_price,
+          client_multiplier: res.client_multiplier,
+          multiplier_key: res.multiplier_key,
+          calculated_price: res.total_price,
+          urgency_multiplier: res.urgency_multiplier,
+          pricing_settings_captured_at: res.pricing_settings_captured_at,
+        };
+      } catch (e) {
+        console.error("Error calculating price", e);
+        unitPrice = srv.internal_base_price ?? 0;
+      }
+    } else {
+      unitPrice = srv.internal_base_price ?? 0;
+    }
+
+    const priceItem: PriceItem = {
+      _id: `srv-${srv._id}`,
+      code: srv.sku,
+      name: srv.name,
+      category: "service",
+      unit: srv.unit ?? "óra",
+      unit_price: unitPrice,
+      tax_percent: 27,
+      description: srv.description ?? "",
+      preferred_supplier: null,
+      service_price_list_item_id: srv._id,
+    };
+
+    setCart((prev) => {
+      const existing = prev.find((c) => c.item.service_price_list_item_id === srv._id);
+      if (existing) {
+        return prev.map((c) =>
+          c.item.service_price_list_item_id === srv._id ? { ...c, qty: c.qty + 1 } : c,
+        );
+      }
+      return [
+        ...prev,
+        {
+          item: priceItem,
+          qty: 1,
+          custom_price: null,
+          discount_percent: 0,
+          price_snapshot: snapshot,
+        },
+      ];
+    });
+  };
+
   const updateQty = (id: string, delta: number) => {
     setCart((prev) =>
       prev
@@ -233,7 +345,8 @@ export default function NewOfferPage() {
     );
   };
 
-  const isInCart = (id: string) => cart.some((c) => c.item._id === id);
+  const isInCart = (id: string) =>
+    cart.some((c) => c.item._id === id || c.item.service_price_list_item_id === id);
 
   const totalNet = cart.reduce((sum, c) => {
     const base = (c.custom_price ?? c.item.unit_price) * (1 - c.discount_percent / 100);
@@ -252,13 +365,15 @@ export default function NewOfferPage() {
     const valid_until = new Date();
     valid_until.setDate(valid_until.getDate() + days);
     const lines = cart.map((c) => ({
-      price_list_item_id: c.item._id,
+      price_list_item_id: c.item.service_price_list_item_id ? null : c.item._id,
+      service_price_list_item_id: c.item.service_price_list_item_id ?? null,
       description: c.item.name,
       quantity: c.qty,
       unit: c.item.unit,
       net_unit_price: c.custom_price ?? c.item.unit_price,
       tax_rate: c.item.tax_percent,
       discount_percent: c.discount_percent,
+      price_snapshot: c.price_snapshot ?? null,
     }));
     return {
       title: header.title.trim(),
@@ -284,11 +399,211 @@ export default function NewOfferPage() {
     }
   };
 
+  const productCartItems = cart.filter((c) => !c.item.service_price_list_item_id);
+  const serviceCartItems = cart.filter((c) => !!c.item.service_price_list_item_id);
+
   const filtered = priceList.filter(
     (p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.code.toLowerCase().includes(search.toLowerCase()) ||
       categoryLabel[p.category].toLowerCase().includes(search.toLowerCase()),
+  );
+
+  const filteredServices = servicePriceList.filter(
+    (p) =>
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      p.sku.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  const groupedServices = serviceCategories
+    .map((cat) => ({
+      category: cat,
+      items: filteredServices.filter((s) => s.category_id === cat._id),
+    }))
+    .filter((g) => g.items.length > 0);
+
+  const renderCartItem = (c: CartItem) => (
+    <div
+      key={c.item._id}
+      style={{
+        padding: "12px 14px",
+        background: "var(--color-bg-secondary, #111)",
+        borderRadius: "8px",
+        border: "1px solid var(--color-border-subtle, #1a1a1a)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          marginBottom: "8px",
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontWeight: 600,
+              fontSize: "0.82rem",
+              lineHeight: 1.3,
+            }}
+          >
+            {c.item.name}
+          </div>
+          <div
+            style={{
+              fontSize: "0.7rem",
+              color: "var(--color-text-muted, #555)",
+              marginTop: "2px",
+            }}
+          >
+            {fmt(c.custom_price ?? c.item.unit_price)} / {c.item.unit}
+            {c.discount_percent > 0 && (
+              <span
+                style={{
+                  marginLeft: "6px",
+                  color: "var(--color-status-success, #22c55e)",
+                  fontWeight: 700,
+                }}
+              >
+                (-{c.discount_percent}%)
+              </span>
+            )}
+          </div>
+        </div>
+        <button
+          onClick={() => removeItem(c.item._id)}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            color: "var(--color-text-muted, #555)",
+            padding: "2px",
+            borderRadius: "4px",
+          }}
+        >
+          <Trash2 size={13} />
+        </button>
+      </div>
+
+      {/* Qty controls */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <button
+            onClick={() => updateQty(c.item._id, -1)}
+            style={{
+              width: "26px",
+              height: "26px",
+              borderRadius: "6px",
+              background: "var(--color-bg-card, #1a1a1a)",
+              border: "1px solid var(--color-border-default, #222)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--color-text-muted, #555)",
+            }}
+          >
+            <Minus size={12} />
+          </button>
+          <span
+            style={{
+              fontWeight: 700,
+              fontSize: "0.9rem",
+              minWidth: "28px",
+              textAlign: "center",
+            }}
+          >
+            {c.qty}
+          </span>
+          <button
+            onClick={() => updateQty(c.item._id, 1)}
+            style={{
+              width: "26px",
+              height: "26px",
+              borderRadius: "6px",
+              background: "var(--color-bg-card, #1a1a1a)",
+              border: "1px solid var(--color-border-default, #222)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--color-text-muted, #555)",
+            }}
+          >
+            <Plus size={12} />
+          </button>
+          <span
+            style={{
+              fontSize: "0.72rem",
+              color: "var(--color-text-muted, #555)",
+              marginLeft: "4px",
+            }}
+          >
+            {c.item.unit}
+          </span>
+        </div>
+        <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>
+          {fmt(
+            (c.custom_price ?? c.item.unit_price) *
+              (1 - c.discount_percent / 100) *
+              c.qty,
+          )}
+        </span>
+      </div>
+
+      {/* Discount input */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          marginTop: "8px",
+        }}
+      >
+        <span
+          style={{
+            fontSize: "0.7rem",
+            color: "var(--color-text-muted, #555)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Kedvezmény:
+        </span>
+        <input
+          type="number"
+          min={0}
+          max={100}
+          step={1}
+          value={c.discount_percent}
+          onChange={(e) => {
+            const val = Math.min(100, Math.max(0, Number(e.target.value)));
+            setCart((prev) =>
+              prev.map((ci) =>
+                ci.item._id === c.item._id ? { ...ci, discount_percent: val } : ci,
+              ),
+            );
+          }}
+          style={{
+            width: "52px",
+            padding: "2px 6px",
+            borderRadius: "5px",
+            border: "1px solid var(--color-border-subtle)",
+            background: "var(--color-bg-input)",
+            color: "inherit",
+            fontSize: "0.78rem",
+            textAlign: "center",
+          }}
+        />
+        <span style={{ fontSize: "0.7rem", color: "var(--color-text-muted)" }}>%</span>
+      </div>
+    </div>
   );
 
   // -------------------------------------------------------
@@ -414,7 +729,7 @@ export default function NewOfferPage() {
               <Label>Ügyfél *</Label>
               <Select
                 value={header.contact_id || undefined}
-                onValueChange={(v) => setHeader({ ...header, contact_id: v })}
+                onValueChange={handleContactChange}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Válassz ügyfelet" />
@@ -475,6 +790,67 @@ export default function NewOfferPage() {
         >
           {/* Bal: Árlista picker */}
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div
+              style={{
+                display: "flex",
+                background: "var(--color-bg-secondary, #111)",
+                padding: "4px",
+                borderRadius: "8px",
+              }}
+            >
+              <button
+                onClick={() => setPickerTab("product")}
+                style={{
+                  flex: 1,
+                  padding: "8px",
+                  borderRadius: "6px",
+                  fontSize: "0.85rem",
+                  fontWeight: pickerTab === "product" ? 600 : 500,
+                  background:
+                    pickerTab === "product"
+                      ? "var(--color-bg-card, #1a1a1a)"
+                      : "transparent",
+                  color:
+                    pickerTab === "product" ? "#fff" : "var(--color-text-muted, #555)",
+                  border:
+                    pickerTab === "product"
+                      ? "1px solid var(--color-border-subtle)"
+                      : "1px solid transparent",
+                  boxShadow:
+                    pickerTab === "product" ? "0 1px 3px rgba(0,0,0,0.2)" : "none",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                }}
+              >
+                Fizikai termékek
+              </button>
+              <button
+                onClick={() => setPickerTab("service")}
+                style={{
+                  flex: 1,
+                  padding: "8px",
+                  borderRadius: "6px",
+                  fontSize: "0.85rem",
+                  fontWeight: pickerTab === "service" ? 600 : 500,
+                  background:
+                    pickerTab === "service"
+                      ? "var(--color-bg-card, #1a1a1a)"
+                      : "transparent",
+                  color:
+                    pickerTab === "service" ? "#fff" : "var(--color-text-muted, #555)",
+                  border:
+                    pickerTab === "service"
+                      ? "1px solid var(--color-border-subtle)"
+                      : "1px solid transparent",
+                  boxShadow:
+                    pickerTab === "service" ? "0 1px 3px rgba(0,0,0,0.2)" : "none",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                }}
+              >
+                Szolgáltatások
+              </button>
+            </div>
             <Card className="p-5">
               <div style={{ position: "relative", display: "flex", gap: "10px" }}>
                 <div style={{ position: "relative", flex: 1 }}>
@@ -497,16 +873,18 @@ export default function NewOfferPage() {
                     style={{ paddingLeft: "36px" }}
                   />
                 </div>
-                <Button
-                  variant="secondary"
-                  onClick={() => setCreatingCustom(!creatingCustom)}
-                  style={{ whiteSpace: "nowrap" }}
-                >
-                  {creatingCustom ? "Mégsem" : "+ Új egyedi tétel"}
-                </Button>
+                {pickerTab === "product" && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setCreatingCustom(!creatingCustom)}
+                    style={{ whiteSpace: "nowrap" }}
+                  >
+                    {creatingCustom ? "Mégsem" : "+ Új egyedi tétel"}
+                  </Button>
+                )}
               </div>
 
-              {creatingCustom && (
+              {pickerTab === "product" && creatingCustom && (
                 <div
                   style={{
                     marginTop: "16px",
@@ -610,134 +988,293 @@ export default function NewOfferPage() {
             </Card>
 
             {/* Termék kártyák */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              {filtered.map((item) => {
-                const inCart = isInCart(item._id);
-                return (
-                  <button
-                    key={item._id}
-                    onClick={() => addItem(item)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "16px",
-                      padding: "16px 20px",
-                      background: inCart
-                        ? "rgba(34,197,94,0.06)"
-                        : "var(--color-bg-card, #1a1a1a)",
-                      border: inCart
-                        ? "1px solid rgba(34,197,94,0.3)"
-                        : "1px solid var(--color-border-default, #222)",
-                      borderRadius: "10px",
-                      textAlign: "left",
-                      cursor: "pointer",
-                      transition: "all 0.12s",
-                      width: "100%",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!inCart)
-                        (e.currentTarget as HTMLElement).style.borderColor =
-                          "var(--color-accent-primary, #e53935)";
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!inCart)
-                        (e.currentTarget as HTMLElement).style.borderColor =
-                          "var(--color-border-default, #222)";
-                    }}
-                  >
-                    {/* Zöld pipa ha már kosárban van */}
-                    <div
+            {pickerTab === "product" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                {filtered.map((item) => {
+                  const inCart = isInCart(item._id);
+                  return (
+                    <button
+                      key={item._id}
+                      onClick={() => addItem(item)}
                       style={{
-                        width: "32px",
-                        height: "32px",
-                        borderRadius: "8px",
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
+                        gap: "16px",
+                        padding: "16px 20px",
                         background: inCart
-                          ? "rgba(34,197,94,0.15)"
-                          : "var(--color-bg-secondary, #111)",
-                        color: inCart ? "#22c55e" : "var(--color-text-muted, #555)",
+                          ? "rgba(34,197,94,0.06)"
+                          : "var(--color-bg-card, #1a1a1a)",
+                        border: inCart
+                          ? "1px solid rgba(34,197,94,0.3)"
+                          : "1px solid var(--color-border-default, #222)",
+                        borderRadius: "10px",
+                        textAlign: "left",
+                        cursor: "pointer",
                         transition: "all 0.12s",
+                        width: "100%",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!inCart)
+                          (e.currentTarget as HTMLElement).style.borderColor =
+                            "var(--color-accent-primary, #e53935)";
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!inCart)
+                          (e.currentTarget as HTMLElement).style.borderColor =
+                            "var(--color-border-default, #222)";
                       }}
                     >
-                      {inCart ? <CheckCircle2 size={16} /> : <Plus size={16} />}
-                    </div>
-
-                    {/* Név + leírás */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {/* Zöld pipa ha már kosárban van */}
                       <div
                         style={{
+                          width: "32px",
+                          height: "32px",
+                          borderRadius: "8px",
                           display: "flex",
                           alignItems: "center",
-                          gap: "8px",
-                          marginBottom: "3px",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                          background: inCart
+                            ? "rgba(34,197,94,0.15)"
+                            : "var(--color-bg-secondary, #111)",
+                          color: inCart ? "#22c55e" : "var(--color-text-muted, #555)",
+                          transition: "all 0.12s",
                         }}
                       >
-                        <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>
-                          {item.name}
-                        </span>
-                        <Badge variant={categoryVariant[item.category]}>
-                          {categoryLabel[item.category]}
-                        </Badge>
-                        {inCart && (
-                          <span
-                            style={{
-                              fontSize: "0.7rem",
-                              fontWeight: 700,
-                              color: "#22c55e",
-                            }}
-                          >
-                            Kosárban
-                          </span>
-                        )}
+                        {inCart ? <CheckCircle2 size={16} /> : <Plus size={16} />}
                       </div>
-                      <div
-                        style={{
-                          fontSize: "0.72rem",
-                          color: "var(--color-text-muted, #555)",
-                          display: "flex",
-                          gap: "8px",
-                        }}
-                      >
-                        <span
+
+                      {/* Név + leírás */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
                           style={{
-                            fontFamily: "monospace",
-                            color: "var(--color-text-secondary, #a0a0a0)",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            marginBottom: "3px",
                           }}
                         >
-                          {item.code}
-                        </span>
-                        {item.preferred_supplier && (
-                          <span
-                            style={{ display: "flex", alignItems: "center", gap: "3px" }}
-                          >
-                            <Building2 size={10} />
-                            {item.preferred_supplier}
+                          <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>
+                            {item.name}
                           </span>
-                        )}
+                          <Badge variant={categoryVariant[item.category]}>
+                            {categoryLabel[item.category]}
+                          </Badge>
+                          {inCart && (
+                            <span
+                              style={{
+                                fontSize: "0.7rem",
+                                fontWeight: 700,
+                                color: "#22c55e",
+                              }}
+                            >
+                              Kosárban
+                            </span>
+                          )}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "0.72rem",
+                            color: "var(--color-text-muted, #555)",
+                            display: "flex",
+                            gap: "8px",
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontFamily: "monospace",
+                              color: "var(--color-text-secondary, #a0a0a0)",
+                            }}
+                          >
+                            {item.code}
+                          </span>
+                          {item.preferred_supplier && (
+                            <span
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "3px",
+                              }}
+                            >
+                              <Building2 size={10} />
+                              {item.preferred_supplier}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Ár */}
-                    <div style={{ textAlign: "right", flexShrink: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>
-                        {fmt(item.unit_price)}
+                      {/* Ár */}
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>
+                          {fmt(item.unit_price)}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "0.7rem",
+                            color: "var(--color-text-muted, #555)",
+                          }}
+                        >
+                          / {item.unit} · nettó
+                        </div>
                       </div>
-                      <div
-                        style={{
-                          fontSize: "0.7rem",
-                          color: "var(--color-text-muted, #555)",
-                        }}
-                      >
-                        / {item.unit} · nettó
-                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Szolgáltatás kártyák */}
+            {pickerTab === "service" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                {groupedServices.map((group) => (
+                  <div key={group.category._id}>
+                    <h3
+                      style={{
+                        fontSize: "0.8rem",
+                        fontWeight: 700,
+                        color: "var(--color-text-muted)",
+                        textTransform: "uppercase",
+                        marginBottom: "8px",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      {group.category.name}
+                    </h3>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                      {group.items.map((item) => {
+                        const inCart = isInCart(item._id);
+                        return (
+                          <button
+                            key={item._id}
+                            onClick={() => addServiceItem(item)}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "16px",
+                              padding: "16px 20px",
+                              background: inCart
+                                ? "rgba(34,197,94,0.06)"
+                                : "var(--color-bg-card, #1a1a1a)",
+                              border: inCart
+                                ? "1px solid rgba(34,197,94,0.3)"
+                                : "1px solid var(--color-border-default, #222)",
+                              borderRadius: "10px",
+                              textAlign: "left",
+                              cursor: "pointer",
+                              transition: "all 0.12s",
+                              width: "100%",
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!inCart)
+                                (e.currentTarget as HTMLElement).style.borderColor =
+                                  "var(--color-accent-primary, #e53935)";
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!inCart)
+                                (e.currentTarget as HTMLElement).style.borderColor =
+                                  "var(--color-border-default, #222)";
+                            }}
+                          >
+                            {/* Zöld pipa ha már kosárban van */}
+                            <div
+                              style={{
+                                width: "32px",
+                                height: "32px",
+                                borderRadius: "8px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                                background: inCart
+                                  ? "rgba(34,197,94,0.15)"
+                                  : "var(--color-bg-secondary, #111)",
+                                color: inCart
+                                  ? "#22c55e"
+                                  : "var(--color-text-muted, #555)",
+                                transition: "all 0.12s",
+                              }}
+                            >
+                              {inCart ? <CheckCircle2 size={16} /> : <Plus size={16} />}
+                            </div>
+
+                            {/* Név + leírás */}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "8px",
+                                  marginBottom: "3px",
+                                }}
+                              >
+                                <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>
+                                  {item.name}
+                                </span>
+                                <Badge variant="warning">Szolgáltatás</Badge>
+                                {inCart && (
+                                  <span
+                                    style={{
+                                      fontSize: "0.7rem",
+                                      fontWeight: 700,
+                                      color: "#22c55e",
+                                    }}
+                                  >
+                                    Kosárban
+                                  </span>
+                                )}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: "0.72rem",
+                                  color: "var(--color-text-muted, #555)",
+                                  display: "flex",
+                                  gap: "8px",
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    fontFamily: "monospace",
+                                    color: "var(--color-text-secondary, #a0a0a0)",
+                                  }}
+                                >
+                                  {item.sku}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Ár */}
+                            <div style={{ textAlign: "right", flexShrink: 0 }}>
+                              <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>
+                                Auto-kalkulált
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: "0.7rem",
+                                  color: "var(--color-text-muted, #555)",
+                                }}
+                              >
+                                / {item.unit || "óra"} · nettó
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
-                  </button>
-                );
-              })}
-            </div>
+                  </div>
+                ))}
+                {groupedServices.length === 0 && (
+                  <div
+                    style={{
+                      textAlign: "center",
+                      color: "var(--color-text-muted)",
+                      padding: "20px",
+                    }}
+                  >
+                    Nincs találat a szolgáltatások között.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Jobb: Kosár */}
@@ -790,200 +1327,53 @@ export default function NewOfferPage() {
                 </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                  {cart.map((c) => (
+                  {productCartItems.length > 0 && (
                     <div
-                      key={c.item._id}
                       style={{
-                        padding: "12px 14px",
-                        background: "var(--color-bg-secondary, #111)",
-                        borderRadius: "8px",
-                        border: "1px solid var(--color-border-subtle, #1a1a1a)",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "10px",
+                        marginBottom: "8px",
                       }}
                     >
-                      <div
+                      <h4
                         style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "flex-start",
-                          marginBottom: "8px",
+                          fontSize: "0.8rem",
+                          fontWeight: 700,
+                          color: "var(--color-text-muted)",
+                          textTransform: "uppercase",
+                          marginLeft: "4px",
                         }}
                       >
-                        <div>
-                          <div
-                            style={{
-                              fontWeight: 600,
-                              fontSize: "0.82rem",
-                              lineHeight: 1.3,
-                            }}
-                          >
-                            {c.item.name}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: "0.7rem",
-                              color: "var(--color-text-muted, #555)",
-                              marginTop: "2px",
-                            }}
-                          >
-                            {fmt(c.custom_price ?? c.item.unit_price)} / {c.item.unit}
-                            {c.discount_percent > 0 && (
-                              <span
-                                style={{
-                                  marginLeft: "6px",
-                                  color: "var(--color-status-success, #22c55e)",
-                                  fontWeight: 700,
-                                }}
-                              >
-                                (-{c.discount_percent}%)
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => removeItem(c.item._id)}
-                          style={{
-                            background: "none",
-                            border: "none",
-                            cursor: "pointer",
-                            color: "var(--color-text-muted, #555)",
-                            padding: "2px",
-                            borderRadius: "4px",
-                          }}
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-
-                      {/* Qty controls */}
-                      <div
+                        Fizikai termékek
+                      </h4>
+                      {productCartItems.map(renderCartItem)}
+                    </div>
+                  )}
+                  {serviceCartItems.length > 0 && (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "10px",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      <h4
                         style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <div
-                          style={{ display: "flex", alignItems: "center", gap: "6px" }}
-                        >
-                          <button
-                            onClick={() => updateQty(c.item._id, -1)}
-                            style={{
-                              width: "26px",
-                              height: "26px",
-                              borderRadius: "6px",
-                              background: "var(--color-bg-card, #1a1a1a)",
-                              border: "1px solid var(--color-border-default, #222)",
-                              cursor: "pointer",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              color: "var(--color-text-muted, #555)",
-                            }}
-                          >
-                            <Minus size={12} />
-                          </button>
-                          <span
-                            style={{
-                              fontWeight: 700,
-                              fontSize: "0.9rem",
-                              minWidth: "28px",
-                              textAlign: "center",
-                            }}
-                          >
-                            {c.qty}
-                          </span>
-                          <button
-                            onClick={() => updateQty(c.item._id, 1)}
-                            style={{
-                              width: "26px",
-                              height: "26px",
-                              borderRadius: "6px",
-                              background: "var(--color-bg-card, #1a1a1a)",
-                              border: "1px solid var(--color-border-default, #222)",
-                              cursor: "pointer",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              color: "var(--color-text-muted, #555)",
-                            }}
-                          >
-                            <Plus size={12} />
-                          </button>
-                          <span
-                            style={{
-                              fontSize: "0.72rem",
-                              color: "var(--color-text-muted, #555)",
-                              marginLeft: "4px",
-                            }}
-                          >
-                            {c.item.unit}
-                          </span>
-                        </div>
-                        <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>
-                          {fmt(
-                            (c.custom_price ?? c.item.unit_price) *
-                              (1 - c.discount_percent / 100) *
-                              c.qty,
-                          )}
-                        </span>
-                      </div>
-
-                      {/* Discount input */}
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "6px",
+                          fontSize: "0.8rem",
+                          fontWeight: 700,
+                          color: "var(--color-text-muted)",
+                          textTransform: "uppercase",
+                          marginLeft: "4px",
                           marginTop: "8px",
                         }}
                       >
-                        <span
-                          style={{
-                            fontSize: "0.7rem",
-                            color: "var(--color-text-muted, #555)",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          Kedvezmény:
-                        </span>
-                        <input
-                          type="number"
-                          min={0}
-                          max={100}
-                          step={1}
-                          value={c.discount_percent}
-                          onChange={(e) => {
-                            const val = Math.min(
-                              100,
-                              Math.max(0, Number(e.target.value)),
-                            );
-                            setCart((prev) =>
-                              prev.map((ci) =>
-                                ci.item._id === c.item._id
-                                  ? { ...ci, discount_percent: val }
-                                  : ci,
-                              ),
-                            );
-                          }}
-                          style={{
-                            width: "52px",
-                            padding: "2px 6px",
-                            borderRadius: "5px",
-                            border: "1px solid var(--color-border-subtle)",
-                            background: "var(--color-bg-input)",
-                            color: "inherit",
-                            fontSize: "0.78rem",
-                            textAlign: "center",
-                          }}
-                        />
-                        <span
-                          style={{ fontSize: "0.7rem", color: "var(--color-text-muted)" }}
-                        >
-                          %
-                        </span>
-                      </div>
+                        Szolgáltatások
+                      </h4>
+                      {serviceCartItems.map(renderCartItem)}
                     </div>
-                  ))}
+                  )}
 
                   {/* Összesítő */}
                   <div

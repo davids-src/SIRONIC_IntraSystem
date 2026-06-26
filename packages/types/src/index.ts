@@ -38,7 +38,11 @@ export type PermissionModule =
   | "checklist"
   | "project_expense"
   | "maintenance_plan"
-  | "floorplan";
+  | "floorplan"
+  // Pricing Engine modulok
+  | "service_price_list"
+  | "service_categories"
+  | "pricing_settings";
 
 /** CRM app login roles only (subset of RoleKey). */
 export type CrmRoleKey = "crm.admin" | "crm.staff";
@@ -75,8 +79,20 @@ export interface PortalUser {
 
 export type OfferStatus = "draft" | "sent" | "accepted" | "rejected";
 
+/** Lefagyasztott ár snapshot – létrehozáskor rögzítve, nem változik */
+export interface PriceSnapshot {
+  internal_base_price: number;
+  client_multiplier: number;
+  multiplier_key: string; // pl. "smb_1year"
+  calculated_price: number; // ez kerül a dokumentumra
+  urgency_multiplier?: number; // csak munkalapon
+  pricing_settings_captured_at?: string; // mikor volt érvényes
+}
+
 export interface OfferLine {
   price_list_item_id: string | null;
+  /** Szolgáltatás Árlistából – null ha termék */
+  service_price_list_item_id?: string | null;
   description: string;
   quantity: number;
   unit: string;
@@ -84,6 +100,8 @@ export interface OfferLine {
   tax_rate: number;
   /** Tételenkénti kedvezmény %-ban, default: 0 */
   discount_percent?: number;
+  /** Árképzési snapshot – csak service tételeknél */
+  price_snapshot?: PriceSnapshot | null;
 }
 
 export interface Offer {
@@ -275,6 +293,10 @@ export interface WorklogItem {
   unit: string;
   unit_price: number | null;
   price_list_item_id: string | null;
+  /** Szolgáltatás Árlistából – null ha termék */
+  service_price_list_item_id?: string | null;
+  /** Árképzési snapshot – csak service tételeknél */
+  price_snapshot?: PriceSnapshot | null;
 }
 
 export type WorklogStatus = "draft" | "finalized";
@@ -316,10 +338,14 @@ export type CompletionCertificateStatus = "draft" | "sent" | "accepted" | "rejec
 
 export interface CompletionCertificateLine {
   price_list_item_id: string | null;
+  /** Szolgáltatás Árlistából – null ha termék */
+  service_price_list_item_id?: string | null;
   description: string;
   quantity: number;
   unit: string;
   net_unit_price: number;
+  /** Árképzési snapshot – csak service tételeknél */
+  price_snapshot?: PriceSnapshot | null;
 }
 
 export interface CompletionCertificate {
@@ -463,6 +489,19 @@ export interface ContactPerson {
 export type ContactType = "company" | "individual" | "one_time";
 export type ContactContractType = "project" | "ongoing" | "mixed" | "one_time" | null;
 
+// ─── Árképzési profil mezők ───────────────────────────────────────────────────
+export type PartnerRole = "client" | "subcontractor_employer" | "supplier" | "mixed";
+export type ClientCategory = "individual" | "smb" | "enterprise";
+export type PricingContractType = "occasional" | "6month" | "1year" | "2year";
+export type SubcontractorPresenceType = "daily_presence" | "project_based" | "both";
+export type SubcontractorWorkType =
+  | "it"
+  | "security_tech"
+  | "fire_protection"
+  | "electrical"
+  | "pm";
+// ──────────────────────────────────────────────────────────────────────────────
+
 export interface Contact {
   _id: string;
   contact_number: string;
@@ -483,7 +522,32 @@ export interface Contact {
   has_portal_access: boolean;
   portal_permissions: PortalPermissions;
   active_services: string[];
+  /** Meglévő projekt-szintű szerződéstípus (nem változik) */
   contract_type: ContactContractType;
+
+  // ─── Árképzési profil mezők (ÚJ) ────────────────────────────────────────
+  /** Partner szerepköre – ki kicsoda a kapcsolatban */
+  partner_role?: PartnerRole | null;
+  /** Ügyfél kategória árképzéshez */
+  client_category?: ClientCategory | null;
+  /** Árképzési szerződéstípus (occasional/6month/1year/2year) */
+  pricing_contract_type?: PricingContractType | null;
+  /** Keretszerződés kezdete */
+  contract_start_date?: Date | null;
+  /** Keretszerződés vége (auto-számított) */
+  contract_end_date?: Date | null;
+  /** Hány nappal lejárat előtt emlékeztessen (default: 30) */
+  contract_renewal_reminder_days?: number | null;
+  /** Alvállalkozói munkaterületek */
+  subcontractor_work_types?: SubcontractorWorkType[] | null;
+  /** Alvállalkozói jelenlét típusa */
+  subcontractor_presence_type?: SubcontractorPresenceType | null;
+  /** Alvállalkozói elszámolási ciklus */
+  subcontractor_billing_cycle?: "weekly" | "monthly" | null;
+  /** Auto-számított aktív szorzó kulcs (denormalizált cache) */
+  active_price_multiplier_key?: string | null;
+  // ────────────────────────────────────────────────────────────────────────
+
   created_at: Date;
   updated_at: Date;
 }
@@ -1049,4 +1113,163 @@ export interface Floorplan {
   created_by: string;
   created_at: Date;
   updated_at: Date;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRICING ENGINE – ÁRKÉPZÉSI MOTOR
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface PricingSettingsHourlyRates {
+  it_operations: number;
+  it_development: number;
+  security_tech_installer: number;
+  security_tech_planner: number;
+  fire_protection_installer: number;
+  fire_protection_planner: number;
+  electrical_general: number;
+  electrical_industrial: number;
+  project_management: number;
+  consulting: number;
+}
+
+export interface PricingSettingsClientMultipliers {
+  individual: number;
+  smb_occasional: number;
+  smb_6month: number;
+  smb_1year: number;
+  smb_2year: number;
+  enterprise: number;
+  subcontractor_presence: number;
+  subcontractor_project: number;
+  pm_external: number;
+}
+
+export interface PricingSettings {
+  _id: string;
+  tenantId: string;
+
+  // Overhead és Rezsi
+  overhead_multiplier: number;
+  monthly_fixed_cost: number;
+  monthly_productive_hours: number;
+
+  // Belső óradíjak (soha nem jelennek meg ügyfelek felé)
+  hourly_rates: PricingSettingsHourlyRates;
+
+  // Ügyfél kategória szorzók
+  client_multipliers: PricingSettingsClientMultipliers;
+
+  // Anyagköltség kezelési pótlék
+  material_surcharges: {
+    occasional: number;
+    contracted: number;
+    enterprise: number;
+    subcontractor: number;
+  };
+
+  // Sürgősségi szorzók
+  urgency_multipliers: {
+    same_day: number;
+    after_hours: number;
+    weekend: number;
+    night: number;
+  };
+
+  // ÁFA és egyéb
+  vat_rate: number;
+  min_callout_fee: number;
+  min_project_fee: number;
+
+  updated_at: Date;
+  updated_by?: string | null;
+  created_at: Date;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERVICE PRICE LIST – SZOLGÁLTATÁS ÁRLISTA
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ServiceCategory {
+  _id: string;
+  tenantId: string;
+  name: string;
+  icon: string; // lucide icon név pl. "Monitor"
+  sku_prefix: string; // pl. "IT", "BT"
+  color: string; // hex szín
+  sort_order: number;
+  is_active: boolean;
+  description?: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface ServiceSubCategory {
+  _id: string;
+  tenantId: string;
+  category_id: string;
+  name: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type ServicePricingType = "fixed" | "hourly" | "custom" | "unit_based";
+export type HourlyRateCategory = keyof PricingSettingsHourlyRates;
+
+export interface UnitBasedTier {
+  label: string; // pl. "1–10 érzékelő"
+  min_units: number;
+  max_units?: number; // undefined = korlátlan
+  base_price: number; // Ft
+}
+
+export interface ServicePriceListItem {
+  _id: string;
+  tenantId: string;
+
+  // Hierarchia
+  category_id: string;
+  subcategory_id?: string | null;
+
+  // Azonosítás
+  sku: string; // pl. "IT-000001"
+  name: string;
+  description?: string | null;
+  unit: string; // pl. "óra", "db", "hó"
+
+  // Árképzés típusa
+  pricing_type: ServicePricingType;
+
+  // Belső kalkulált ár (floor – soha nem jelenik meg ügyfeleknek)
+  internal_base_price?: number | null;
+  hourly_rate_category?: HourlyRateCategory | null;
+
+  // Rendszeregység alapú árazás
+  unit_based_tiers?: UnitBasedTier[];
+
+  // Megjegyzések
+  notes?: string | null; // belső megjegyzés
+  client_note?: string | null; // ügyfél felé megjelenő megjegyzés
+
+  // Állapot és archiválás
+  is_active: boolean;
+  is_archived: boolean;
+  archived_at?: Date | null;
+  archive_reason?: string | null;
+
+  sort_order: number;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/** Számított ár eredménye – calculateServicePrice() visszatérési értéke */
+export interface CalculatedServicePrice {
+  internal_base_price: number;
+  client_multiplier: number;
+  calculated_price: number;
+  urgency_multiplier: number;
+  final_price: number;
+  pricing_type: ServicePricingType;
+  is_custom: boolean;
 }

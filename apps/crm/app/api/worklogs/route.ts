@@ -3,12 +3,23 @@ import { z } from "zod";
 import { WorklogModel, formatNumber, nextCounterValue, serializeForJson } from "@crm/db";
 import { guard, handleApiError, requireCrmAuth, withDb } from "@/lib/api-helpers";
 
+const priceSnapshotZodSchema = z.object({
+  internal_base_price: z.number(),
+  client_multiplier: z.number(),
+  multiplier_key: z.string(),
+  calculated_price: z.number(),
+  urgency_multiplier: z.number().optional().default(1.0),
+  pricing_settings_captured_at: z.string().nullable().optional(),
+});
+
 const itemSchema = z.object({
   description: z.string(),
   quantity: z.number(),
   unit: z.string(),
   unit_price: z.number().nullable().optional(),
   price_list_item_id: z.string().nullable().optional(),
+  service_price_list_item_id: z.string().nullable().optional(),
+  price_snapshot: priceSnapshotZodSchema.nullable().optional(),
 });
 
 const createSchema = z.object({

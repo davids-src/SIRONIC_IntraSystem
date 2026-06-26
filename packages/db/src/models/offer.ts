@@ -1,4 +1,5 @@
 import { defineSchema } from "./schema-def";
+import { priceSnapshotSchema } from "./embedded-schemas";
 import { getModel } from "./get-model";
 import { ts } from "./timestamps";
 
@@ -30,6 +31,8 @@ offerSchema.index({ tenantId: 1, offer_number: 1 }, { unique: true });
 const offerLineSchema = defineSchema(
   {
     price_list_item_id: { type: String, default: null },
+    /** Szolgáltatás Árlistából – null ha fizikai termék */
+    service_price_list_item_id: { type: String, default: null },
     description: { type: String, required: true },
     quantity: { type: Number, required: true },
     unit: { type: String, required: true },
@@ -37,6 +40,8 @@ const offerLineSchema = defineSchema(
     tax_rate: { type: Number, required: true },
     /** Tételenkénti kedvezmény százalékban (0-100), default: 0 */
     discount_percent: { type: Number, default: 0 },
+    /** Árképzési snapshot – csak service tételeknél, lefagyasztott */
+    price_snapshot: { type: priceSnapshotSchema, default: null },
   },
   { _id: false },
 );

@@ -87,6 +87,7 @@ export default function CompletionCertificateFormPage({
   const [lines, setLines] = useState<any[]>([]);
   const [rejectionReason, setRejectionReason] = useState("");
   const [priceList, setPriceList] = useState<any[]>([]);
+  const [servicePriceList, setServicePriceList] = useState<any[]>([]);
 
   // Import states
   const [sourceType, setSourceType] = useState<"offer" | "worklog" | "project" | "none">(
@@ -107,6 +108,11 @@ export default function CompletionCertificateFormPage({
     // Load price list items
     apiJson<any[]>("/api/price-list")
       .then((res) => setPriceList(res))
+      .catch(() => {});
+
+    // Load service price list items
+    apiJson<any[]>("/api/service-price-list")
+      .then((res) => setServicePriceList(res))
       .catch(() => {});
 
     if (isNew) return;
@@ -206,6 +212,37 @@ export default function CompletionCertificateFormPage({
     }
   };
 
+  const addServiceItem = async (val: string) => {
+    const service = servicePriceList.find((p) => p._id === val);
+    if (!service) return;
+
+    try {
+      const payload: any = { partnerId: null };
+      if (service.category_id) {
+        payload.categoryId = service.category_id;
+      }
+      const calcData = await apiJsonBody<{
+        calculatedPrice: number;
+        snapshot: any;
+      }>(`/api/service-price-list/${service._id}/calculated-price`, "POST", payload);
+
+      setLines((prev) => [
+        ...prev,
+        {
+          price_list_item_id: null,
+          service_price_list_item_id: service._id,
+          price_snapshot: calcData.snapshot,
+          description: service.name,
+          quantity: 1,
+          unit: service.unit || "db",
+          net_unit_price: calcData.calculatedPrice,
+        },
+      ]);
+    } catch (e) {
+      alert("Hiba történt az árkalkuláció során.");
+    }
+  };
+
   const handleSourceTypeChange = async (type: string) => {
     setSourceType(type as any);
     setSourceId("");
@@ -265,6 +302,8 @@ export default function CompletionCertificateFormPage({
         setLines(
           selected.lines.map((l: any) => ({
             price_list_item_id: l.price_list_item_id ?? null,
+            service_price_list_item_id: l.service_price_list_item_id ?? null,
+            price_snapshot: l.price_snapshot ?? null,
             description: l.description,
             quantity: l.quantity,
             unit: l.unit,
@@ -286,6 +325,8 @@ export default function CompletionCertificateFormPage({
         setLines(
           selected.items.map((it: any) => ({
             price_list_item_id: it.price_list_item_id ?? null,
+            service_price_list_item_id: it.service_price_list_item_id ?? null,
+            price_snapshot: it.price_snapshot ?? null,
             description: it.description,
             quantity: it.quantity,
             unit: it.unit,
@@ -635,6 +676,27 @@ export default function CompletionCertificateFormPage({
                     {priceList.map((p) => (
                       <SelectItem key={p._id} value={p._id}>
                         {p.name} ({p.net_unit_price} Ft)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {servicePriceList.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Select
+                  value=""
+                  onValueChange={(val) => {
+                    if (val) addServiceItem(val);
+                  }}
+                >
+                  <SelectTrigger className="w-[240px]">
+                    <SelectValue placeholder="Tallózás a szolgáltatásokból..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {servicePriceList.map((p) => (
+                      <SelectItem key={p._id} value={p._id}>
+                        {p.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

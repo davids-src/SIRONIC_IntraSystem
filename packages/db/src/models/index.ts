@@ -28,3 +28,8 @@ export { ProjectExpenseModel } from "./project-expense";
 export { SecretShareModel } from "./secret-share";
 export { MaintenancePlanModel } from "./maintenance-plan";
 export { FloorplanModel } from "./floorplan";
+// Pricing Engine + Service Price List
+export { PricingSettingsModel } from "./pricing-settings";
+export { ServiceCategoryModel } from "./service-category";
+export { ServiceSubCategoryModel } from "./service-subcategory";
+export { ServicePriceListItemModel } from "./service-price-list-item";

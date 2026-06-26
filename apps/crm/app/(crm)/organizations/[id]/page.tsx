@@ -15,6 +15,7 @@ import {
   Textarea,
 } from "@crm/ui";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { use, useEffect, useState } from "react";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 import type {
@@ -45,6 +46,7 @@ import {
   KeyRound,
   Save,
   Trash2,
+  DollarSign,
 } from "lucide-react";
 import { ContactContractsTab } from "../../contacts/[id]/ContactContractsTab";
 import { ContactWorklogsTab } from "../../contacts/[id]/ContactWorklogsTab";
@@ -150,6 +152,18 @@ export default function OrganizationDetailPage({
   const [inviteName, setInviteName] = useState("");
   const [invitePassword, setInvitePassword] = useState("");
 
+  // ─── ÚJ árképzési mezők állapota ──────────────────────────────────────────
+  const [partnerRole, setPartnerRole] = useState<string>("client");
+  const [clientCategory, setClientCategory] = useState<string>("smb");
+  const [pricingContractType, setPricingContractType] = useState<string>("occasional");
+  const [contractStartDate, setContractStartDate] = useState<string>("");
+  const [contractEndDate, setContractEndDate] = useState<string>("");
+  const [contractRenewalReminderDays, setContractRenewalReminderDays] =
+    useState<number>(30);
+  const [subcontractorPresenceType, setSubcontractorPresenceType] = useState<string>("");
+  const [subcontractorBillingCycle, setSubcontractorBillingCycle] = useState<string>("");
+  const [subcontractorWorkTypes, setSubcontractorWorkTypes] = useState<string[]>([]);
+
   useEffect(() => {
     const ac = new AbortController();
     (async () => {
@@ -167,6 +181,26 @@ export default function OrganizationDetailPage({
         setContractType(c.contract_type ?? "ongoing");
         setServiceNotes(c.notes ?? "");
         setPortalPerms({ ...c.portal_permissions });
+
+        // ÚJ árképzési mezők inicializálása
+        setPartnerRole((c as any).partner_role ?? "client");
+        setClientCategory((c as any).client_category ?? "smb");
+        setPricingContractType((c as any).pricing_contract_type ?? "occasional");
+        setContractStartDate(
+          (c as any).contract_start_date
+            ? (new Date((c as any).contract_start_date).toISOString().split("T")[0] ?? "")
+            : "",
+        );
+        setContractEndDate(
+          (c as any).contract_end_date
+            ? (new Date((c as any).contract_end_date).toISOString().split("T")[0] ?? "")
+            : "",
+        );
+        setContractRenewalReminderDays((c as any).contract_renewal_reminder_days ?? 30);
+        setSubcontractorPresenceType((c as any).subcontractor_presence_type ?? "");
+        setSubcontractorBillingCycle((c as any).subcontractor_billing_cycle ?? "");
+        setSubcontractorWorkTypes((c as any).subcontractor_work_types ?? []);
+
         setLoadErr(null);
 
         if (id !== "new") {
@@ -420,6 +454,7 @@ export default function OrganizationDetailPage({
   const tabs = [
     { id: "basic", label: "Alapadatok", icon: <Building2 size={16} /> },
     { id: "services", label: "Szolgáltatások", icon: <Briefcase size={16} /> },
+    { id: "pricing", label: "Szerződés & Árképzés", icon: <DollarSign size={16} /> },
     { id: "projects", label: "Projektek", icon: <FolderKanban size={16} /> },
     { id: "tickets", label: "Ticketek", icon: <Ticket size={16} /> },
     { id: "worklogs", label: "Munkalapok", icon: <ClipboardList size={16} /> },
@@ -599,6 +634,225 @@ export default function OrganizationDetailPage({
                 </Button>
               </div>
             </div>
+          </div>
+        )}
+
+        {activeTab === "pricing" && (
+          <div className="flex flex-col gap-6">
+            <Card className="p-6 space-y-4">
+              <h3 className="text-lg font-bold text-[var(--color-text-primary)] border-b border-[var(--color-border-subtle)] pb-2">
+                Szerződés és Partner Árképzés Profil
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Bal oszlop – Partner szerepkör és típus */}
+                <div className="space-y-4">
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="partner-role">Partner Szerepköre</Label>
+                    <Select value={partnerRole} onValueChange={setPartnerRole}>
+                      <SelectTrigger id="partner-role">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="client">Ügyfél (Megrendelő)</SelectItem>
+                        <SelectItem value="subcontractor_employer">
+                          Alvállalkozó
+                        </SelectItem>
+                        <SelectItem value="supplier">Beszállító</SelectItem>
+                        <SelectItem value="mixed">
+                          Vegyes szerep (Ügyfél és Alvállalkozó)
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="client-category">Ügyfél Kategória</Label>
+                    <Select value={clientCategory} onValueChange={setClientCategory}>
+                      <SelectTrigger id="client-category">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="individual">Magánszemély (B2C)</SelectItem>
+                        <SelectItem value="smb">
+                          Kis- és középvállalkozás (KKV)
+                        </SelectItem>
+                        <SelectItem value="enterprise">
+                          Nagyvállalat / Prémium partner
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="pricing-contract-type">
+                      Szerződés Típusa (Árképzéshez)
+                    </Label>
+                    <Select
+                      value={pricingContractType}
+                      onValueChange={setPricingContractType}
+                    >
+                      <SelectTrigger id="pricing-contract-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="occasional">
+                          Eseti (Nincs keretszerződés)
+                        </SelectItem>
+                        <SelectItem value="6month">6 hónapos keretszerződés</SelectItem>
+                        <SelectItem value="1year">1 éves keretszerződés</SelectItem>
+                        <SelectItem value="2year">2 éves keretszerződés</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Jobb oszlop – Szerződés érvényesség */}
+                <div className="space-y-4">
+                  <Input
+                    label="Szerződés kezdete"
+                    type="date"
+                    value={contractStartDate}
+                    onChange={(e) => setContractStartDate(e.target.value)}
+                  />
+                  <Input
+                    label="Szerződés lejárata"
+                    type="date"
+                    value={contractEndDate}
+                    onChange={(e) => setContractEndDate(e.target.value)}
+                  />
+                  <Input
+                    label="Figyelmeztetés lejárat előtt (nap)"
+                    type="number"
+                    value={contractRenewalReminderDays}
+                    onChange={(e) =>
+                      setContractRenewalReminderDays(parseInt(e.target.value) || 0)
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Alvállalkozói kiegészítő opciók */}
+              {(partnerRole === "subcontractor_employer" || partnerRole === "mixed") && (
+                <div className="mt-6 border-t border-[var(--color-border-subtle)] pt-6 space-y-4">
+                  <h4 className="text-sm font-bold text-[var(--color-text-primary)]">
+                    Alvállalkozói Beállítások
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="sub-presence">Jelenlét Típusa</Label>
+                      <Select
+                        value={subcontractorPresenceType}
+                        onValueChange={setSubcontractorPresenceType}
+                      >
+                        <SelectTrigger id="sub-presence">
+                          <SelectValue placeholder="Válassz jelenlétet..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="daily_presence">
+                            Napibéres jelenlét
+                          </SelectItem>
+                          <SelectItem value="project_based">Projekt alapú</SelectItem>
+                          <SelectItem value="both">Mindkettő</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="sub-billing-cycle">Számlázási Ciklus</Label>
+                      <Select
+                        value={subcontractorBillingCycle}
+                        onValueChange={setSubcontractorBillingCycle}
+                      >
+                        <SelectTrigger id="sub-billing-cycle">
+                          <SelectValue placeholder="Válassz ciklust..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="weekly">Heti számlázás</SelectItem>
+                          <SelectItem value="monthly">Havi számlázás</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Munkaterületek */}
+                  <div className="space-y-2">
+                    <Label>Alvállalkozói munkaterületek</Label>
+                    <div className="flex flex-wrap gap-4 mt-2">
+                      {[
+                        { value: "it", label: "IT üzemeltetés & Fejlesztés" },
+                        { value: "security_tech", label: "Biztonságtechnika" },
+                        { value: "fire_protection", label: "Tűzvédelem" },
+                        { value: "electrical", label: "Erősáram / Villanyszerelés" },
+                        { value: "pm", label: "Projektmenedzsment" },
+                      ].map((work) => (
+                        <div key={work.value} className="flex items-center gap-2">
+                          <Checkbox
+                            checked={subcontractorWorkTypes.includes(work.value)}
+                            onCheckedChange={(v) => {
+                              const on = v === true;
+                              setSubcontractorWorkTypes((prev) =>
+                                on
+                                  ? [...prev, work.value]
+                                  : prev.filter((w) => w !== work.value),
+                              );
+                            }}
+                            id={`work-type-${work.value}`}
+                          />
+                          <label
+                            htmlFor={`work-type-${work.value}`}
+                            className="text-sm font-medium text-foreground cursor-pointer"
+                          >
+                            {work.label}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end pt-4">
+                <Button
+                  variant="primary"
+                  disabled={saving}
+                  onClick={async () => {
+                    setSaving(true);
+                    setLoadErr(null);
+                    try {
+                      const raw = await apiJsonBody(`/api/contacts/${id}`, "PATCH", {
+                        partner_role: partnerRole,
+                        client_category: clientCategory,
+                        pricing_contract_type: pricingContractType,
+                        contract_start_date: contractStartDate
+                          ? new Date(contractStartDate).toISOString()
+                          : null,
+                        contract_end_date: contractEndDate
+                          ? new Date(contractEndDate).toISOString()
+                          : null,
+                        contract_renewal_reminder_days: contractRenewalReminderDays,
+                        subcontractor_presence_type: subcontractorPresenceType || null,
+                        subcontractor_billing_cycle: subcontractorBillingCycle || null,
+                        subcontractor_work_types: subcontractorWorkTypes,
+                      });
+                      const updated = parseContact(raw);
+                      setContact(updated);
+                      toast.success("Árképzési beállítások elmentve");
+                    } catch (e) {
+                      setLoadErr(
+                        e instanceof ApiError ? e.message : "Mentés sikertelen.",
+                      );
+                      toast.error("Hiba a mentés során");
+                    } finally {
+                      setSaving(false);
+                    }
+                  }}
+                >
+                  {saving ? "Mentés..." : "Beállítások mentése"}
+                </Button>
+              </div>
+            </Card>
           </div>
         )}
 
