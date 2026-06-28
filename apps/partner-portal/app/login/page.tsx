@@ -2,12 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Button, Input, Label, Card } from "@crm/ui";
 
 export default function PartnerLoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const magicConsumeAttemptedRef = useRef(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,8 +16,9 @@ export default function PartnerLoginPage() {
   const [magicLoading, setMagicLoading] = useState(false);
 
   useEffect(() => {
-    const queryEmail = searchParams.get("email") ?? "";
-    const magicToken = searchParams.get("magicToken") ?? "";
+    const query = new URLSearchParams(window.location.search);
+    const queryEmail = query.get("email") ?? "";
+    const magicToken = query.get("magicToken") ?? "";
     if (queryEmail && !email) {
       setEmail(queryEmail);
     }
@@ -53,7 +53,7 @@ export default function PartnerLoginPage() {
     return () => {
       cancelled = true;
     };
-  }, [searchParams, email, router]);
+  }, [email, router]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
