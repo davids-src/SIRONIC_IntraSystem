@@ -12,6 +12,8 @@ const portalUserSchema = defineSchema(
     roleKeys: [{ type: String, required: true }],
     invite_token: { type: String, default: null, index: true, sparse: true },
     invite_token_expires: { type: Date, default: null },
+    magic_token_hash: { type: String, default: null, index: true, sparse: true },
+    magic_token_expires: { type: Date, default: null },
   },
   ts,
 );

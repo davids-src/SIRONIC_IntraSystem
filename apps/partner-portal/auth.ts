@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import type { Session, User } from "next-auth";
 import type { JWT } from "next-auth/jwt";
+import { createHash } from "crypto";
 import bcrypt from "bcryptjs";
 import { connectDb, PortalUserModel } from "@crm/db";
 import type { RoleKey } from "@crm/types";
@@ -18,6 +19,8 @@ type PortalUserLean = {
   tenantId: string;
   contact_id: string;
   roleKeys?: string[];
+  magic_token_hash?: string | null;
+  magic_token_expires?: Date | null;
 };
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -27,6 +30,57 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/login",
   },
   providers: [
+    Credentials({
+      id: "magic-link",
+      name: "magic-link",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        token: { label: "Token", type: "text" },
+      },
+      async authorize(credentials) {
+        const email =
+          typeof credentials?.email === "string"
+            ? credentials.email.trim().toLowerCase()
+            : "";
+        const token =
+          typeof credentials?.token === "string" ? credentials.token.trim() : "";
+        if (!email || !token) {
+          return null;
+        }
+        const tokenHash = createHash("sha256").update(token).digest("hex");
+        await connectDb();
+        const user = (await PortalUserModel.findOneAndUpdate(
+          {
+            email,
+            magic_token_hash: tokenHash,
+            magic_token_expires: { $gt: new Date() },
+            roleKeys: { $in: ["partner.admin", "partner.viewer"] },
+          },
+          {
+            $unset: {
+              magic_token_hash: "",
+              magic_token_expires: "",
+            },
+          },
+          { new: true },
+        ).lean()) as PortalUserLean | null;
+        if (!user) {
+          return null;
+        }
+        const roleKeys = (user.roleKeys ?? []).filter(isPartnerRole) as RoleKey[];
+        if (roleKeys.length === 0) {
+          return null;
+        }
+        return {
+          id: String(user._id),
+          email: user.email,
+          name: user.display_name ?? user.email,
+          tenantId: user.tenantId,
+          contactId: user.contact_id,
+          roleKeys,
+        };
+      },
+    }),
     Credentials({
       name: "credentials",
       credentials: {
