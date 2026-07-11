@@ -1,7 +1,7 @@
 "use client";
 
 import { PageHeader, Card, Badge, Button, UnifiedPdfTemplate } from "@crm/ui";
-import { Download, ChevronLeft } from "lucide-react";
+import { Download, ChevronLeft, Edit } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { PurchaseOrder, Supplier, Settings, CompanyDetails } from "@crm/types";
@@ -166,13 +166,23 @@ export default function PurchaseOrderDetailPage() {
               <ChevronLeft size={16} /> Vissza
             </Button>
             {order.status === "draft" && (
-              <Button
-                variant="secondary"
-                onClick={() => handleStatusChange("sent")}
-                disabled={updating}
-              >
-                Elküldés
-              </Button>
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={() => router.push(`/purchase-orders/${id}/edit`)}
+                  disabled={updating}
+                >
+                  <Edit size={16} className="mr-1.5" />
+                  Szerkesztés
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => handleStatusChange("sent")}
+                  disabled={updating}
+                >
+                  Elküldés
+                </Button>
+              </>
             )}
             {(order.status === "sent" || order.status === "draft") && (
               <Button

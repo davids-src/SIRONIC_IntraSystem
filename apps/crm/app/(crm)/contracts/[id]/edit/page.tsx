@@ -17,9 +17,9 @@ import {
   InputControl,
 } from "@crm/ui";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { FileText, Upload, ArrowLeft, ArrowRight, Check } from "lucide-react";
-import type { Contact, ContractTemplate } from "@crm/types";
+import { useEffect, useState, use } from "react";
+import { FileText, Upload, ArrowLeft, Save } from "lucide-react";
+import type { Contact, ContractTemplate, Contract } from "@crm/types";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 
 const CONTRACT_CATEGORIES = [
@@ -33,17 +33,22 @@ const CONTRACT_CATEGORIES = [
   "Egyéb",
 ];
 
-export default function NewContractPage() {
+export default function EditContractPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
   const router = useRouter();
-  const [step, setStep] = useState<1 | 2>(1);
-  const [contractType, setContractType] = useState<"generated" | "uploaded" | null>(null);
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Loaded DB data
   const [templates, setTemplates] = useState<ContractTemplate[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [loadingData, setLoadingData] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [contractType, setContractType] = useState<"generated" | "uploaded" | null>(null);
 
   // Step 2a – from template
   const [templateId, setTemplateId] = useState("");
@@ -69,86 +74,59 @@ export default function NewContractPage() {
     Promise.all([
       apiJson<ContractTemplate[]>("/api/contract-templates"),
       apiJson<Contact[]>("/api/contacts"),
+      apiJson<Contract>(`/api/contracts/${id}`),
     ])
-      .then(([tmpls, conts]) => {
+      .then(([tmpls, conts, doc]) => {
         setTemplates(tmpls.filter((t) => t.is_active));
         setContacts(conts);
-      })
-      .catch(() => {})
-      .finally(() => setLoadingData(false));
-  }, []);
+        setContractType(doc.type);
 
-  const handleTemplateChange = (id: string) => {
-    setTemplateId(id);
-    const tmpl = templates.find((t) => t._id === id);
+        if (doc.status !== "draft") {
+          router.replace(`/contracts/${id}`);
+          return;
+        }
+
+        if (doc.type === "generated") {
+          setTemplateId(doc.template_id || "");
+          setContractName(doc.name);
+          setContactId(doc.contact_id);
+          setCategory(doc.category);
+          setValidFrom(
+            doc.valid_from ? new Date(doc.valid_from).toISOString().slice(0, 10) : "",
+          );
+          setValidUntil(
+            doc.valid_until ? new Date(doc.valid_until).toISOString().slice(0, 10) : "",
+          );
+          setIndefinite(!doc.valid_until);
+          setSigningType(doc.signing_type);
+          setPortalVisible(doc.portal_visible);
+          setVariablesFilled(doc.variables_filled || {});
+        } else {
+          setUploadName(doc.name);
+          setUploadContactId(doc.contact_id);
+          setUploadCategory(doc.category);
+          setUploadSigningType(doc.signing_type);
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        setError("Nem sikerült betölteni a szerződést.");
+        setLoading(false);
+      });
+  }, [id, router]);
+
+  const handleTemplateChange = (tmplId: string) => {
+    setTemplateId(tmplId);
+    const tmpl = templates.find((t) => t._id === tmplId);
     if (tmpl) {
-      if (!contractName) setContractName(tmpl.name);
-      if (!category) setCategory(tmpl.category);
+      setContractName(tmpl.name);
+      setCategory(tmpl.category);
       // Initialize variables filled
       const initVars: Record<string, string> = {};
       (tmpl.variables ?? []).forEach((v) => {
         initVars[v] = "";
       });
       setVariablesFilled(initVars);
-    }
-  };
-
-  const handleStep1Select = (type: "generated" | "uploaded") => {
-    setContractType(type);
-    setStep(2);
-  };
-
-  const handleSave = async (status: "draft" | "sent") => {
-    setError(null);
-    setSaving(true);
-    try {
-      let payload: Record<string, any> = {};
-      if (contractType === "generated") {
-        if (!contactId || !contractName || !templateId || !category) {
-          setError("Kérlek tölts ki minden kötelező mezőt!");
-          setSaving(false);
-          return;
-        }
-        payload = {
-          contact_id: contactId,
-          type: "generated",
-          category,
-          name: contractName,
-          template_id: templateId,
-          status,
-          variables_filled: variablesFilled,
-          signing_type: signingType,
-          portal_visible: portalVisible,
-          valid_from: validFrom ? new Date(validFrom).toISOString() : null,
-          valid_until:
-            indefinite || !validUntil ? null : new Date(validUntil).toISOString(),
-          // Generate actual HTML body replacing variables
-          body: generateHtmlBody(),
-        };
-      } else {
-        if (!uploadContactId || !uploadName || !uploadCategory) {
-          setError("Kérlek tölts ki minden kötelező mezőt!");
-          setSaving(false);
-          return;
-        }
-        payload = {
-          contact_id: uploadContactId,
-          type: "uploaded",
-          category: uploadCategory,
-          name: uploadName,
-          status: "draft",
-          pdf_url: "/uploads/dummy_contract.pdf",
-          signing_type: uploadSigningType,
-          portal_visible: true,
-        };
-      }
-
-      const res = await apiJsonBody<{ _id: string }>("/api/contracts", "POST", payload);
-      router.push(`/contracts/${res._id}`);
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Hiba a mentés során.");
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -169,227 +147,85 @@ export default function NewContractPage() {
     return content;
   };
 
+  const handleSave = async () => {
+    setError(null);
+    setSaving(true);
+    try {
+      let payload: Record<string, any> = {};
+      if (contractType === "generated") {
+        if (!contactId || !contractName || !templateId || !category) {
+          setError("Kérlek tölts ki minden kötelező mezőt!");
+          setSaving(false);
+          return;
+        }
+        payload = {
+          contact_id: contactId,
+          category,
+          name: contractName,
+          template_id: templateId,
+          variables_filled: variablesFilled,
+          signing_type: signingType,
+          portal_visible: portalVisible,
+          valid_from: validFrom ? new Date(validFrom).toISOString() : null,
+          valid_until:
+            indefinite || !validUntil ? null : new Date(validUntil).toISOString(),
+          body: generateHtmlBody(),
+        };
+      } else {
+        if (!uploadContactId || !uploadName || !uploadCategory) {
+          setError("Kérlek tölts ki minden kötelező mezőt!");
+          setSaving(false);
+          return;
+        }
+        payload = {
+          contact_id: uploadContactId,
+          category: uploadCategory,
+          name: uploadName,
+          signing_type: uploadSigningType,
+        };
+      }
+
+      await apiJsonBody(`/api/contracts/${id}`, "PATCH", payload);
+      router.push(`/contracts/${id}`);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Hiba a mentés során.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const selectedTemplate = templates.find((t) => t._id === templateId);
   const templateVariables = selectedTemplate?.variables ?? [];
 
-  if (loadingData) {
+  if (loading) {
     return <div className="p-6 text-[var(--color-text-muted)]">Betöltés…</div>;
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       <PageHeader
-        title="Új szerződés"
+        title="Szerződés szerkesztése"
         subtitle={
-          step === 1
-            ? "Válassz szerződés típust"
-            : contractType === "generated"
-              ? "Sablon alapú szerződés"
-              : "Külső fájl feltöltése"
+          contractType === "generated"
+            ? "Sablon alapú szerződés módosítása"
+            : "Feltöltött szerződés adatainak módosítása"
         }
         actions={
           <Button
             variant="secondary"
-            onClick={() => (step === 2 ? setStep(1) : router.back())}
+            onClick={() => router.push(`/contracts/${id}`)}
             disabled={saving}
           >
             <ArrowLeft size={16} style={{ marginRight: "8px" }} />
-            Vissza
+            Mégse
           </Button>
         }
       />
 
       {error && <div className="text-red-400 p-4 rounded-lg bg-red-950/30">{error}</div>}
 
-      {/* Step indicator */}
-      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-        {[1, 2].map((s) => (
-          <div key={s} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <div
-              style={{
-                width: "28px",
-                height: "28px",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "0.8rem",
-                fontWeight: 700,
-                background:
-                  step === s
-                    ? "var(--accent-primary, #e53935)"
-                    : step > s
-                      ? "var(--status-success, #22c55e)"
-                      : "var(--bg-secondary, #222)",
-                color: "#fff",
-              }}
-            >
-              {step > s ? <Check size={14} /> : s}
-            </div>
-            <span
-              style={{
-                fontSize: "0.875rem",
-                color:
-                  step === s ? "var(--text-primary, #fff)" : "var(--text-muted, #888)",
-                fontWeight: step === s ? 600 : 400,
-              }}
-            >
-              {s === 1 ? "Típus kiválasztása" : "Adatok megadása"}
-            </span>
-            {s < 2 && (
-              <div
-                style={{
-                  width: "40px",
-                  height: "2px",
-                  background: "var(--border-subtle, #2a2a2a)",
-                  margin: "0 4px",
-                }}
-              />
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Step 1: Type selection */}
-      {step === 1 && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: "24px",
-          }}
-        >
-          <Card
-            className="p-8"
-            style={{
-              cursor: "pointer",
-              transition: "all 0.2s",
-              border: "2px solid transparent",
-            }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.borderColor = "var(--accent-primary, #e53935)")
-            }
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "transparent")}
-            onClick={() => handleStep1Select("generated")}
-          >
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "16px",
-                alignItems: "flex-start",
-              }}
-            >
-              <div
-                style={{
-                  width: "48px",
-                  height: "48px",
-                  borderRadius: "12px",
-                  background: "var(--accent-badge-bg, #3b0a0a)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "var(--accent-primary, #e53935)",
-                }}
-              >
-                <FileText size={24} />
-              </div>
-              <div>
-                <h2
-                  style={{
-                    fontSize: "1.125rem",
-                    fontWeight: 700,
-                    color: "var(--text-primary, #fff)",
-                    margin: "0 0 8px 0",
-                  }}
-                >
-                  Generálás sablonból
-                </h2>
-                <p
-                  style={{
-                    fontSize: "0.875rem",
-                    color: "var(--text-muted, #888)",
-                    margin: 0,
-                    lineHeight: 1.6,
-                  }}
-                >
-                  Tölts ki egy sablont a CRM-ben. A változók automatikusan kitölthetők a
-                  kontakt adataiból, majd PDF generálódik.
-                </p>
-              </div>
-              <Button variant="primary" style={{ marginTop: "8px" }}>
-                Sablon kiválasztása <ArrowRight size={16} style={{ marginLeft: "8px" }} />
-              </Button>
-            </div>
-          </Card>
-
-          <Card
-            className="p-8"
-            style={{
-              cursor: "pointer",
-              transition: "all 0.2s",
-              border: "2px solid transparent",
-            }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.borderColor = "var(--border-default, #444)")
-            }
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "transparent")}
-            onClick={() => handleStep1Select("uploaded")}
-          >
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "16px",
-                alignItems: "flex-start",
-              }}
-            >
-              <div
-                style={{
-                  width: "48px",
-                  height: "48px",
-                  borderRadius: "12px",
-                  background: "var(--bg-secondary, #1a1a1a)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "var(--text-secondary, #aaa)",
-                }}
-              >
-                <Upload size={24} />
-              </div>
-              <div>
-                <h2
-                  style={{
-                    fontSize: "1.125rem",
-                    fontWeight: 700,
-                    color: "var(--text-primary, #fff)",
-                    margin: "0 0 8px 0",
-                  }}
-                >
-                  Külső fájl feltöltése
-                </h2>
-                <p
-                  style={{
-                    fontSize: "0.875rem",
-                    color: "var(--text-muted, #888)",
-                    margin: 0,
-                    lineHeight: 1.6,
-                  }}
-                >
-                  Külsőleg elkészített szerződés PDF feltöltése és rögzítése a CRM-ben.
-                </p>
-              </div>
-              <Button variant="secondary" style={{ marginTop: "8px" }}>
-                PDF feltöltése <ArrowRight size={16} style={{ marginLeft: "8px" }} />
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* Step 2a: From template */}
-      {step === 2 && contractType === "generated" && (
+      {/* From template */}
+      {contractType === "generated" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           {/* Header fields */}
           <Card className="flex flex-col gap-5 p-6">
@@ -398,12 +234,12 @@ export default function NewContractPage() {
             </h3>
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="new-contract-template">Sablon *</Label>
+                <Label htmlFor="edit-contract-template">Sablon *</Label>
                 <Select
                   value={templateId || "__empty__"}
                   onValueChange={(v) => handleTemplateChange(v === "__empty__" ? "" : v)}
                 >
-                  <SelectTrigger id="new-contract-template" className="w-full">
+                  <SelectTrigger id="edit-contract-template" className="w-full">
                     <SelectValue placeholder="-- Sablon kiválasztása --" />
                   </SelectTrigger>
                   <SelectContent>
@@ -423,12 +259,12 @@ export default function NewContractPage() {
                 placeholder="Szerződés neve"
               />
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="new-contract-contact">Kontakt *</Label>
+                <Label htmlFor="edit-contract-contact">Kontakt *</Label>
                 <Select
                   value={contactId || "__empty__"}
                   onValueChange={(v) => setContactId(v === "__empty__" ? "" : v)}
                 >
-                  <SelectTrigger id="new-contract-contact" className="w-full">
+                  <SelectTrigger id="edit-contract-contact" className="w-full">
                     <SelectValue placeholder="-- Kontakt kiválasztása --" />
                   </SelectTrigger>
                   <SelectContent>
@@ -442,12 +278,12 @@ export default function NewContractPage() {
                 </Select>
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="new-contract-category">Kategória *</Label>
+                <Label htmlFor="edit-contract-category">Kategória *</Label>
                 <Select
                   value={category || "__empty__"}
                   onValueChange={(v) => setCategory(v === "__empty__" ? "" : v)}
                 >
-                  <SelectTrigger id="new-contract-category" className="w-full">
+                  <SelectTrigger id="edit-contract-category" className="w-full">
                     <SelectValue placeholder="-- Kategória --" />
                   </SelectTrigger>
                   <SelectContent>
@@ -467,9 +303,9 @@ export default function NewContractPage() {
                 onChange={(e) => setValidFrom(e.target.value)}
               />
               <div className="flex flex-col gap-2">
-                <Label htmlFor="new-contract-valid-until">Érvényesség vége</Label>
+                <Label htmlFor="edit-contract-valid-until">Érvényesség vége</Label>
                 <Input
-                  id="new-contract-valid-until"
+                  id="edit-contract-valid-until"
                   type="date"
                   value={validUntil}
                   onChange={(e) => setValidUntil(e.target.value)}
@@ -477,12 +313,12 @@ export default function NewContractPage() {
                 />
                 <div className="flex flex-row items-center gap-2">
                   <Checkbox
-                    id="new-contract-indefinite"
+                    id="edit-contract-indefinite"
                     checked={indefinite}
                     onCheckedChange={(v) => setIndefinite(v === true)}
                   />
                   <Label
-                    htmlFor="new-contract-indefinite"
+                    htmlFor="edit-contract-indefinite"
                     className="cursor-pointer font-normal text-muted-foreground"
                   >
                     Határozatlan idejű
@@ -490,12 +326,12 @@ export default function NewContractPage() {
                 </div>
               </div>
               <div className="flex flex-col gap-1.5 md:col-span-2 xl:col-span-3">
-                <Label htmlFor="new-contract-signing">Aláírás módja</Label>
+                <Label htmlFor="edit-contract-signing">Aláírás módja</Label>
                 <Select
                   value={signingType}
                   onValueChange={(v) => setSigningType(v as "digital" | "paper" | "none")}
                 >
-                  <SelectTrigger id="new-contract-signing" className="w-full max-w-md">
+                  <SelectTrigger id="edit-contract-signing" className="w-full max-w-md">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -507,7 +343,7 @@ export default function NewContractPage() {
               </div>
               <div className="md:col-span-2 xl:col-span-3">
                 <CheckboxField
-                  id="new-contract-portal-visible"
+                  id="edit-contract-portal-visible"
                   label="Partner láthatja a portálon"
                   checked={portalVisible}
                   onCheckedChange={(v) => setPortalVisible(v === true)}
@@ -574,31 +410,23 @@ export default function NewContractPage() {
 
           {/* Actions */}
           <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
-            <Button variant="secondary" onClick={() => setStep(1)} disabled={saving}>
-              Vissza
-            </Button>
             <Button
               variant="secondary"
-              onClick={() => handleSave("draft")}
+              onClick={() => router.push(`/contracts/${id}`)}
               disabled={saving}
             >
-              Mentés vázlatként
+              Mégse
             </Button>
-            {signingType !== "none" && (
-              <Button
-                variant="primary"
-                onClick={() => handleSave("sent")}
-                disabled={saving}
-              >
-                Generálás és küldés partnernek
-              </Button>
-            )}
+            <Button variant="primary" onClick={handleSave} disabled={saving}>
+              <Save size={15} className="mr-1.5" />
+              {saving ? "Mentés..." : "Változtatások mentése"}
+            </Button>
           </div>
         </div>
       )}
 
-      {/* Step 2b: Upload */}
-      {step === 2 && contractType === "uploaded" && (
+      {/* Uploaded */}
+      {contractType === "uploaded" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           <Card className="flex flex-col gap-5 p-6">
             <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
@@ -670,70 +498,17 @@ export default function NewContractPage() {
             </div>
           </Card>
 
-          <Card className="p-6">
-            <h3
-              style={{
-                fontSize: "0.9rem",
-                fontWeight: 700,
-                color: "var(--text-muted, #888)",
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-                margin: "0 0 16px 0",
-              }}
-            >
-              Szerződés PDF *
-            </h3>
-            <div
-              style={{
-                border: "2px dashed var(--border-subtle, #2a2a2a)",
-                borderRadius: "12px",
-                padding: "48px 24px",
-                textAlign: "center",
-                cursor: "pointer",
-                transition: "border-color 0.2s",
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.borderColor = "var(--accent-primary, #e53935)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.borderColor = "var(--border-subtle, #2a2a2a)")
-              }
-            >
-              <Upload
-                size={40}
-                style={{ color: "var(--text-muted, #888)", marginBottom: "12px" }}
-              />
-              <p
-                style={{
-                  color: "var(--text-primary, #fff)",
-                  fontWeight: 600,
-                  margin: "0 0 4px 0",
-                }}
-              >
-                Simulated Upload Box (Az elmentett bizonylat dummy PDF-et fog kapni)
-              </p>
-              <p
-                style={{
-                  color: "var(--text-muted, #888)",
-                  fontSize: "0.875rem",
-                  margin: 0,
-                }}
-              >
-                PDF formátum támogatott
-              </p>
-            </div>
-          </Card>
-
           <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
-            <Button variant="secondary" onClick={() => setStep(1)} disabled={saving}>
-              Vissza
-            </Button>
             <Button
-              variant="primary"
-              onClick={() => handleSave("draft")}
+              variant="secondary"
+              onClick={() => router.push(`/contracts/${id}`)}
               disabled={saving}
             >
-              {saving ? "Mentés..." : "Feltöltés és mentés"}
+              Mégse
+            </Button>
+            <Button variant="primary" onClick={handleSave} disabled={saving}>
+              <Save size={15} className="mr-1.5" />
+              {saving ? "Mentés..." : "Változtatások mentése"}
             </Button>
           </div>
         </div>

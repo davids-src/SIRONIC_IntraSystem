@@ -338,3 +338,26 @@ Hogy a kiállított ajánlatok, munkalapok és teljesítési igazolások utólag
 - A tétel felvitelekor a rendszer lekéri az adott pillanatban érvényes árat és a snapshotot az API-tól, és elmenti a dokumentumba.
 - Későbbi megtekintéskor vagy letöltéskor (PDF generálás) szigorúan a dokumentumba ágyazott `price_snapshot.calculated_price` vagy a rögzített `unit_price` érvényesül.
 - Ez az adatintegritás biztosítja a jogi és pénzügyi nyomonkövethetőséget.
+
+---
+
+### 4.12. Bizonylatok Szerkeszthetősége és Módosítási Korlátai (Draft-Only Editing Boundaries)
+
+A rendszerben a különböző bizonylatok (szállítólevelek, ajánlatok, megrendelőlapok, szerződések, számlák és teljesítésigazolások) életciklusának menedzselése és a pénzügyi/raktár-integritás védelme érdekében szigorú szerkesztési korlátok érvényesülnek.
+
+#### 1. Piszkozat (Draft) állapotú bizonylatok szerkesztése
+
+Minden bizonylattípus esetében a **Piszkozat (Draft)** állapotú bizonylatok teljesen módosíthatók. Minden bizonylathoz elkészült a dedikált szerkesztő felület (`/edit`) és a részletes nézeten a "Szerkesztés" akciógomb.
+
+- **Szerződések (Contracts) Szerkesztése (`/contracts/[id]/edit`):** A rendszer zárolja a szerződés típusát (`generated` vagy `uploaded`) az eredetileg megadott értékre, és betölti a megfelelő űrlapot. Sablon alapú szerződésnél a változók kitöltése módosítható, és a mentés során a backend API generálja újra a szerződés szövegét.
+- **Szállítólevelek (Delivery Notes) Szerkesztése (`/delivery-notes/[id]/edit`):** A piszkozat állapotú szállítólevelek tételei, partnere és a kapcsolódó projektje módosítható. A mentés a `PATCH /api/delivery-notes/[id]` végponton fut le.
+- **Ajánlatok (Offers) Szerkesztése (`/offers/[id]/edit`):** A piszkozat ajánlatok a teljes létrehozási varázsló (Wizard) segítségével módosíthatók (fejléc adatok, partner, egyedi tételek, kedvezmények, árlistából és kalkulált szolgáltatásokból beemelt sorok). A mentés a `PATCH /api/offers/[id]` végponton történik.
+- **Megrendelőlapok (Purchase Orders) Szerkesztése (`/purchase-orders/[id]/edit`):** A piszkozat megrendelőlapokon módosítható a beszállító, a várható szállítási határidő, a megjegyzés és az összes tétel. A backend API (`PATCH /api/purchase-orders/[id]`) feldolgozza a beszállító és a tételek változásait, és automatikusan újraszámolja a megrendelés bruttó végösszegét (`total_amount`).
+
+#### 2. Módosítási határok (Editing Boundaries) nem-piszkozat állapotban
+
+Amikor egy bizonylat kikerül a Piszkozat (Draft) állapotból (pl. kiküldésre, aláírásra vagy teljesítésre kerül), a benne szereplő adatok és tételek már nem módosíthatók, elkerülve a visszamenőleges adatmódosítást és az inkonzisztenciát.
+
+- **Számlák (Invoices):** Ha a számla státusza nem `draft` (pl. `sent`, `paid`, `cancelled`), a rendszer a részletes nézeten lévő szerkesztési mezőket letiltja (`disabled`), a "Mentés" akciógombot pedig elrejti.
+- **Teljesítésigazolások (Completion Certificates):** Ha a teljesítésigazolás nem új (`isNew === false`) és státusza nem `draft` (pl. `sent`, `accepted`, `rejected`), a rendszer letiltja a cím, a munka összefoglaló, a tételsorok, a munkaidőszak, az aláíró nevének és az e-mail címzettnek a szerkesztését. A manuális sor hozzáadása, az árlistából és a szolgáltatásokból történő tallózás letiltásra kerül, és a mentés gomb elrejtésre kerül.
+- **Megrendelőlapok, Szállítólevelek, Ajánlatok, Szerződések:** A részletes nézetek és a háttér API-k is letiltják a `/edit` útvonal elérését és a módosító kéréseket (`PATCH`/`PUT`), automatikusan átirányítva a felhasználót a részletező nézetre.

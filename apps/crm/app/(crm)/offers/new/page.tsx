@@ -129,6 +129,7 @@ export default function NewOfferPage() {
   const [servicePriceList, setServicePriceList] = useState<any[]>([]);
   const [serviceCategories, setServiceCategories] = useState<any[]>([]);
   const [pickerTab, setPickerTab] = useState<"product" | "service">("product");
+  const [productCategoryFilter, setProductCategoryFilter] = useState<string>("__all__");
 
   useEffect(() => {
     const ac = new AbortController();
@@ -404,10 +405,31 @@ export default function NewOfferPage() {
 
   const filtered = priceList.filter(
     (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.code.toLowerCase().includes(search.toLowerCase()) ||
-      categoryLabel[p.category].toLowerCase().includes(search.toLowerCase()),
+      (productCategoryFilter === "__all__" || p.category === productCategoryFilter) &&
+      (p.name.toLowerCase().includes(search.toLowerCase()) ||
+        p.code.toLowerCase().includes(search.toLowerCase()) ||
+        categoryLabel[p.category].toLowerCase().includes(search.toLowerCase())),
   );
+
+  // Build unique product categories for sidebar filter
+  const productCategories: { id: string; label: string; count: number }[] = (() => {
+    const map = new Map<string, number>();
+    for (const p of priceList) {
+      const label = categoryLabel[p.category] ?? p.category;
+      map.set(p.category, (map.get(p.category) ?? 0) + 1);
+      // Store label separately
+      if (!map.has(`label:${p.category}`)) {
+        map.set(`label:${p.category}`, label as any);
+      }
+    }
+    return Array.from(new Set(priceList.map((p) => p.category)))
+      .map((cat) => ({
+        id: cat,
+        label: categoryLabel[cat as keyof typeof categoryLabel] ?? cat,
+        count: priceList.filter((p) => p.category === cat).length,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label, "hu"));
+  })();
 
   const filteredServices = servicePriceList.filter(
     (p) =>
@@ -989,137 +1011,259 @@ export default function NewOfferPage() {
 
             {/* Termék kártyák */}
             {pickerTab === "product" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                {filtered.map((item) => {
-                  const inCart = isInCart(item._id);
-                  return (
-                    <button
-                      key={item._id}
-                      onClick={() => addItem(item)}
+              <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
+                {/* Category sidebar */}
+                <div
+                  style={{
+                    width: "160px",
+                    flexShrink: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "2px",
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: "0.6875rem",
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                      color: "var(--color-text-muted)",
+                      padding: "0 4px",
+                      marginBottom: "6px",
+                    }}
+                  >
+                    Kategóriák
+                  </p>
+                  <button
+                    style={{
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "6px 10px",
+                      borderRadius: "6px",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: "0.8125rem",
+                      fontWeight: productCategoryFilter === "__all__" ? 600 : 400,
+                      background:
+                        productCategoryFilter === "__all__"
+                          ? "var(--color-accent-badge-bg)"
+                          : "transparent",
+                      color:
+                        productCategoryFilter === "__all__"
+                          ? "var(--color-accent-primary)"
+                          : "var(--color-text-muted)",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                    onClick={() => setProductCategoryFilter("__all__")}
+                  >
+                    <span>Összes</span>
+                    <span
                       style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "16px",
-                        padding: "16px 20px",
-                        background: inCart
-                          ? "rgba(34,197,94,0.06)"
-                          : "var(--color-bg-card, #1a1a1a)",
-                        border: inCart
-                          ? "1px solid rgba(34,197,94,0.3)"
-                          : "1px solid var(--color-border-default, #222)",
-                        borderRadius: "10px",
-                        textAlign: "left",
-                        cursor: "pointer",
-                        transition: "all 0.12s",
-                        width: "100%",
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!inCart)
-                          (e.currentTarget as HTMLElement).style.borderColor =
-                            "var(--color-accent-primary, #e53935)";
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!inCart)
-                          (e.currentTarget as HTMLElement).style.borderColor =
-                            "var(--color-border-default, #222)";
+                        fontSize: "0.7rem",
+                        background: "var(--color-border-default)",
+                        padding: "1px 6px",
+                        borderRadius: "999px",
+                        color: "var(--color-text-secondary)",
                       }}
                     >
-                      {/* Zöld pipa ha már kosárban van */}
-                      <div
+                      {priceList.length}
+                    </span>
+                  </button>
+                  {productCategories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "6px 10px",
+                        borderRadius: "6px",
+                        border: "none",
+                        cursor: "pointer",
+                        fontSize: "0.8125rem",
+                        fontWeight: productCategoryFilter === cat.id ? 600 : 400,
+                        background:
+                          productCategoryFilter === cat.id
+                            ? "var(--color-accent-badge-bg)"
+                            : "transparent",
+                        color:
+                          productCategoryFilter === cat.id
+                            ? "var(--color-accent-primary)"
+                            : "var(--color-text-muted)",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                      onClick={() => setProductCategoryFilter(cat.id)}
+                    >
+                      <span
                         style={{
-                          width: "32px",
-                          height: "32px",
-                          borderRadius: "8px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                          background: inCart
-                            ? "rgba(34,197,94,0.15)"
-                            : "var(--color-bg-secondary, #111)",
-                          color: inCart ? "#22c55e" : "var(--color-text-muted, #555)",
-                          transition: "all 0.12s",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          flex: 1,
                         }}
                       >
-                        {inCart ? <CheckCircle2 size={16} /> : <Plus size={16} />}
-                      </div>
+                        {cat.label}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "0.7rem",
+                          background: "var(--color-border-default)",
+                          padding: "1px 6px",
+                          borderRadius: "999px",
+                          color: "var(--color-text-secondary)",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {cat.count}
+                      </span>
+                    </button>
+                  ))}
+                </div>
 
-                      {/* Név + leírás */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
+                {/* Product cards */}
+                <div
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "6px",
+                  }}
+                >
+                  {filtered.map((item) => {
+                    const inCart = isInCart(item._id);
+                    return (
+                      <button
+                        key={item._id}
+                        onClick={() => addItem(item)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "16px",
+                          padding: "16px 20px",
+                          background: inCart
+                            ? "rgba(34,197,94,0.06)"
+                            : "var(--color-bg-card, #1a1a1a)",
+                          border: inCart
+                            ? "1px solid rgba(34,197,94,0.3)"
+                            : "1px solid var(--color-border-default, #222)",
+                          borderRadius: "10px",
+                          textAlign: "left",
+                          cursor: "pointer",
+                          transition: "all 0.12s",
+                          width: "100%",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!inCart)
+                            (e.currentTarget as HTMLElement).style.borderColor =
+                              "var(--color-accent-primary, #e53935)";
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!inCart)
+                            (e.currentTarget as HTMLElement).style.borderColor =
+                              "var(--color-border-default, #222)";
+                        }}
+                      >
+                        {/* Zöld pipa ha már kosárban van */}
                         <div
                           style={{
+                            width: "32px",
+                            height: "32px",
+                            borderRadius: "8px",
                             display: "flex",
                             alignItems: "center",
-                            gap: "8px",
-                            marginBottom: "3px",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                            background: inCart
+                              ? "rgba(34,197,94,0.15)"
+                              : "var(--color-bg-secondary, #111)",
+                            color: inCart ? "#22c55e" : "var(--color-text-muted, #555)",
+                            transition: "all 0.12s",
                           }}
                         >
-                          <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>
-                            {item.name}
-                          </span>
-                          <Badge variant={categoryVariant[item.category]}>
-                            {categoryLabel[item.category]}
-                          </Badge>
-                          {inCart && (
-                            <span
-                              style={{
-                                fontSize: "0.7rem",
-                                fontWeight: 700,
-                                color: "#22c55e",
-                              }}
-                            >
-                              Kosárban
-                            </span>
-                          )}
+                          {inCart ? <CheckCircle2 size={16} /> : <Plus size={16} />}
                         </div>
-                        <div
-                          style={{
-                            fontSize: "0.72rem",
-                            color: "var(--color-text-muted, #555)",
-                            display: "flex",
-                            gap: "8px",
-                          }}
-                        >
-                          <span
+
+                        {/* Név + leírás */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
                             style={{
-                              fontFamily: "monospace",
-                              color: "var(--color-text-secondary, #a0a0a0)",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              marginBottom: "3px",
                             }}
                           >
-                            {item.code}
-                          </span>
-                          {item.preferred_supplier && (
+                            <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>
+                              {item.name}
+                            </span>
+                            <Badge variant={categoryVariant[item.category]}>
+                              {categoryLabel[item.category]}
+                            </Badge>
+                            {inCart && (
+                              <span
+                                style={{
+                                  fontSize: "0.7rem",
+                                  fontWeight: 700,
+                                  color: "#22c55e",
+                                }}
+                              >
+                                Kosárban
+                              </span>
+                            )}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "0.72rem",
+                              color: "var(--color-text-muted, #555)",
+                              display: "flex",
+                              gap: "8px",
+                            }}
+                          >
                             <span
                               style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "3px",
+                                fontFamily: "monospace",
+                                color: "var(--color-text-secondary, #a0a0a0)",
                               }}
                             >
-                              <Building2 size={10} />
-                              {item.preferred_supplier}
+                              {item.code}
                             </span>
-                          )}
+                            {item.preferred_supplier && (
+                              <span
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "3px",
+                                }}
+                              >
+                                <Building2 size={10} />
+                                {item.preferred_supplier}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Ár */}
-                      <div style={{ textAlign: "right", flexShrink: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>
-                          {fmt(item.unit_price)}
+                        {/* Ár */}
+                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>
+                            {fmt(item.unit_price)}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "0.7rem",
+                              color: "var(--color-text-muted, #555)",
+                            }}
+                          >
+                            / {item.unit} · nettó
+                          </div>
                         </div>
-                        <div
-                          style={{
-                            fontSize: "0.7rem",
-                            color: "var(--color-text-muted, #555)",
-                          }}
-                        >
-                          / {item.unit} · nettó
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
 

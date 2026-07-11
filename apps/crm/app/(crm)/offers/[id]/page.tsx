@@ -148,6 +148,14 @@ export default function OfferDetailsPage() {
             <Button variant="ghost" onClick={() => router.push("/offers")}>
               <ChevronLeft size={16} /> Vissza
             </Button>
+            {offer.status === "draft" && (
+              <Button
+                variant="secondary"
+                onClick={() => router.push(`/offers/${id}/edit`)}
+              >
+                <Edit size={16} className="mr-2" /> Szerkesztés
+              </Button>
+            )}
             <Button variant="secondary" onClick={handleDownloadPdf}>
               <Download size={16} className="mr-2" /> PDF Letöltés
             </Button>

@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
   UnifiedPdfTemplate,
+  ItemPickerModal,
 } from "@crm/ui";
 import type {
   CompletionCertificate,
@@ -88,6 +89,7 @@ export default function CompletionCertificateFormPage({
   const [rejectionReason, setRejectionReason] = useState("");
   const [priceList, setPriceList] = useState<any[]>([]);
   const [servicePriceList, setServicePriceList] = useState<any[]>([]);
+  const [showPicker, setShowPicker] = useState(false);
 
   // Import states
   const [sourceType, setSourceType] = useState<"offer" | "worklog" | "project" | "none">(
@@ -212,8 +214,7 @@ export default function CompletionCertificateFormPage({
     }
   };
 
-  const addServiceItem = async (val: string) => {
-    const service = servicePriceList.find((p) => p._id === val);
+  const addServiceItem = async (service: any) => {
     if (!service) return;
 
     try {
@@ -545,241 +546,221 @@ export default function CompletionCertificateFormPage({
       )}
 
       <Card className="p-6 space-y-4">
-        <Input label="Cím *" value={title} onChange={(e) => setTitle(e.target.value)} />
-        <Textarea
-          label="Munka összefoglalója *"
-          value={workSummary}
-          onChange={(e) => setWorkSummary(e.target.value)}
-          rows={5}
-        />
+        {(() => {
+          const disabled = !isNew && status !== "draft";
+          return (
+            <>
+              <Input
+                label="Cím *"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                disabled={disabled}
+              />
+              <Textarea
+                label="Munka összefoglalója *"
+                value={workSummary}
+                onChange={(e) => setWorkSummary(e.target.value)}
+                rows={5}
+                disabled={disabled}
+              />
 
-        {/* Itemized Lines Editor */}
-        <div className="pt-4 border-t border-[var(--color-border-subtle)] space-y-4">
-          <h3 className="text-sm font-bold text-[var(--color-text-secondary)]">
-            Igazolt tételek / anyagok listája (Opcionális)
-          </h3>
-          {lines.length === 0 ? (
-            <p className="text-sm text-[var(--color-text-muted)] italic">
-              Nincsenek egyedileg megadott tételek. Adj hozzá kézzel vagy válassz az
-              árlistából.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {lines.map((line, idx) => (
-                <div
-                  key={idx}
-                  className="flex flex-col md:flex-row gap-3 items-end border-b pb-3 md:border-0 md:pb-0"
-                >
-                  <div className="flex-1 min-w-[200px]">
-                    <Label className="text-xs">Megnevezés *</Label>
-                    <Input
-                      value={line.description}
-                      onChange={(e) => {
-                        const newLines = [...lines];
-                        newLines[idx].description = e.target.value;
-                        setLines(newLines);
-                      }}
-                      placeholder="Tétel leírása..."
-                    />
+              {/* Itemized Lines Editor */}
+              <div className="pt-4 border-t border-[var(--color-border-subtle)] space-y-4">
+                <h3 className="text-sm font-bold text-[var(--color-text-secondary)]">
+                  Igazolt tételek / anyagok listája (Opcionális)
+                </h3>
+                {lines.length === 0 ? (
+                  <p className="text-sm text-[var(--color-text-muted)] italic">
+                    Nincsenek egyedileg megadott tételek. Adj hozzá kézzel vagy válassz az
+                    árlistából.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {lines.map((line, idx) => (
+                      <div
+                        key={idx}
+                        className="flex flex-col md:flex-row gap-3 items-end border-b pb-3 md:border-0 md:pb-0"
+                      >
+                        <div className="flex-1 min-w-[200px]">
+                          <Label className="text-xs">Megnevezés *</Label>
+                          <Input
+                            value={line.description}
+                            onChange={(e) => {
+                              const newLines = [...lines];
+                              newLines[idx].description = e.target.value;
+                              setLines(newLines);
+                            }}
+                            placeholder="Tétel leírása..."
+                            disabled={disabled}
+                          />
+                        </div>
+                        <div className="w-24">
+                          <Label className="text-xs">Mennyiség</Label>
+                          <Input
+                            type="number"
+                            value={line.quantity}
+                            onChange={(e) => {
+                              const newLines = [...lines];
+                              newLines[idx].quantity = Number(e.target.value) || 0;
+                              setLines(newLines);
+                            }}
+                            disabled={disabled}
+                          />
+                        </div>
+                        <div className="w-24">
+                          <Label className="text-xs">Egység</Label>
+                          <Input
+                            value={line.unit}
+                            onChange={(e) => {
+                              const newLines = [...lines];
+                              newLines[idx].unit = e.target.value;
+                              setLines(newLines);
+                            }}
+                            placeholder="db, óra..."
+                            disabled={disabled}
+                          />
+                        </div>
+                        <div className="w-28">
+                          <Label className="text-xs">Nettó egységár (Ft)</Label>
+                          <Input
+                            type="number"
+                            value={line.net_unit_price}
+                            onChange={(e) => {
+                              const newLines = [...lines];
+                              newLines[idx].net_unit_price = Number(e.target.value) || 0;
+                              setLines(newLines);
+                            }}
+                            disabled={disabled}
+                          />
+                        </div>
+                        <Button
+                          variant="ghost"
+                          className="text-red-500 hover:text-red-700 p-2"
+                          onClick={() => {
+                            setLines(lines.filter((_, i) => i !== idx));
+                          }}
+                          disabled={disabled}
+                        >
+                          Törlés
+                        </Button>
+                      </div>
+                    ))}
                   </div>
-                  <div className="w-24">
-                    <Label className="text-xs">Mennyiség</Label>
-                    <Input
-                      type="number"
-                      value={line.quantity}
-                      onChange={(e) => {
-                        const newLines = [...lines];
-                        newLines[idx].quantity = Number(e.target.value) || 0;
-                        setLines(newLines);
-                      }}
-                    />
-                  </div>
-                  <div className="w-24">
-                    <Label className="text-xs">Egység</Label>
-                    <Input
-                      value={line.unit}
-                      onChange={(e) => {
-                        const newLines = [...lines];
-                        newLines[idx].unit = e.target.value;
-                        setLines(newLines);
-                      }}
-                      placeholder="db, óra..."
-                    />
-                  </div>
-                  <div className="w-28">
-                    <Label className="text-xs">Nettó egységár (Ft)</Label>
-                    <Input
-                      type="number"
-                      value={line.net_unit_price}
-                      onChange={(e) => {
-                        const newLines = [...lines];
-                        newLines[idx].net_unit_price = Number(e.target.value) || 0;
-                        setLines(newLines);
-                      }}
-                    />
-                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-2 pt-2">
                   <Button
-                    variant="ghost"
-                    className="text-red-500 hover:text-red-700 p-2"
+                    variant="secondary"
                     onClick={() => {
-                      setLines(lines.filter((_, i) => i !== idx));
-                    }}
-                  >
-                    Törlés
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-2 pt-2">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setLines([
-                  ...lines,
-                  {
-                    price_list_item_id: null,
-                    description: "",
-                    quantity: 1,
-                    unit: "db",
-                    net_unit_price: 0,
-                  },
-                ]);
-              }}
-            >
-              + Új tétel manuálisan
-            </Button>
-            {priceList.length > 0 && (
-              <div className="flex items-center gap-2">
-                <Select
-                  onValueChange={(val) => {
-                    const item = priceList.find((p) => p._id === val);
-                    if (item) {
                       setLines([
                         ...lines,
                         {
-                          price_list_item_id: item._id,
-                          description: item.name,
+                          price_list_item_id: null,
+                          description: "",
                           quantity: 1,
-                          unit: item.unit || "db",
-                          net_unit_price: item.net_unit_price || 0,
+                          unit: "db",
+                          net_unit_price: 0,
                         },
                       ]);
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Tallózás az árlistából..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {priceList.map((p) => (
-                      <SelectItem key={p._id} value={p._id}>
-                        {p.name} ({p.net_unit_price} Ft)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            {servicePriceList.length > 0 && (
-              <div className="flex items-center gap-2">
-                <Select
-                  value=""
-                  onValueChange={(val) => {
-                    if (val) addServiceItem(val);
-                  }}
-                >
-                  <SelectTrigger className="w-[240px]">
-                    <SelectValue placeholder="Tallózás a szolgáltatásokból..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {servicePriceList.map((p) => (
-                      <SelectItem key={p._id} value={p._id}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-[var(--color-border-subtle)]">
-          <Input
-            type="date"
-            label="Munkaidőszak kezdete"
-            value={periodStart}
-            onChange={(e) => setPeriodStart(e.target.value)}
-          />
-          <Input
-            type="date"
-            label="Munkaidőszak vége"
-            value={periodEnd}
-            onChange={(e) => setPeriodEnd(e.target.value)}
-          />
-        </div>
-        <Input
-          label="Összesített órák (opcionális)"
-          value={totalHours}
-          onChange={(e) => setTotalHours(e.target.value)}
-          inputMode="decimal"
-        />
-        {!isNew && (
-          <>
-            <div className="space-y-2">
-              <Label>Státusz</Label>
-              <Select
-                value={status}
-                onValueChange={(v) => setStatus(v as CompletionCertificateStatus)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(statusLabel) as CompletionCertificateStatus[]).map(
-                    (s) => (
-                      <SelectItem key={s} value={s}>
-                        {statusLabel[s]}
-                      </SelectItem>
-                    ),
+                    }}
+                    disabled={disabled}
+                  >
+                    + Új tétel manuálisan
+                  </Button>
+                  {!disabled && (
+                    <Button variant="secondary" onClick={() => setShowPicker(true)}>
+                      📦 Tétel hozzáadása árlistából
+                    </Button>
                   )}
-                </SelectContent>
-              </Select>
-            </div>
-            <Input
-              label="Ügyfél aláíró neve"
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-            />
+                </div>
+              </div>
 
-            {/* Recipient section */}
-            <div className="pt-4 border-t border-[var(--color-border-subtle)] space-y-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-                E-mail értesítés címzettje (felülírja a partner e-mail-jét)
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-[var(--color-border-subtle)]">
                 <Input
-                  label="Fogadó neve"
-                  value={recipientName}
-                  onChange={(e) => setRecipientName(e.target.value)}
-                  placeholder="Pl. Kovács István"
+                  type="date"
+                  label="Munkaidőszak kezdete"
+                  value={periodStart}
+                  onChange={(e) => setPeriodStart(e.target.value)}
+                  disabled={disabled}
                 />
                 <Input
-                  type="email"
-                  label="Fogadó e-mail cím"
-                  value={recipientEmail}
-                  onChange={(e) => setRecipientEmail(e.target.value)}
-                  placeholder="pelda@ceg.hu"
+                  type="date"
+                  label="Munkaidőszak vége"
+                  value={periodEnd}
+                  onChange={(e) => setPeriodEnd(e.target.value)}
+                  disabled={disabled}
                 />
               </div>
-            </div>
-          </>
-        )}
-        <Button variant="primary" disabled={saving} onClick={() => void save()}>
-          {saving ? "Mentés…" : isNew ? "Létrehozás" : "Mentés"}
-        </Button>
+              <Input
+                label="Összesített órák (opcionális)"
+                value={totalHours}
+                onChange={(e) => setTotalHours(e.target.value)}
+                inputMode="decimal"
+                disabled={disabled}
+              />
+              {!isNew && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Státusz</Label>
+                    <Select
+                      value={status}
+                      onValueChange={(v) => setStatus(v as CompletionCertificateStatus)}
+                      disabled={disabled}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(Object.keys(statusLabel) as CompletionCertificateStatus[]).map(
+                          (s) => (
+                            <SelectItem key={s} value={s}>
+                              {statusLabel[s]}
+                            </SelectItem>
+                          ),
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Input
+                    label="Ügyfél aláíró neve"
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    disabled={disabled}
+                  />
+
+                  {/* Recipient section */}
+                  <div className="pt-4 border-t border-[var(--color-border-subtle)] space-y-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                      E-mail értesítés címzettje (felülírja a partner e-mail-jét)
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Input
+                        label="Fogadó neve"
+                        value={recipientName}
+                        onChange={(e) => setRecipientName(e.target.value)}
+                        placeholder="Pl. Kovács István"
+                        disabled={disabled}
+                      />
+                      <Input
+                        type="email"
+                        label="Fogadó e-mail cím"
+                        value={recipientEmail}
+                        onChange={(e) => setRecipientEmail(e.target.value)}
+                        placeholder="pelda@ceg.hu"
+                        disabled={disabled}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+              {!disabled && (
+                <Button variant="primary" disabled={saving} onClick={() => void save()}>
+                  {saving ? "Mentés…" : isNew ? "Létrehozás" : "Mentés"}
+                </Button>
+              )}
+            </>
+          );
+        })()}
       </Card>
 
       {/* Hidden PDF template */}
@@ -1007,6 +988,27 @@ export default function CompletionCertificateFormPage({
           </div>
         </div>
       )}
+      <ItemPickerModal
+        open={showPicker}
+        onClose={() => setShowPicker(false)}
+        priceList={priceList}
+        servicePriceList={servicePriceList}
+        onSelectProduct={(p) => {
+          setLines((prev) => [
+            ...prev,
+            {
+              price_list_item_id: p._id,
+              service_price_list_item_id: null,
+              description: p.name,
+              quantity: 1,
+              unit: p.unit || "db",
+              net_unit_price: p.net_price ?? 0,
+            },
+          ]);
+        }}
+        onSelectService={(s) => addServiceItem(s)}
+        title="Tétel hozzáadása"
+      />
     </div>
   );
 }

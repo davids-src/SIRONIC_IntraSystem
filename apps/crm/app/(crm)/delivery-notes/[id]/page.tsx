@@ -16,6 +16,7 @@ import {
   Download,
   Mail,
   Loader2,
+  Edit,
 } from "lucide-react";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 import type { Contact, Settings } from "@crm/types";
@@ -252,14 +253,24 @@ export default function DeliveryNoteDetailPage({
           </Button>
 
           {note.status === "draft" && (
-            <Button
-              variant="primary"
-              onClick={() => void changeStatus("issued")}
-              disabled={acting}
-            >
-              <FileOutput size={15} className="mr-1.5" />
-              {acting ? "Feldolgozás…" : "Kiadás & Készletlevonás"}
-            </Button>
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => router.push(`/delivery-notes/${id}/edit`)}
+                disabled={acting}
+              >
+                <Edit size={15} className="mr-1.5" />
+                Szerkesztés
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => void changeStatus("issued")}
+                disabled={acting}
+              >
+                <FileOutput size={15} className="mr-1.5" />
+                {acting ? "Feldolgozás…" : "Kiadás & Készletlevonás"}
+              </Button>
+            </>
           )}
           {note.status === "issued" && (
             <Button

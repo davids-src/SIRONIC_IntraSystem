@@ -2,7 +2,7 @@
 
 import { Card, Button, Badge, Input } from "@crm/ui";
 import { useRouter } from "next/navigation";
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import {
   ArrowLeft,
   Download,
@@ -12,38 +12,10 @@ import {
   RefreshCw,
   ExternalLink,
   CheckCircle2,
+  Edit,
 } from "lucide-react";
-import type { Contract, ContractStatus } from "@crm/types";
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const mockContract = {
-  _id: "c1",
-  contract_number: "SZ-000001",
-  name: "Éves karbantartási szerződés 2026",
-  category: "Karbantartási szerződés",
-  type: "generated",
-  status: "sent" as ContractStatus,
-  signing_type: "digital",
-  contact_id: "org1",
-  contact_name: "Acme Kft.",
-  project_id: "p1",
-  project_name: "Irodaház infrastruktúra",
-  ticket_id: null,
-  pdf_url: "/fake/contract.pdf",
-  portal_visible: true,
-  valid_from: new Date("2026-01-01"),
-  valid_until: new Date("2026-12-31"),
-  client_name: null as string | null,
-  client_signature: null as string | null,
-  signed_at: null as Date | null,
-  body: `<p>Ez a karbantartási szerződés az <strong>Acme Kft.</strong> és a SIRONIC Kft. között jött létre.</p>
-<p>A szerződés tárgya: éves karbantartási szolgáltatás biztosítása az irodaház IT infrastruktúrájához.</p>
-<p>A szerződés hatálya: 2026. január 1-jétől 2026. december 31-ig.</p>
-<p>A felek megállapodnak a havi karbantartási díjban és a rendelkezésre állási feltételekben.</p>`,
-  notes: null,
-  created_at: new Date("2026-01-15"),
-  updated_at: new Date("2026-01-15"),
-};
+import type { Contract, ContractStatus, Contact } from "@crm/types";
+import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 
 function statusBadge(status: ContractStatus) {
   const map: Record<
@@ -79,7 +51,6 @@ const metaRow = (label: string, value: React.ReactNode) => (
   </div>
 );
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
 export default function ContractDetailPage({
   params,
 }: {
@@ -87,9 +58,103 @@ export default function ContractDetailPage({
 }) {
   const router = useRouter();
   const { id } = use(params);
-  const contract = mockContract; // In real app: fetch by id
+  const [contract, setContract] = useState<Contract | null>(null);
+  const [contactName, setContactName] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [updating, setUpdating] = useState(false);
   const [showPaperModal, setShowPaperModal] = useState(false);
   const [paperSignerName, setPaperSignerName] = useState("");
+
+  useEffect(() => {
+    const ac = new AbortController();
+    (async () => {
+      try {
+        const doc = await apiJson<Contract>(`/api/contracts/${id}`, {
+          signal: ac.signal,
+        });
+        setContract(doc);
+
+        try {
+          const contact = await apiJson<Contact>(`/api/contacts/${doc.contact_id}`, {
+            signal: ac.signal,
+          });
+          setContactName(contact.name);
+        } catch {
+          setContactName(doc.contact_id);
+        }
+        setError(null);
+      } catch (e) {
+        if (!ac.signal.aborted) {
+          setError("A szerződés nem tölthető be.");
+        }
+      } finally {
+        setLoading(false);
+      }
+    })();
+    return () => ac.abort();
+  }, [id]);
+
+  const handleStatusChange = async (
+    newStatus: ContractStatus,
+    additionalPatch: Record<string, any> = {},
+  ) => {
+    if (!contract) return;
+    setUpdating(true);
+    try {
+      const updated = await apiJsonBody<Contract>(`/api/contracts/${id}`, "PATCH", {
+        status: newStatus,
+        ...additionalPatch,
+      });
+      setContract(updated);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Művelet sikertelen.");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleSignPaper = async () => {
+    if (!paperSignerName.trim()) {
+      alert("Kérlek add meg az aláíró nevét!");
+      return;
+    }
+    await handleStatusChange("signed_paper", {
+      client_name: paperSignerName.trim(),
+      signed_at: new Date().toISOString(),
+    });
+    setShowPaperModal(false);
+  };
+
+  const handleDelete = async () => {
+    if (!confirm("Biztosan törölni szeretnéd ezt a szerződést?")) return;
+    setUpdating(true);
+    try {
+      await apiJson(`/api/contracts/${id}`, { method: "DELETE" });
+      router.push("/contracts");
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Törlés sikertelen.");
+      setUpdating(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="p-6 text-[var(--color-text-muted)]">Betöltés…</div>;
+  }
+
+  if (error && !contract) {
+    return (
+      <div className="p-6 space-y-4">
+        <p className="text-[var(--color-status-error)]">{error}</p>
+        <Button variant="secondary" onClick={() => router.push("/contracts")}>
+          Vissza
+        </Button>
+      </div>
+    );
+  }
+
+  if (!contract) return null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -179,6 +244,12 @@ export default function ContractDetailPage({
         </div>
       </div>
 
+      {error && (
+        <p className="text-sm text-[var(--color-status-error)] bg-[var(--color-status-error)]/10 border border-[var(--color-status-error)]/30 rounded-md px-4 py-2">
+          {error}
+        </p>
+      )}
+
       {/* Main layout: 2/3 + 1/3 */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "24px" }}>
         <div
@@ -260,8 +331,7 @@ export default function ContractDetailPage({
                     style={{ color: "var(--accent-primary, #e53935)", cursor: "pointer" }}
                     onClick={() => router.push(`/organizations/${contract.contact_id}`)}
                   >
-                    {contract.contact_name}{" "}
-                    <ExternalLink size={12} style={{ display: "inline" }} />
+                    {contactName} <ExternalLink size={12} style={{ display: "inline" }} />
                   </span>,
                 )}
                 {contract.project_id &&
@@ -274,7 +344,7 @@ export default function ContractDetailPage({
                       }}
                       onClick={() => router.push(`/projects/${contract.project_id}`)}
                     >
-                      {contract.project_name}{" "}
+                      {contract.project_id}{" "}
                       <ExternalLink size={12} style={{ display: "inline" }} />
                     </span>,
                   )}
@@ -338,38 +408,43 @@ export default function ContractDetailPage({
                 Műveletek
               </h3>
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {contract.pdf_url && (
+                {contract.status === "draft" && (
                   <Button
                     variant="primary"
                     style={{ justifyContent: "flex-start", gap: "8px" }}
+                    onClick={() => router.push(`/contracts/${id}/edit`)}
+                    disabled={updating}
+                  >
+                    <Edit size={16} /> Szerkesztés
+                  </Button>
+                )}
+                {contract.pdf_url && (
+                  <Button
+                    variant="secondary"
+                    style={{ justifyContent: "flex-start", gap: "8px" }}
+                    onClick={() => window.open(contract.pdf_url || "", "_blank")}
                   >
                     <Download size={16} /> PDF letöltése
                   </Button>
                 )}
-                {contract.status === "draft" && contract.portal_visible && (
+                {contract.status === "draft" && (
                   <Button
                     variant="secondary"
                     style={{ justifyContent: "flex-start", gap: "8px" }}
+                    onClick={() => handleStatusChange("sent")}
+                    disabled={updating}
                   >
                     <Send size={16} /> Küldés partnernek
                   </Button>
                 )}
-                {contract.signing_type === "paper" &&
-                  contract.status !== "signed_paper" && (
-                    <Button
-                      variant="secondary"
-                      style={{ justifyContent: "flex-start", gap: "8px" }}
-                      onClick={() => setShowPaperModal(true)}
-                    >
-                      <FileCheck2 size={16} /> Papírosan aláírva jelölés
-                    </Button>
-                  )}
-                {contract.type === "generated" && (
+                {contract.signing_type === "paper" && contract.status === "sent" && (
                   <Button
                     variant="secondary"
                     style={{ justifyContent: "flex-start", gap: "8px" }}
+                    onClick={() => setShowPaperModal(true)}
+                    disabled={updating}
                   >
-                    <RefreshCw size={16} /> PDF újragenerálás
+                    <FileCheck2 size={16} /> Papírosan aláírva jelölés
                   </Button>
                 )}
                 {contract.status !== "cancelled" && (
@@ -381,6 +456,8 @@ export default function ContractDetailPage({
                       borderColor: "#e53935",
                       color: "#e53935",
                     }}
+                    onClick={handleDelete}
+                    disabled={updating}
                   >
                     <XCircle size={16} /> Szerződés törlése
                   </Button>
@@ -430,13 +507,14 @@ export default function ContractDetailPage({
                   margin: 0,
                 }}
               >
-                Opcionálisan feltölthetsz egy beszkennelt aláírt PDF-et is.
+                Papír alapú aláírás rögzítésével a szerződés státusza azonnal 'Papíron
+                aláírva' lesz.
               </p>
               <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
                 <Button variant="secondary" onClick={() => setShowPaperModal(false)}>
                   Mégse
                 </Button>
-                <Button variant="primary" onClick={() => setShowPaperModal(false)}>
+                <Button variant="primary" onClick={handleSignPaper}>
                   Rögzítés
                 </Button>
               </div>

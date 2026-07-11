@@ -12,10 +12,21 @@ import {
 } from "@crm/db";
 import { guard, handleApiError, requireCrmAuth, withDb } from "@/lib/api-helpers";
 
+const lineSchema = z.object({
+  price_list_item_id: z.string().nullable().optional(),
+  description: z.string().min(1),
+  quantity: z.number().positive(),
+  unit: z.string().min(1),
+  net_unit_price: z.number(),
+  tax_rate: z.number(),
+});
+
 const updateSchema = z.object({
   status: z.enum(["draft", "sent", "fulfilled", "cancelled"]).optional(),
   expected_delivery_date: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
+  supplier_id: z.string().optional(),
+  lines: z.array(lineSchema).optional(),
   is_archived: z.boolean().optional(),
   archived_at: z.any().optional(),
   archive_reason: z.string().nullable().optional(),
@@ -62,9 +73,25 @@ export async function PATCH(
       }).lean()) as any;
       if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+      if (existing.status !== "draft" && (parsed.data.lines || parsed.data.supplier_id)) {
+        return NextResponse.json(
+          {
+            error:
+              "Csak piszkozat státuszú megrendelőlap tételei és beszállítója módosíthatók.",
+          },
+          { status: 400 },
+        );
+      }
+
       const update: Record<string, unknown> = { ...parsed.data };
       if (parsed.data.expected_delivery_date) {
         update.expected_delivery_date = new Date(parsed.data.expected_delivery_date);
+      }
+      if (parsed.data.lines) {
+        update.total_amount = parsed.data.lines.reduce(
+          (sum, l) => sum + l.net_unit_price * l.quantity * (1 + l.tax_rate / 100),
+          0,
+        );
       }
       const doc = (await PurchaseOrderModel.findOneAndUpdate(
         { _id: id, tenantId: actor.tenantId },

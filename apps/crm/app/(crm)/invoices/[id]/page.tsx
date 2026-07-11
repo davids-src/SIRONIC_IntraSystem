@@ -145,58 +145,75 @@ export default function InvoiceDetailPage({
         </p>
       )}
       <Card className="p-6 space-y-4">
-        <Input
-          label="Megnevezés"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-        <Input
-          label="Összeg"
-          value={totalAmount}
-          onChange={(e) => setTotalAmount(e.target.value)}
-        />
-        <div className="space-y-2">
-          <Label>Pénznem</Label>
-          <Select value={currency} onValueChange={setCurrency}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="HUF">HUF</SelectItem>
-              <SelectItem value="EUR">EUR</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Státusz</Label>
-          <Select value={status} onValueChange={(v) => setStatus(v as Invoice["status"])}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.keys(statusLabel) as Invoice["status"][]).map((s) => (
-                <SelectItem key={s} value={s}>
-                  {statusLabel[s]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <Input
-          type="date"
-          label="Kiállítva"
-          value={issuedAt}
-          onChange={(e) => setIssuedAt(e.target.value)}
-        />
-        <Input
-          type="date"
-          label="Esedékes"
-          value={dueAt}
-          onChange={(e) => setDueAt(e.target.value)}
-        />
-        <Button variant="primary" disabled={saving} onClick={() => void save()}>
-          {saving ? "Mentés…" : "Mentés"}
-        </Button>
+        {(() => {
+          const disabled = invoice?.status !== "draft";
+          return (
+            <>
+              <Input
+                label="Megnevezés"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                disabled={disabled}
+              />
+              <Input
+                label="Összeg"
+                value={totalAmount}
+                onChange={(e) => setTotalAmount(e.target.value)}
+                disabled={disabled}
+              />
+              <div className="space-y-2">
+                <Label>Pénznem</Label>
+                <Select value={currency} onValueChange={setCurrency} disabled={disabled}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="HUF">HUF</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Státusz</Label>
+                <Select
+                  value={status}
+                  onValueChange={(v) => setStatus(v as Invoice["status"])}
+                  disabled={disabled}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(statusLabel) as Invoice["status"][]).map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {statusLabel[s]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Input
+                type="date"
+                label="Kiállítva"
+                value={issuedAt}
+                onChange={(e) => setIssuedAt(e.target.value)}
+                disabled={disabled}
+              />
+              <Input
+                type="date"
+                label="Esedékes"
+                value={dueAt}
+                onChange={(e) => setDueAt(e.target.value)}
+                disabled={disabled}
+              />
+              {!disabled && (
+                <Button variant="primary" disabled={saving} onClick={() => void save()}>
+                  {saving ? "Mentés…" : "Mentés"}
+                </Button>
+              )}
+            </>
+          );
+        })()}
       </Card>
     </div>
   );

@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
   InputControl,
+  ItemPickerModal,
 } from "@crm/ui";
 import { UnifiedPdfTemplate } from "@crm/ui";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -121,13 +122,13 @@ function WorklogFormContent({ id }: { id: string }) {
   const [contactInventory, setContactInventory] = useState<InventoryItem[]>([]);
 
   const [showPricesOnPdf, setShowPricesOnPdf] = useState(true);
-  const [showItemPicker, setShowItemPicker] = useState(false);
-  const [showServicePicker, setShowServicePicker] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
+  const [pickerDefaultTab, setPickerDefaultTab] = useState<"product" | "service">(
+    "product",
+  );
   const [priceList, setPriceList] = useState<PriceListItem[]>([]);
   const [servicePriceList, setServicePriceList] = useState<any[]>([]);
   const [stockItems, setStockItems] = useState<StockItemWithProduct[]>([]);
-  const [itemSearch, setItemSearch] = useState("");
-  const [serviceSearch, setServiceSearch] = useState("");
 
   const disabled = status !== "draft";
 
@@ -451,8 +452,7 @@ function WorklogFormContent({ id }: { id: string }) {
       } else {
         setItems((prev) => [...prev, newItem]);
       }
-      setShowServicePicker(false);
-      setServiceSearch("");
+      setShowPicker(false);
     } catch (e) {
       alert("Hiba történt az árkalkuláció során.");
     }
@@ -1065,7 +1065,10 @@ function WorklogFormContent({ id }: { id: string }) {
                     border: "1px solid var(--color-border-default)",
                     cursor: "pointer",
                   }}
-                  onClick={() => setShowItemPicker(true)}
+                  onClick={() => {
+                    setPickerDefaultTab("product");
+                    setShowPicker(true);
+                  }}
                 >
                   <Plus size={13} /> + Anyag hozzáadása árlistából
                 </button>
@@ -1078,7 +1081,10 @@ function WorklogFormContent({ id }: { id: string }) {
                     border: "1px solid var(--color-border-default)",
                     cursor: "pointer",
                   }}
-                  onClick={() => setShowServicePicker(true)}
+                  onClick={() => {
+                    setPickerDefaultTab("service");
+                    setShowPicker(true);
+                  }}
                 >
                   <Plus size={13} /> + Szolgáltatás hozzáadása
                 </button>
@@ -1508,266 +1514,29 @@ function WorklogFormContent({ id }: { id: string }) {
         </div>
       </div>
 
-      {showItemPicker && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0,0,0,0.6)",
-            zIndex: 100,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <Card
-            style={{
-              padding: "24px",
-              width: "100%",
-              maxWidth: "600px",
-              maxHeight: "80vh",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "16px",
-              }}
-            >
-              <h2 style={{ margin: 0 }}>Hozzáadás árlistából</h2>
-              <Button variant="ghost" onClick={() => setShowItemPicker(false)}>
-                Bezár
-              </Button>
-            </div>
-
-            <Input
-              placeholder="Keresés..."
-              value={itemSearch}
-              onChange={(e) => setItemSearch(e.target.value)}
-            />
-
-            <div
-              style={{
-                marginTop: "16px",
-                overflowY: "auto",
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                gap: "8px",
-              }}
-            >
-              {priceList
-                .filter(
-                  (p) =>
-                    p.name.toLowerCase().includes(itemSearch.toLowerCase()) ||
-                    p.item_number.toLowerCase().includes(itemSearch.toLowerCase()),
-                )
-                .map((p) => {
-                  const stockItem = stockItems.find(
-                    (s) => s.price_list_item_id === p._id,
-                  );
-                  const stockQty = stockItem ? stockItem.quantity_in_stock : 0;
-                  const location = stockItem?.warehouse_location;
-                  return (
-                    <div
-                      key={p._id}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: "12px",
-                        border: "1px solid var(--color-border-subtle)",
-                        borderRadius: "8px",
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 600 }}>{p.name}</div>
-                        <div
-                          style={{
-                            fontSize: "12px",
-                            color: "var(--color-text-muted)",
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "2px",
-                            marginTop: "4px",
-                          }}
-                        >
-                          <div>
-                            {p.item_number} •{" "}
-                            {new Intl.NumberFormat("hu-HU", {
-                              style: "currency",
-                              currency: "HUF",
-                              maximumFractionDigits: 0,
-                            }).format(p.net_price)}{" "}
-                            / {p.unit}
-                          </div>
-                          {p.type === "product" && (
-                            <div
-                              style={{
-                                fontWeight: 700,
-                                color: stockQty > 0 ? "#22c55e" : "#ef4444",
-                              }}
-                            >
-                              Készleten: {stockQty} {p.unit}
-                              {location ? ` (${location})` : ""}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <Button
-                        variant="secondary"
-                        onClick={() => {
-                          const newItem = {
-                            description: p.name,
-                            quantity: 1,
-                            unit: p.unit,
-                            unit_price: p.net_price,
-                            price_list_item_id: p._id,
-                          };
-                          if (items.length === 1 && items[0]?.description === "") {
-                            setItems([newItem]);
-                          } else {
-                            setItems((prev) => [...prev, newItem]);
-                          }
-                          setShowItemPicker(false);
-                          setItemSearch("");
-                        }}
-                      >
-                        Kiválaszt
-                      </Button>
-                    </div>
-                  );
-                })}
-              {priceList.length === 0 && (
-                <div
-                  style={{
-                    color: "var(--color-text-muted)",
-                    textAlign: "center",
-                    padding: "20px",
-                  }}
-                >
-                  Nincs találat.
-                </div>
-              )}
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {showServicePicker && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0,0,0,0.6)",
-            zIndex: 100,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <Card
-            style={{
-              padding: "24px",
-              width: "100%",
-              maxWidth: "600px",
-              maxHeight: "80vh",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "16px",
-              }}
-            >
-              <h2 style={{ margin: 0 }}>Hozzáadás szolgáltatások közül</h2>
-              <Button variant="ghost" onClick={() => setShowServicePicker(false)}>
-                Bezár
-              </Button>
-            </div>
-
-            <Input
-              placeholder="Keresés..."
-              value={serviceSearch}
-              onChange={(e) => setServiceSearch(e.target.value)}
-              style={{ marginBottom: "16px" }}
-            />
-
-            <div
-              style={{
-                overflowY: "auto",
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                gap: "8px",
-              }}
-            >
-              {servicePriceList
-                .filter(
-                  (p) =>
-                    p.name.toLowerCase().includes(serviceSearch.toLowerCase()) ||
-                    p.sku?.toLowerCase().includes(serviceSearch.toLowerCase()),
-                )
-                .map((p) => {
-                  return (
-                    <div
-                      key={p._id}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: "12px",
-                        border: "1px solid var(--color-border-subtle)",
-                        borderRadius: "8px",
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 600 }}>{p.name}</div>
-                        <div
-                          style={{
-                            fontSize: "12px",
-                            color: "var(--color-text-muted)",
-                            marginTop: "4px",
-                          }}
-                        >
-                          {p.sku}
-                        </div>
-                      </div>
-                      <Button variant="secondary" onClick={() => addServiceItem(p)}>
-                        Kiválaszt
-                      </Button>
-                    </div>
-                  );
-                })}
-              {servicePriceList.length === 0 && (
-                <div
-                  style={{
-                    color: "var(--color-text-muted)",
-                    textAlign: "center",
-                    padding: "20px",
-                  }}
-                >
-                  Nincs találat.
-                </div>
-              )}
-            </div>
-          </Card>
-        </div>
-      )}
+      <ItemPickerModal
+        open={showPicker}
+        onClose={() => setShowPicker(false)}
+        priceList={priceList as any[]}
+        servicePriceList={servicePriceList}
+        stockItems={stockItems as any[]}
+        defaultTab={pickerDefaultTab}
+        onSelectProduct={(p) => {
+          const newItem = {
+            description: p.name,
+            quantity: 1,
+            unit: p.unit,
+            unit_price: p.net_price,
+            price_list_item_id: p._id,
+          };
+          if (items.length === 1 && items[0]?.description === "") {
+            setItems([newItem]);
+          } else {
+            setItems((prev) => [...prev, newItem]);
+          }
+        }}
+        onSelectService={(s) => addServiceItem(s)}
+      />
     </div>
   );
 }

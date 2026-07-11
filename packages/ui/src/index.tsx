@@ -61,5 +61,14 @@ export type { TopbarProps } from "./layout/Topbar";
 export { AppShell } from "./layout/AppShell";
 export type { AppShellProps } from "./layout/AppShell";
 
+export { ItemPickerModal } from "./components/ItemPickerModal";
+export type {
+  ItemPickerModalProps,
+  PriceListItemForPicker,
+  ServiceItemForPicker,
+  StockInfoForPicker,
+  ServiceCategoryForPicker,
+} from "./components/ItemPickerModal";
+
 // Tokens
 export { colors, radius, spacing } from "./tokens";
