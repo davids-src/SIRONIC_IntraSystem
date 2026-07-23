@@ -20,6 +20,7 @@ import type {
   CompletionCertificate,
   CompletionCertificateStatus,
   Settings,
+  Contact,
 } from "@crm/types";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 import { useRouter } from "next/navigation";
@@ -90,6 +91,7 @@ export default function CompletionCertificateFormPage({
   const [priceList, setPriceList] = useState<any[]>([]);
   const [servicePriceList, setServicePriceList] = useState<any[]>([]);
   const [showPicker, setShowPicker] = useState(false);
+  const [clientContact, setClientContact] = useState<Contact | null>(null);
 
   // Import states
   const [sourceType, setSourceType] = useState<"offer" | "worklog" | "project" | "none">(
@@ -142,6 +144,12 @@ export default function CompletionCertificateFormPage({
         setLines(c.lines ?? []);
         setRejectionReason(c.rejection_reason ?? "");
         setLoadErr(null);
+        // Betöltjük a partner kontakt adatait a PDF-hez
+        if (c.contact_id) {
+          apiJson<Contact>(`/api/contacts/${c.contact_id}`)
+            .then((ct) => setClientContact(ct))
+            .catch(() => {});
+        }
       } catch {
         if (!ac.signal.aborted) setLoadErr("Az igazolás nem tölthető be.");
       }
@@ -772,7 +780,43 @@ export default function CompletionCertificateFormPage({
               documentId={doc.certificate_number}
               date={new Date()}
               provider={companyDetails}
-              client={null}
+              client={
+                clientContact ??
+                (doc.client_name
+                  ? ({
+                      _id: "",
+                      contact_number: "",
+                      partner_id: null,
+                      tenantId: "",
+                      type: "company" as const,
+                      name: doc.client_name,
+                      short_name: null,
+                      tax_number: null,
+                      registration_number: null,
+                      address: { zip: "", city: "", street: "", country: "HU" },
+                      billing_address: null,
+                      contact_persons: [],
+                      phone: null,
+                      email: null,
+                      notes: null,
+                      tags: [],
+                      has_portal_access: false,
+                      portal_permissions: {
+                        menu_tickets: false,
+                        menu_worklogs: false,
+                        menu_offers: false,
+                        menu_completion_certificates: false,
+                        menu_projects: false,
+                        menu_contracts: false,
+                        menu_invoices: false,
+                        menu_company_profile: false,
+                        menu_settings: false,
+                      },
+                      active_services: [],
+                      contract_type: null,
+                    } as unknown as Contact)
+                  : null)
+              }
             >
               <div style={{ fontSize: "13px", lineHeight: 1.7, color: "#111" }}>
                 <h3 style={{ fontWeight: 700, fontSize: "14px", marginBottom: "8px" }}>
@@ -866,7 +910,7 @@ export default function CompletionCertificateFormPage({
                             style={{
                               padding: "6px 8px",
                               borderBottom: "1px solid #e5e7eb",
-                              width: "80px",
+                              width: "70px",
                               textAlign: "right",
                             }}
                           >
@@ -876,10 +920,30 @@ export default function CompletionCertificateFormPage({
                             style={{
                               padding: "6px 8px",
                               borderBottom: "1px solid #e5e7eb",
-                              width: "60px",
+                              width: "50px",
                             }}
                           >
                             Egység
+                          </th>
+                          <th
+                            style={{
+                              padding: "6px 8px",
+                              borderBottom: "1px solid #e5e7eb",
+                              width: "100px",
+                              textAlign: "right",
+                            }}
+                          >
+                            Nettó egységár
+                          </th>
+                          <th
+                            style={{
+                              padding: "6px 8px",
+                              borderBottom: "1px solid #e5e7eb",
+                              width: "100px",
+                              textAlign: "right",
+                            }}
+                          >
+                            Nettó összeg
                           </th>
                         </tr>
                       </thead>
@@ -899,8 +963,66 @@ export default function CompletionCertificateFormPage({
                             <td style={{ padding: "6px 8px", color: "#4b5563" }}>
                               {l.unit}
                             </td>
+                            <td
+                              style={{
+                                padding: "6px 8px",
+                                textAlign: "right",
+                                color: "#374151",
+                              }}
+                            >
+                              {(l.net_unit_price ?? 0).toLocaleString("hu-HU")} Ft
+                            </td>
+                            <td
+                              style={{
+                                padding: "6px 8px",
+                                textAlign: "right",
+                                fontWeight: 700,
+                                color: "#111827",
+                              }}
+                            >
+                              {((l.net_unit_price ?? 0) * l.quantity).toLocaleString(
+                                "hu-HU",
+                              )}{" "}
+                              Ft
+                            </td>
                           </tr>
                         ))}
+                        <tr
+                          style={{
+                            borderTop: "2px solid #e5e7eb",
+                            backgroundColor: "#f9fafb",
+                          }}
+                        >
+                          <td
+                            colSpan={3}
+                            style={{
+                              padding: "8px",
+                              fontWeight: 700,
+                              fontSize: "12px",
+                              textAlign: "right",
+                            }}
+                          >
+                            Nettó összesen:
+                          </td>
+                          <td />
+                          <td
+                            style={{
+                              padding: "8px",
+                              textAlign: "right",
+                              fontWeight: 800,
+                              fontSize: "13px",
+                              color: "#111827",
+                            }}
+                          >
+                            {doc.lines
+                              .reduce(
+                                (sum, l) => sum + (l.net_unit_price ?? 0) * l.quantity,
+                                0,
+                              )
+                              .toLocaleString("hu-HU")}{" "}
+                            Ft
+                          </td>
+                        </tr>
                       </tbody>
                     </table>
                   </div>

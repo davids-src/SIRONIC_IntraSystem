@@ -7,6 +7,21 @@ import { ChevronLeft, Plus, Trash2, Save, ShieldCheck } from "lucide-react";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 import type { Contact, PriceListItem } from "@crm/types";
 
+interface DeliveryNoteLine {
+  price_list_item_id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+}
+
+interface DeliveryNoteItem {
+  _id: string;
+  delivery_number: string;
+  contact_id: string;
+  issue_date: string;
+  lines: DeliveryNoteLine[];
+}
+
 interface WarrantyLine {
   price_list_item_id: string;
   name: string;
@@ -59,6 +74,12 @@ export default function NewWarrantyPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Szállítólevel import állapotok
+  const [deliveryNotes, setDeliveryNotes] = useState<DeliveryNoteItem[]>([]);
+  const [selectedDeliveryNoteId, setSelectedDeliveryNoteId] = useState("");
+  const [loadingDeliveryNotes, setLoadingDeliveryNotes] = useState(false);
+  const [showDeliveryImport, setShowDeliveryImport] = useState(false);
+
   useEffect(() => {
     Promise.all([
       apiJson<Contact[]>("/api/contacts"),
@@ -70,6 +91,15 @@ export default function NewWarrantyPage() {
         setPriceListItems(pls.filter((p) => p.is_active && p.type === "product"));
       })
       .catch(() => {});
+
+    // Szállítólevelek betöltése
+    setLoadingDeliveryNotes(true);
+    apiJson<DeliveryNoteItem[]>("/api/delivery-notes")
+      .then((dns) => {
+        setDeliveryNotes(dns);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingDeliveryNotes(false));
   }, []);
 
   const updateLine = <K extends keyof WarrantyLine>(
@@ -104,6 +134,29 @@ export default function NewWarrantyPage() {
         i === idx ? { ...l, price_list_item_id: item._id, name: item.name } : l,
       ),
     );
+  };
+
+  const handleDeliveryImport = () => {
+    if (!selectedDeliveryNoteId) return;
+    const dn = deliveryNotes.find((d) => d._id === selectedDeliveryNoteId);
+    if (!dn || !dn.lines || dn.lines.length === 0) return;
+
+    const importedLines: WarrantyLine[] = dn.lines.map((l) => ({
+      price_list_item_id: l.price_list_item_id ?? "",
+      name: l.name,
+      serial_number: "",
+      warranty_years: 2,
+      warranty_start: today(),
+      warranty_end: calcEnd(today(), 2),
+    }));
+
+    setLines(importedLines);
+    // Ha a szállítólevelen van partner, beállít juk
+    if (dn.contact_id && !contactId) {
+      setContactId(dn.contact_id);
+    }
+    setShowDeliveryImport(false);
+    setSelectedDeliveryNoteId("");
   };
 
   const handleSubmit = async () => {
@@ -232,6 +285,64 @@ export default function NewWarrantyPage() {
             />
           </div>
         </div>
+      </Card>
+
+      {/* Szállítólevél import szekció */}
+      <Card className="p-6 bg-blue-50/50 border-blue-100 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-blue-800">
+            📦 Import szállítólevélből (opcionális)
+          </h2>
+          <button
+            type="button"
+            onClick={() => setShowDeliveryImport((v) => !v)}
+            className="text-xs text-blue-600 hover:text-blue-800 font-medium underline"
+          >
+            {showDeliveryImport ? "Bezárás" : "Megnyitás"}
+          </button>
+        </div>
+        {showDeliveryImport && (
+          <div className="flex flex-col md:flex-row items-end gap-4">
+            <div className="flex flex-col gap-1.5 flex-1">
+              <label className="text-sm font-medium text-blue-900">
+                Válassz szállítólevelet
+              </label>
+              <select
+                value={selectedDeliveryNoteId}
+                onChange={(e) => setSelectedDeliveryNoteId(e.target.value)}
+                disabled={loadingDeliveryNotes}
+                className={`${inputCls} bg-white`}
+              >
+                <option value="">
+                  {loadingDeliveryNotes ? "Betöltés..." : "-- Válassz szállítólevelet --"}
+                </option>
+                {deliveryNotes.map((dn) => (
+                  <option key={dn._id} value={dn._id}>
+                    {dn.delivery_number}
+                    {dn.issue_date
+                      ? ` (${new Intl.DateTimeFormat("hu-HU").format(new Date(dn.issue_date))})`
+                      : ""}{" "}
+                    &mdash; {dn.lines?.length ?? 0} tétel
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="button"
+              onClick={handleDeliveryImport}
+              disabled={!selectedDeliveryNoteId}
+              className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Importálás
+            </button>
+          </div>
+        )}
+        {!showDeliveryImport && (
+          <p className="text-xs text-blue-600">
+            Kattints a "Megnyitás" gombra, hogy szállítólevélből importáld a jótállási
+            tételeket.
+          </p>
+        )}
       </Card>
 
       {/* Tételek */}

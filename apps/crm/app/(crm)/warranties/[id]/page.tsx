@@ -43,6 +43,7 @@ interface PdfData {
   contact: Contact | null;
   companyDetails: CompanyDetails | null;
   legalNotice: string;
+  legalNoticeType?: "A" | "B";
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -88,7 +89,7 @@ function statusBadge(status: WarrantyCard["status"]) {
 // ─── PDF sablon (2 oldal, inline HTML) ───────────────────────────────────────
 
 function buildPdfHtml(data: PdfData): string {
-  const { warranty, contact, companyDetails, legalNotice } = data;
+  const { warranty, contact, companyDetails, legalNotice, legalNoticeType } = data;
   const co = companyDetails;
 
   const linesRows = warranty.lines
@@ -302,9 +303,12 @@ function buildPdfHtml(data: PdfData): string {
 <!-- ══════════════ OLDAL 2: JOGI TÁJÉKOZTATÓ ══════════════ -->
 <div class="page">
   <div class="legal-header">
-    <div class="legal-title">Jótállási Tájékoztató és Jogi Feltételek</div>
-    <div class="doc-number" style="margin-top:0;">${warranty.warranty_number}</div>
-  </div>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <div class="legal-title">${legalNoticeType === "A" ? "Jótállási Tájékoztató &amp; Jogi Feltételek" : "Garanciális Tájékoztató &amp; Jogi Feltételek"}</div>
+      ${legalNoticeType ? `<span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:${legalNoticeType === "A" ? "#3b82f6" : "#10b981"};color:#fff;font-weight:800;font-size:14px;flex-shrink:0;">${legalNoticeType}<\/span>` : ""}
+    <\/div>
+    <div class="doc-number" style="margin-top:0;">${warranty.warranty_number}<\/div>
+  <\/div>
   <div class="legal-content">${legalHtml}</div>
   
   <div class="footer">

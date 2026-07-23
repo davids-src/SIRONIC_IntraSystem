@@ -843,60 +843,9 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      {/* Jótállási jegy – jogi tájékoztató szöveg */}
-      <WarrantyLegalNoticeEditor
-        initialValue={
-          (settings as Settings & { warranty_legal_notice?: string })
-            .warranty_legal_notice ?? ""
-        }
-        onSaved={(val) => setSettings({ ...settings, warranty_legal_notice: val })}
-      />
-    </div>
-  );
-}
-
-// ─── Jogi szöveg szerkesztő komponens ───────────────────────────────────────
-
-function WarrantyLegalNoticeEditor({
-  initialValue,
-  onSaved,
-}: {
-  initialValue: string;
-  onSaved: (val: string) => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [text, setText] = useState(initialValue);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    setText(initialValue);
-  }, [initialValue]);
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await apiJsonBody("/api/settings", "PATCH", { warranty_legal_notice: text });
-      onSaved(text);
-      setEditing(false);
-    } catch (e) {
-      console.error(e);
-      alert("Hiba történt a mentés során.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Card className="p-6">
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          marginBottom: "16px",
-        }}
-      >
-        <div>
+      {/* Jótállási jegy – jogi tájékoztató tájékoztató */}
+      <Card className="p-6">
+        <div style={{ marginBottom: "16px" }}>
           <h2 style={{ fontSize: "1.125rem", fontWeight: 700, margin: 0 }}>
             Jótállási jegy – Jogi tájékoztató szövege
           </h2>
@@ -907,81 +856,110 @@ function WarrantyLegalNoticeEditor({
               margin: "4px 0 0 0",
             }}
           >
-            Ez a szöveg jelenik meg a generált jótállási jegy 2. oldalán.
-            Jogszabályváltozás esetén itt módosítható kódmódosítás nélkül.
+            A jogi szöveg automatikusan kerül kiválasztásra a partner típusa alapján.
+            Kódmódosítás nélkül nem szerkeszthető.
           </p>
         </div>
-        <div style={{ display: "flex", gap: "8px" }}>
-          {!editing ? (
-            <Button variant="secondary" onClick={() => setEditing(true)}>
-              Szerkesztés
-            </Button>
-          ) : (
-            <>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setEditing(false);
-                  setText(initialValue);
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <div
+            style={{
+              padding: "16px",
+              borderRadius: "8px",
+              border: "1px solid var(--color-border-subtle)",
+              background: "var(--color-bg-secondary)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                marginBottom: "6px",
+              }}
+            >
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "24px",
+                  height: "24px",
+                  borderRadius: "50%",
+                  background: "#3b82f6",
+                  color: "#fff",
+                  fontWeight: 800,
+                  fontSize: "13px",
                 }}
-                disabled={saving}
               >
-                Mégse
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => void handleSave()}
-                disabled={saving}
+                A
+              </span>
+              <span style={{ fontWeight: 700, fontSize: "0.9375rem" }}>
+                Magánszemélynek (fogyasztónak) történő értékesítés
+              </span>
+            </div>
+            <p
+              style={{
+                fontSize: "0.8125rem",
+                color: "var(--color-text-muted)",
+                margin: 0,
+                lineHeight: 1.6,
+              }}
+            >
+              Kötelező jótállás – a 151/2003. (IX. 22.) Korm. rendelet és a Ptk. alapján.
+              Akkor kerül alkalmazásra, ha a partner típusa <strong>Magánszemély</strong>.
+            </p>
+          </div>
+          <div
+            style={{
+              padding: "16px",
+              borderRadius: "8px",
+              border: "1px solid var(--color-border-subtle)",
+              background: "var(--color-bg-secondary)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                marginBottom: "6px",
+              }}
+            >
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "24px",
+                  height: "24px",
+                  borderRadius: "50%",
+                  background: "#10b981",
+                  color: "#fff",
+                  fontWeight: 800,
+                  fontSize: "13px",
+                }}
               >
-                {saving ? "Mentés…" : "Mentés"}
-              </Button>
-            </>
-          )}
+                B
+              </span>
+              <span style={{ fontWeight: 700, fontSize: "0.9375rem" }}>
+                Vállalkozásnak (cégnek) történő értékesítés
+              </span>
+            </div>
+            <p
+              style={{
+                fontSize: "0.8125rem",
+                color: "var(--color-text-muted)",
+                margin: 0,
+                lineHeight: 1.6,
+              }}
+            >
+              Önkéntes garancia – a Ptk. diszpozitív szabályai alapján, szerződéses
+              megállapodással. Akkor kerül alkalmazásra, ha a partner típusa{" "}
+              <strong>Cég</strong> vagy <strong>Egyszeri</strong>.
+            </p>
+          </div>
         </div>
-      </div>
-
-      {editing ? (
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          rows={20}
-          style={{
-            width: "100%",
-            fontFamily: "monospace",
-            fontSize: "0.8125rem",
-            lineHeight: "1.6",
-            padding: "12px",
-            borderRadius: "6px",
-            border: "1px solid var(--color-border-subtle)",
-            background: "var(--color-bg-secondary)",
-            color: "var(--color-text-primary)",
-            resize: "vertical",
-            outline: "none",
-          }}
-        />
-      ) : (
-        <div
-          style={{
-            padding: "12px",
-            borderRadius: "6px",
-            border: "1px solid var(--color-border-subtle)",
-            background: "var(--color-bg-secondary)",
-            fontSize: "0.8125rem",
-            fontFamily: "monospace",
-            whiteSpace: "pre-wrap",
-            lineHeight: "1.6",
-            color: "var(--color-text-secondary)",
-            maxHeight: "200px",
-            overflowY: "auto",
-          }}
-        >
-          {text || (
-            <span style={{ color: "var(--color-text-muted)", fontStyle: "italic" }}>
-              Nincs mentett szöveg – az alapértelmezett jogi szöveg kerül a PDF-be.
-            </span>
-          )}
-        </div>
-      )}
-    </Card>
+      </Card>
+    </div>
   );
 }
