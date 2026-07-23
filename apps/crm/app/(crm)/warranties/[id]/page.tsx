@@ -190,8 +190,6 @@ function buildPdfHtml(data: PdfData): string {
     .legal-content p { font-size: 12px; color: #475569; line-height: 1.8; margin-bottom: 12px; text-align: justify; }
     .legal-content li { font-size: 12px; color: #475569; line-height: 1.8; margin-left: 24px; margin-bottom: 8px; }
   </style>
-</head>
-<body>
 
 <!-- ══════════════ OLDAL 1: JÓTÁLLÁSI JEGY ══════════════ -->
 <div class="page">
@@ -381,9 +379,14 @@ export default function WarrantyDetailPage({
 
       const container = document.createElement("div");
       container.innerHTML = html;
-      container.style.position = "absolute";
-      container.style.left = "-9999px";
+      // Fontos: visibility:hidden + fixed pozíció, hogy a scroll state
+      // ne befolyásolja a html2canvas renderelést
+      container.style.position = "fixed";
       container.style.top = "0";
+      container.style.left = "0";
+      container.style.width = "210mm";
+      container.style.zIndex = "-9999";
+      container.style.visibility = "hidden";
       document.body.appendChild(container);
 
       await html2pdf()
@@ -392,7 +395,7 @@ export default function WarrantyDetailPage({
           margin: 0,
           filename: `Jótállási_jegy_${warranty.warranty_number}.pdf`,
           image: { type: "jpeg", quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+          html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
         })
         .save();

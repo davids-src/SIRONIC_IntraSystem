@@ -1782,20 +1782,12 @@ export default function NewOfferPage() {
               Vissza szerkeszteni
             </Button>
             <Button
-              variant="secondary"
+              variant="primary"
               disabled={saving}
               onClick={() => void saveOffer("draft")}
             >
               <FileText size={16} style={{ marginRight: "6px" }} />
-              Mentés piszkozatként
-            </Button>
-            <Button
-              variant="primary"
-              disabled={saving}
-              onClick={() => void saveOffer("sent")}
-            >
-              <Send size={16} style={{ marginRight: "6px" }} />
-              {saving ? "Mentés…" : "Mentés véglegesként"}
+              {saving ? "Mentés…" : "Ajánlat mentése"}
             </Button>
           </div>
         </div>

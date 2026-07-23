@@ -136,11 +136,6 @@ export default function EditOfferPage({ params }: { params: Promise<{ id: string
           apiJson<Offer>(`/api/offers/${id}`, { signal: ac.signal }),
         ]);
 
-        if (doc.status !== "draft") {
-          router.replace(`/offers/${id}`);
-          return;
-        }
-
         setPriceList(pl.map((r) => mapPriceListItem(r as PriceListItem)));
         setContacts(cr as Contact[]);
         setServicePriceList(spl);
@@ -232,12 +227,14 @@ export default function EditOfferPage({ params }: { params: Promise<{ id: string
     };
   };
 
-  const saveOffer = async (status: "draft" | "sent") => {
+  const saveOffer = async (forcedStatus?: "draft" | "sent") => {
     if (!header.contact_id || !header.title.trim() || cart.length === 0) return;
     setSaving(true);
     setLoadErr(null);
     try {
-      await apiJsonBody(`/api/offers/${id}`, "PATCH", buildPayload(status));
+      // Keep existing offer status if not forced
+      const statusToSave = forcedStatus ?? "draft";
+      await apiJsonBody(`/api/offers/${id}`, "PATCH", buildPayload(statusToSave));
       router.push(`/offers/${id}`);
     } catch (e) {
       setLoadErr(e instanceof ApiError ? e.message : "Mentés sikertelen.");
@@ -369,7 +366,7 @@ export default function EditOfferPage({ params }: { params: Promise<{ id: string
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Ajánlat szerkesztése"
-        subtitle={`Piszkozat ajánlat módosítása`}
+        subtitle={`Ajánlat módosítása`}
         actions={
           <Button variant="secondary" onClick={() => router.push(`/offers/${id}`)}>
             Mégse
@@ -917,22 +914,9 @@ export default function EditOfferPage({ params }: { params: Promise<{ id: string
             <Button variant="secondary" disabled={saving} onClick={() => setStep(1)}>
               Vissza a tételekhez
             </Button>
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                disabled={saving}
-                onClick={() => saveOffer("draft")}
-              >
-                Változtatások mentése
-              </Button>
-              <Button
-                variant="primary"
-                disabled={saving}
-                onClick={() => saveOffer("sent")}
-              >
-                Mentés és kiküldés partnernek
-              </Button>
-            </div>
+            <Button variant="primary" disabled={saving} onClick={() => saveOffer()}>
+              {saving ? "Mentés..." : "Változtatások mentése"}
+            </Button>
           </div>
         </Card>
       )}

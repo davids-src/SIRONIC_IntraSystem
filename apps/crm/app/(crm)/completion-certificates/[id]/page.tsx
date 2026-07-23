@@ -25,7 +25,7 @@ import type {
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useRef, useState } from "react";
-import { Download, Mail, Loader2 } from "lucide-react";
+import { Download, Mail, Loader2, Save } from "lucide-react";
 
 function parseCc(raw: unknown): CompletionCertificate {
   const r = raw as Record<string, unknown>;
@@ -40,7 +40,7 @@ function parseCc(raw: unknown): CompletionCertificate {
 }
 
 const statusLabel: Record<CompletionCertificateStatus, string> = {
-  draft: "Piszkozat",
+  draft: "Aktív",
   sent: "Kiküldve",
   accepted: "Elfogadva",
   rejected: "Elutasítva",
@@ -50,8 +50,8 @@ const statusVariant: Record<
   CompletionCertificateStatus,
   "default" | "warning" | "success" | "error"
 > = {
-  draft: "default",
-  sent: "warning",
+  draft: "success",
+  sent: "success",
   accepted: "success",
   rejected: "error",
 };
@@ -93,6 +93,10 @@ export default function CompletionCertificateFormPage({
   const [showPicker, setShowPicker] = useState(false);
   const [clientContact, setClientContact] = useState<Contact | null>(null);
 
+  // Contacts (for partner picker on new doc)
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [contactId, setContactId] = useState("");
+
   // Import states
   const [sourceType, setSourceType] = useState<"offer" | "worklog" | "project" | "none">(
     "none",
@@ -117,6 +121,11 @@ export default function CompletionCertificateFormPage({
     // Load service price list items
     apiJson<any[]>("/api/service-price-list")
       .then((res) => setServicePriceList(res))
+      .catch(() => {});
+
+    // Load contacts (for partner picker)
+    apiJson<Contact[]>("/api/contacts")
+      .then((res) => setContacts(res))
       .catch(() => {});
 
     if (isNew) return;
@@ -173,6 +182,7 @@ export default function CompletionCertificateFormPage({
             title: title.trim(),
             work_summary: workSummary.trim(),
             status: "draft",
+            contact_id: contactId || null,
             total_hours: totalHours.trim() === "" ? null : Number.parseFloat(totalHours),
             work_period_start: periodStart ? new Date(periodStart) : null,
             work_period_end: periodEnd ? new Date(periodEnd) : null,
@@ -494,8 +504,8 @@ export default function CompletionCertificateFormPage({
 
       {!isNew && doc && (
         <div className="flex items-center gap-2">
-          <span className="text-sm text-[var(--color-text-muted)]">Állapot:</span>
-          <Badge variant={statusVariant[doc.status]}>{statusLabel[doc.status]}</Badge>
+          <span className="text-sm text-[var(--color-text-muted)]">Azonosító:</span>
+          <Badge variant="default">{doc.certificate_number}</Badge>
         </div>
       )}
 
@@ -553,9 +563,39 @@ export default function CompletionCertificateFormPage({
         </Card>
       )}
 
+      {/* Partner picker – new doc only */}
+      {isNew && (
+        <Card className="p-6 space-y-3">
+          <h3 className="text-sm font-bold text-[var(--color-text-secondary)]">
+            Partner (Ügyfél)
+          </h3>
+          <div className="flex flex-col gap-1.5">
+            <Label>Partner</Label>
+            <Select
+              value={contactId || "__empty__"}
+              onValueChange={(v) => setContactId(v === "__empty__" ? "" : v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Válassz partnert (opcionális)…" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__empty__">
+                  — Válassz partnert (opcionális) —
+                </SelectItem>
+                {contacts.map((c) => (
+                  <SelectItem key={c._id} value={c._id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </Card>
+      )}
+
       <Card className="p-6 space-y-4">
         {(() => {
-          const disabled = !isNew && status !== "draft";
+          const disabled = false; // Mindig szerkeszthető
           return (
             <>
               <Input
@@ -708,32 +748,10 @@ export default function CompletionCertificateFormPage({
               />
               {!isNew && (
                 <>
-                  <div className="space-y-2">
-                    <Label>Státusz</Label>
-                    <Select
-                      value={status}
-                      onValueChange={(v) => setStatus(v as CompletionCertificateStatus)}
-                      disabled={disabled}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(Object.keys(statusLabel) as CompletionCertificateStatus[]).map(
-                          (s) => (
-                            <SelectItem key={s} value={s}>
-                              {statusLabel[s]}
-                            </SelectItem>
-                          ),
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
                   <Input
                     label="Ügyfél aláíró neve"
                     value={clientName}
                     onChange={(e) => setClientName(e.target.value)}
-                    disabled={disabled}
                   />
 
                   {/* Recipient section */}
@@ -747,7 +765,6 @@ export default function CompletionCertificateFormPage({
                         value={recipientName}
                         onChange={(e) => setRecipientName(e.target.value)}
                         placeholder="Pl. Kovács István"
-                        disabled={disabled}
                       />
                       <Input
                         type="email"
@@ -755,17 +772,15 @@ export default function CompletionCertificateFormPage({
                         value={recipientEmail}
                         onChange={(e) => setRecipientEmail(e.target.value)}
                         placeholder="pelda@ceg.hu"
-                        disabled={disabled}
                       />
                     </div>
                   </div>
                 </>
               )}
-              {!disabled && (
-                <Button variant="primary" disabled={saving} onClick={() => void save()}>
-                  {saving ? "Mentés…" : isNew ? "Létrehozás" : "Mentés"}
-                </Button>
-              )}
+              <Button variant="primary" disabled={saving} onClick={() => void save()}>
+                <Save size={15} className="mr-1.5" />
+                {saving ? "Mentés…" : isNew ? "Igazolás létrehozása" : "Mentés"}
+              </Button>
             </>
           );
         })()}
