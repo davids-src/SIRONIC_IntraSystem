@@ -66,17 +66,40 @@ export default function PurchaseOrderDetailPage() {
 
   const handleDownloadPdf = async () => {
     if (!printRef.current) return;
-    const el = printRef.current;
-    el.style.display = "block";
+    let container: HTMLDivElement | null = null;
     try {
       const html2pdf = (await import("html2pdf.js")).default;
+
+      container = document.createElement("div");
+      container.innerHTML = printRef.current.innerHTML;
+      container.style.position = "fixed";
+      container.style.top = "0";
+      container.style.left = "0";
+      container.style.width = "210mm";
+      container.style.zIndex = "-100";
+      container.style.backgroundColor = "#ffffff";
+      container.style.color = "#000000";
+      container.style.opacity = "1";
+      container.style.pointerEvents = "none";
+      document.body.appendChild(container);
+
       await html2pdf()
-        .from(el)
+        .from(container)
         .set({
           margin: 0,
           filename: `Megrendelo_${order?.order_number || id}.pdf`,
           image: { type: "jpeg" as const, quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            letterRendering: true,
+            logging: false,
+            backgroundColor: "#ffffff",
+            scrollX: 0,
+            scrollY: 0,
+            x: 0,
+            y: 0,
+          },
           jsPDF: {
             unit: "mm" as const,
             format: "a4" as const,
@@ -85,9 +108,11 @@ export default function PurchaseOrderDetailPage() {
         })
         .save();
     } catch {
-      alert("PDF generálási hiba.");
+      alert("Hiba történt a PDF generálása során.");
     } finally {
-      el.style.display = "none";
+      if (container && document.body.contains(container)) {
+        document.body.removeChild(container);
+      }
     }
   };
 

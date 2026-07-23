@@ -379,14 +379,15 @@ export default function WarrantyDetailPage({
 
       const container = document.createElement("div");
       container.innerHTML = html;
-      // Fontos: visibility:hidden + fixed pozíció, hogy a scroll state
-      // ne befolyásolja a html2canvas renderelést
       container.style.position = "fixed";
       container.style.top = "0";
       container.style.left = "0";
       container.style.width = "210mm";
-      container.style.zIndex = "-9999";
-      container.style.visibility = "hidden";
+      container.style.zIndex = "-100";
+      container.style.backgroundColor = "#ffffff";
+      container.style.color = "#1e293b";
+      container.style.opacity = "1";
+      container.style.pointerEvents = "none";
       document.body.appendChild(container);
 
       await html2pdf()
@@ -395,7 +396,17 @@ export default function WarrantyDetailPage({
           margin: 0,
           filename: `Jótállási_jegy_${warranty.warranty_number}.pdf`,
           image: { type: "jpeg", quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            letterRendering: true,
+            logging: false,
+            backgroundColor: "#ffffff",
+            scrollX: 0,
+            scrollY: 0,
+            x: 0,
+            y: 0,
+          },
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
         })
         .save();
