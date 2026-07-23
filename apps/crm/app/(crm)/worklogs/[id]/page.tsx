@@ -396,7 +396,7 @@ function WorklogFormContent({ id }: { id: string }) {
       container.style.top = "0";
       container.style.left = "0";
       container.style.width = "210mm";
-      container.style.zIndex = "-100";
+      container.style.zIndex = "99999";
       container.style.backgroundColor = "#ffffff";
       container.style.color = "#000000";
       container.style.opacity = "1";
