@@ -3,11 +3,13 @@
 import * as React from "react";
 import { colors, radius } from "../tokens";
 import { Button } from "./Button";
+import { generatePdfFromElement } from "../lib/pdf-generator";
 
 export interface PdfPreviewModalProps {
   open: boolean;
   onClose: () => void;
-  onDownload?: () => void;
+  onDownload?: (paperEl: HTMLElement | null) => void | Promise<void>;
+  filename?: string;
   title?: string;
   children: React.ReactNode;
 }
@@ -16,10 +18,31 @@ export function PdfPreviewModal({
   open,
   onClose,
   onDownload,
+  filename = "dokumentum.pdf",
   title = "Dokumentum előnézet",
   children,
 }: PdfPreviewModalProps) {
+  const paperRef = React.useRef<HTMLDivElement>(null);
+  const [downloading, setDownloading] = React.useState(false);
+
   if (!open) return null;
+
+  const handleDownloadClick = async () => {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      if (onDownload) {
+        await onDownload(paperRef.current);
+      } else if (paperRef.current) {
+        await generatePdfFromElement(paperRef.current, filename);
+      }
+    } catch (err) {
+      console.error("PDF letöltési hiba:", err);
+      alert("Hiba történt a PDF generálása során.");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   return (
     <div
@@ -106,6 +129,7 @@ export function PdfPreviewModal({
           }}
         >
           <div
+            ref={paperRef}
             style={{
               width: "210mm",
               maxWidth: "100%",
@@ -140,14 +164,16 @@ export function PdfPreviewModal({
             Nyomtatási A4 elrendezés
           </span>
           <div style={{ display: "flex", gap: "12px" }}>
-            <Button variant="secondary" onClick={onClose}>
+            <Button variant="secondary" onClick={onClose} disabled={downloading}>
               Bezárás
             </Button>
-            {onDownload && (
-              <Button variant="primary" onClick={onDownload}>
-                📥 Letöltés (PDF)
-              </Button>
-            )}
+            <Button
+              variant="primary"
+              onClick={handleDownloadClick}
+              disabled={downloading}
+            >
+              {downloading ? "PDF generálása…" : "📥 Letöltés (PDF)"}
+            </Button>
           </div>
         </div>
       </div>

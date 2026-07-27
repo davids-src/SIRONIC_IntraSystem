@@ -6,9 +6,10 @@ import {
   Badge,
   Button,
   UnifiedPdfTemplate,
+  PdfPreviewModal,
   generatePdfFromElement,
 } from "@crm/ui";
-import { Download, ChevronLeft, Check, X } from "lucide-react";
+import { Download, ChevronLeft, Check, X, Eye } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import type { Contact, Offer, CompanyDetails, Settings } from "@crm/types";
@@ -42,6 +43,7 @@ export default function PartnerOfferDetailsPage() {
   const [provider, setProvider] = useState<CompanyDetails | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -137,7 +139,10 @@ export default function PartnerOfferDetailsPage() {
             <Button variant="ghost" onClick={() => router.push("/offers")}>
               <ChevronLeft size={16} /> Vissza
             </Button>
-            <Button variant="secondary" onClick={handleDownloadPdf}>
+            <Button variant="secondary" onClick={() => setShowPreviewModal(true)}>
+              <Eye size={16} className="mr-2" /> Előnézet
+            </Button>
+            <Button variant="secondary" onClick={() => setShowPreviewModal(true)}>
               <Download size={16} className="mr-2" /> PDF Letöltés
             </Button>
           </>
@@ -392,6 +397,123 @@ export default function PartnerOfferDetailsPage() {
           </div>
         </UnifiedPdfTemplate>
       </div>
+
+      {/* PDF Előnézet Modal */}
+      <PdfPreviewModal
+        open={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+        filename={`Arajanlat_${offer.offer_number}.pdf`}
+        title={`Árajánlat előnézet — ${offer.offer_number}`}
+      >
+        <UnifiedPdfTemplate
+          documentTitle="ÁRAJÁNLAT"
+          documentId={offer.offer_number}
+          date={new Date(offer.created_at)}
+          provider={provider}
+          client={contact}
+          showSignatures={false}
+        >
+          <div style={{ marginBottom: "30px" }}>
+            <h3 style={{ fontSize: "16px", marginBottom: "10px", color: "#333" }}>
+              {offer.title}
+            </h3>
+            {offer.notes && (
+              <p
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "20px",
+                  whiteSpace: "pre-wrap",
+                }}
+              >
+                {offer.notes}
+              </p>
+            )}
+          </div>
+
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              fontSize: "12px",
+              marginBottom: "30px",
+            }}
+          >
+            <thead>
+              <tr style={{ borderBottom: "2px solid #000" }}>
+                <th style={{ textAlign: "left", padding: "8px" }}>Tétel</th>
+                <th style={{ textAlign: "right", padding: "8px" }}>Mennyiség</th>
+                <th style={{ textAlign: "right", padding: "8px" }}>Egységár</th>
+                <th style={{ textAlign: "right", padding: "8px" }}>Összesen</th>
+              </tr>
+            </thead>
+            <tbody>
+              {offer.lines.map((l, i) => {
+                const discountedPrice =
+                  l.net_unit_price * (1 - (l.discount_percent ?? 0) / 100);
+                return (
+                  <tr key={i} style={{ borderBottom: "1px solid #eee" }}>
+                    <td style={{ padding: "8px" }}>
+                      <div style={{ fontWeight: 600 }}>{l.description}</div>
+                      {l.discount_percent ? (
+                        <div style={{ fontSize: "10px", color: "#e53935" }}>
+                          Kedvezmény: {l.discount_percent}%
+                        </div>
+                      ) : null}
+                    </td>
+                    <td style={{ textAlign: "right", padding: "8px" }}>
+                      {l.quantity} {l.unit}
+                    </td>
+                    <td style={{ textAlign: "right", padding: "8px" }}>
+                      {fmt(discountedPrice)}
+                    </td>
+                    <td style={{ textAlign: "right", padding: "8px" }}>
+                      {fmt(discountedPrice * l.quantity)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          <div style={{ width: "250px", marginLeft: "auto", fontSize: "12px" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "4px",
+              }}
+            >
+              <span>Nettó összesen:</span>
+              <span>{fmt(totalNet)}</span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "4px",
+              }}
+            >
+              <span>ÁFA:</span>
+              <span>{fmt(totalVat)}</span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontWeight: 700,
+                fontSize: "14px",
+                marginTop: "8px",
+                paddingTop: "8px",
+                borderTop: "2px solid #000",
+              }}
+            >
+              <span>Fizetendő:</span>
+              <span>{fmt(offer.total_amount)}</span>
+            </div>
+          </div>
+        </UnifiedPdfTemplate>
+      </PdfPreviewModal>
     </div>
   );
 }

@@ -6,6 +6,7 @@ import {
   Badge,
   Button,
   UnifiedPdfTemplate,
+  PdfPreviewModal,
   generatePdfFromElement,
 } from "@crm/ui";
 import type { Worklog, CompanyDetails, Contact } from "@crm/types";
@@ -13,7 +14,7 @@ import { apiJson } from "@/lib/api-client";
 import { parseWorklog } from "@/lib/entity-parsers";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState, useRef } from "react";
-import { Download } from "lucide-react";
+import { Download, Eye } from "lucide-react";
 
 export default function PartnerWorklogDetailPage({
   params,
@@ -26,6 +27,7 @@ export default function PartnerWorklogDetailPage({
   const [provider, setProvider] = useState<CompanyDetails | null>(null);
   const [client, setClient] = useState<Contact | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -81,7 +83,11 @@ export default function PartnerWorklogDetailPage({
         subtitle={`${wl.work_category} — ${wl.work_date.toLocaleDateString("hu-HU")}`}
         actions={
           <div className="flex items-center gap-3">
-            <Button variant="secondary" onClick={handleDownloadPdf}>
+            <Button variant="secondary" onClick={() => setShowPreviewModal(true)}>
+              <Eye size={15} style={{ marginRight: "6px" }} />
+              Előnézet
+            </Button>
+            <Button variant="secondary" onClick={() => setShowPreviewModal(true)}>
               <Download size={15} style={{ marginRight: "6px" }} />
               PDF letöltése
             </Button>
@@ -273,6 +279,90 @@ export default function PartnerWorklogDetailPage({
           </div>
         </UnifiedPdfTemplate>
       </div>
+
+      {/* PDF Előnézet Modal */}
+      <PdfPreviewModal
+        open={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+        filename={`Munkalap_${wl.worklog_number}.pdf`}
+        title={`Munkalap előnézet — ${wl.worklog_number}`}
+      >
+        <UnifiedPdfTemplate
+          documentTitle="Munkalap"
+          documentId={wl.worklog_number}
+          date={wl.work_date}
+          provider={provider}
+          client={client}
+        >
+          <div style={{ marginBottom: "20px" }}>
+            <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 10px" }}>
+              Elvégzett munka leírása
+            </h3>
+            <div
+              style={{
+                fontSize: "13px",
+                lineHeight: "1.6",
+                color: "#374151",
+                whiteSpace: "pre-wrap",
+                backgroundColor: "#f9fafb",
+                border: "1px solid #e5e7eb",
+                borderRadius: "6px",
+                padding: "12px",
+              }}
+            >
+              {wl.work_description}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: "20px" }}>
+            <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 10px" }}>
+              Felhasznált tételek & Anyagok
+            </h3>
+            {wl.items && wl.items.length > 0 && wl.items[0]?.description !== "—" ? (
+              <table
+                style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}
+              >
+                <thead>
+                  <tr
+                    style={{
+                      backgroundColor: "#f3f4f6",
+                      borderBottom: "2px solid #e5e7eb",
+                    }}
+                  >
+                    <th style={{ padding: "8px", textAlign: "left" }}>Megnevezés</th>
+                    <th style={{ padding: "8px", textAlign: "center" }}>Egység</th>
+                    <th style={{ padding: "8px", textAlign: "right" }}>Mennyiség</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {wl.items.map((it, idx) => (
+                    <tr key={idx} style={{ borderBottom: "1px solid #eee" }}>
+                      <td style={{ padding: "8px" }}>{it.description}</td>
+                      <td style={{ padding: "8px", textAlign: "center" }}>{it.unit}</td>
+                      <td style={{ padding: "8px", textAlign: "right", fontWeight: 600 }}>
+                        {it.quantity}
+                      </td>
+                    </tr>
+                  ))}
+                  {wl.travel_km && Number(wl.travel_km) > 0 && (
+                    <tr style={{ borderBottom: "1px solid #eee" }}>
+                      <td style={{ padding: "8px" }}>Kiszállás / Útiköltség</td>
+                      <td style={{ padding: "8px", textAlign: "center" }}>km</td>
+                      <td style={{ padding: "8px", textAlign: "right", fontWeight: 600 }}>
+                        {wl.travel_km}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            ) : (
+              <p style={{ fontSize: "13px", color: "#666" }}>
+                Nincsenek rögzített tételek.
+              </p>
+            )}
+          </div>
+        </UnifiedPdfTemplate>
+      </PdfPreviewModal>
     </div>
   );
 }

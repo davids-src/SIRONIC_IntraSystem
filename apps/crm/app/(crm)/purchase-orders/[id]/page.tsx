@@ -200,7 +200,7 @@ export default function PurchaseOrderDetailPage() {
             <Button variant="secondary" onClick={() => setShowPreviewModal(true)}>
               <Eye size={16} className="mr-2" /> Előnézet
             </Button>
-            <Button variant="secondary" onClick={handleDownloadPdf}>
+            <Button variant="secondary" onClick={() => setShowPreviewModal(true)}>
               <Download size={16} className="mr-2" /> PDF Letöltés
             </Button>
           </>
@@ -540,10 +540,7 @@ export default function PurchaseOrderDetailPage() {
       <PdfPreviewModal
         open={showPreviewModal}
         onClose={() => setShowPreviewModal(false)}
-        onDownload={() => {
-          setShowPreviewModal(false);
-          void handleDownloadPdf();
-        }}
+        filename={`Megrendelo_${order.order_number}.pdf`}
         title={`Megrendelőlap előnézet — ${order.order_number}`}
       >
         <UnifiedPdfTemplate

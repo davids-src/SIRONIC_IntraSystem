@@ -148,7 +148,7 @@ export default function OfferDetailsPage() {
             <Button variant="secondary" onClick={() => setShowPreviewModal(true)}>
               <Eye size={16} className="mr-2" /> Előnézet
             </Button>
-            <Button variant="secondary" onClick={handleDownloadPdf}>
+            <Button variant="secondary" onClick={() => setShowPreviewModal(true)}>
               <Download size={16} className="mr-2" /> PDF Letöltés
             </Button>
             <Button
@@ -395,10 +395,7 @@ export default function OfferDetailsPage() {
       <PdfPreviewModal
         open={showPreviewModal}
         onClose={() => setShowPreviewModal(false)}
-        onDownload={() => {
-          setShowPreviewModal(false);
-          handleDownloadPdf();
-        }}
+        filename={`Arajanlat_${offer.offer_number}.pdf`}
         title={`Árajánlat előnézet — ${offer.offer_number}`}
       >
         <UnifiedPdfTemplate

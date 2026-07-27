@@ -230,7 +230,7 @@ export default function DeliveryNoteDetailPage({
           {/* PDF download */}
           <Button
             variant="secondary"
-            onClick={() => void handleDownloadPdf()}
+            onClick={() => setShowPreviewModal(true)}
             disabled={generatingPdf}
           >
             {generatingPdf ? (
@@ -432,10 +432,7 @@ export default function DeliveryNoteDetailPage({
       <PdfPreviewModal
         open={showPreviewModal}
         onClose={() => setShowPreviewModal(false)}
-        onDownload={() => {
-          setShowPreviewModal(false);
-          void handleDownloadPdf();
-        }}
+        filename={`Szallitolevel_${note.delivery_number}.pdf`}
         title={`Szállítólevél előnézet — ${note.delivery_number}`}
       >
         <UnifiedPdfTemplate

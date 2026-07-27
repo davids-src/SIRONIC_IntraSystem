@@ -441,7 +441,7 @@ export default function CompletionCertificateFormPage({
                 </Button>
                 <Button
                   variant="secondary"
-                  onClick={() => void handleDownloadPdf()}
+                  onClick={() => setShowPreviewModal(true)}
                   disabled={generatingPdf}
                 >
                   {generatingPdf ? (
@@ -1156,10 +1156,7 @@ export default function CompletionCertificateFormPage({
         <PdfPreviewModal
           open={showPreviewModal}
           onClose={() => setShowPreviewModal(false)}
-          onDownload={() => {
-            setShowPreviewModal(false);
-            void handleDownloadPdf();
-          }}
+          filename={`Teljesitesi_igazolas_${doc.certificate_number}.pdf`}
           title={`Teljesítési igazolás előnézet — ${doc.certificate_number}`}
         >
           <UnifiedPdfTemplate

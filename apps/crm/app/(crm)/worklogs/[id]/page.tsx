@@ -486,7 +486,7 @@ function WorklogFormContent({ id }: { id: string }) {
           )}
           {status === "finalized" && (
             <>
-              <Button variant="secondary" onClick={handleDownloadPdf}>
+              <Button variant="secondary" onClick={() => setShowPreviewModal(true)}>
                 <Download size={15} style={{ marginRight: "6px" }} />
                 PDF letöltése
               </Button>
@@ -1540,10 +1540,7 @@ function WorklogFormContent({ id }: { id: string }) {
       <PdfPreviewModal
         open={showPreviewModal}
         onClose={() => setShowPreviewModal(false)}
-        onDownload={() => {
-          setShowPreviewModal(false);
-          handleDownloadPdf();
-        }}
+        filename={`Munkalap_${worklogNumber || id}.pdf`}
         title={`Munkalap előnézet — ${worklogNumber || id}`}
       >
         <UnifiedPdfTemplate

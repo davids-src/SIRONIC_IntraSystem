@@ -2,59 +2,38 @@ export async function generatePdfFromElement(
   el: HTMLElement,
   filename: string,
 ): Promise<void> {
-  const prevPosition = el.style.position;
-  const prevLeft = el.style.left;
-  const prevTop = el.style.top;
-  const prevZIndex = el.style.zIndex;
-  const prevDisplay = el.style.display;
+  const imgs = Array.from(el.querySelectorAll("img"));
+  await Promise.all(
+    imgs.map((img) => {
+      if (img.complete) return Promise.resolve();
+      return new Promise((res) => {
+        img.onload = res;
+        img.onerror = res;
+      });
+    }),
+  );
 
-  try {
-    el.style.display = "block";
-    el.style.position = "fixed";
-    el.style.left = "0px";
-    el.style.top = "0px";
-    el.style.zIndex = "999999";
+  const html2pdf = (await import("html2pdf.js" as any)).default;
 
-    const imgs = Array.from(el.querySelectorAll("img"));
-    await Promise.all(
-      imgs.map((img) => {
-        if (img.complete) return Promise.resolve();
-        return new Promise((res) => {
-          img.onload = res;
-          img.onerror = res;
-        });
-      }),
-    );
+  const opt = {
+    margin: 0,
+    filename,
+    image: { type: "jpeg" as const, quality: 0.98 },
+    html2canvas: {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: "#ffffff",
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: 1024,
+    },
+    jsPDF: {
+      unit: "mm" as const,
+      format: "a4" as const,
+      orientation: "portrait" as const,
+    },
+  };
 
-    const html2pdf = (await import("html2pdf.js" as any)).default;
-    const opt = {
-      margin: 0,
-      filename,
-      image: { type: "jpeg" as const, quality: 0.98 },
-      html2canvas: {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-        scrollX: 0,
-        scrollY: 0,
-        x: 0,
-        y: 0,
-        windowWidth: 1024,
-      },
-      jsPDF: {
-        unit: "mm" as const,
-        format: "a4" as const,
-        orientation: "portrait" as const,
-      },
-    };
-
-    await html2pdf().from(el).set(opt).save();
-  } finally {
-    el.style.position = prevPosition;
-    el.style.left = prevLeft;
-    el.style.top = prevTop;
-    el.style.zIndex = prevZIndex;
-    el.style.display = prevDisplay;
-  }
+  await html2pdf().from(el).set(opt).save();
 }
