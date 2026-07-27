@@ -93,21 +93,9 @@ export default function PartnerOfferDetailsPage() {
     const el = printRef.current;
     if (!el) return;
 
-    const prevDisplay = el.style.display;
-    const prevPosition = el.style.position;
-    const prevLeft = el.style.left;
-    const prevTop = el.style.top;
-    const prevZIndex = el.style.zIndex;
-    const prevBg = el.style.backgroundColor;
-
-    el.style.display = "block";
-    el.style.position = "fixed";
-    el.style.left = "0px";
-    el.style.top = "0px";
-    el.style.zIndex = "99999";
-    el.style.backgroundColor = "#ffffff";
-
     try {
+      el.style.left = "0px";
+
       const imgs = Array.from(el.querySelectorAll("img"));
       await Promise.all(
         imgs.map((img) => {
@@ -141,12 +129,7 @@ export default function PartnerOfferDetailsPage() {
       console.error("PDF generálási hiba:", e);
       alert("Hiba történt a PDF generálása során.");
     } finally {
-      el.style.display = prevDisplay || "none";
-      el.style.position = prevPosition;
-      el.style.left = prevLeft;
-      el.style.top = prevTop;
-      el.style.zIndex = prevZIndex;
-      el.style.backgroundColor = prevBg;
+      el.style.left = "-9999px";
     }
   };
 
@@ -306,7 +289,18 @@ export default function PartnerOfferDetailsPage() {
       </div>
 
       {/* Hidden PDF Container */}
-      <div style={{ display: "none" }} ref={printRef}>
+      <div
+        ref={printRef}
+        style={{
+          position: "fixed",
+          left: "-9999px",
+          top: "0px",
+          width: "210mm",
+          backgroundColor: "#ffffff",
+          color: "#000000",
+          zIndex: 99999,
+        }}
+      >
         <UnifiedPdfTemplate
           documentTitle="ÁRAJÁNLAT"
           documentId={offer.offer_number}

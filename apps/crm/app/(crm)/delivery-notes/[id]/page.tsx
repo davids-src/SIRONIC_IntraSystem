@@ -136,21 +136,9 @@ export default function DeliveryNoteDetailPage({
     if (!el) return;
     setGeneratingPdf(true);
 
-    const prevDisplay = el.style.display;
-    const prevPosition = el.style.position;
-    const prevLeft = el.style.left;
-    const prevTop = el.style.top;
-    const prevZIndex = el.style.zIndex;
-    const prevBg = el.style.backgroundColor;
-
-    el.style.display = "block";
-    el.style.position = "fixed";
-    el.style.left = "0px";
-    el.style.top = "0px";
-    el.style.zIndex = "99999";
-    el.style.backgroundColor = "#ffffff";
-
     try {
+      el.style.left = "0px";
+
       const imgs = Array.from(el.querySelectorAll("img"));
       await Promise.all(
         imgs.map((img) => {
@@ -185,12 +173,7 @@ export default function DeliveryNoteDetailPage({
       console.error("PDF hiba:", e);
       alert("Hiba történt a PDF generálása során.");
     } finally {
-      el.style.display = prevDisplay || "none";
-      el.style.position = prevPosition;
-      el.style.left = prevLeft;
-      el.style.top = prevTop;
-      el.style.zIndex = prevZIndex;
-      el.style.backgroundColor = prevBg;
+      el.style.left = "-9999px";
       setGeneratingPdf(false);
     }
   };
@@ -406,54 +389,59 @@ export default function DeliveryNoteDetailPage({
       </Card>
 
       {/* Hidden PDF template */}
-      <div style={{ display: "none" }}>
-        <div ref={printRef}>
-          <UnifiedPdfTemplate
-            documentTitle="Szállítólevél"
-            documentId={note.delivery_number}
-            date={new Date(note.issue_date)}
-            provider={companyDetails}
-            client={contact}
+      <div
+        ref={printRef}
+        style={{
+          position: "fixed",
+          left: "-9999px",
+          top: "0px",
+          width: "210mm",
+          backgroundColor: "#ffffff",
+          color: "#000000",
+          zIndex: 99999,
+        }}
+      >
+        <UnifiedPdfTemplate
+          documentTitle="Szállítólevél"
+          documentId={note.delivery_number}
+          date={new Date(note.issue_date)}
+          provider={companyDetails}
+          client={contact}
+        >
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              fontSize: "13px",
+              marginTop: "8px",
+            }}
           >
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                fontSize: "13px",
-                marginTop: "8px",
-              }}
-            >
-              <thead>
-                <tr
-                  style={{
-                    backgroundColor: "#f3f4f6",
-                    borderBottom: "2px solid #e5e7eb",
-                  }}
-                >
-                  <th style={{ padding: "8px", textAlign: "left" }}>Termék</th>
-                  <th style={{ padding: "8px", textAlign: "center" }}>Mennyiség</th>
-                  <th style={{ padding: "8px", textAlign: "left" }}>Me.</th>
+            <thead>
+              <tr style={{ borderBottom: "2px solid #000" }}>
+                <th style={{ textAlign: "left", padding: "8px" }}>Megnevezés</th>
+                <th style={{ textAlign: "right", padding: "8px" }}>Mennyiség</th>
+                <th style={{ textAlign: "left", padding: "8px" }}>Mértékegység</th>
+              </tr>
+            </thead>
+            <tbody>
+              {note.lines.map((line, i) => (
+                <tr key={i} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                  <td style={{ padding: "7px 8px", fontWeight: 600 }}>{line.name}</td>
+                  <td style={{ padding: "7px 8px", textAlign: "center" }}>
+                    {line.quantity}
+                  </td>
+                  <td style={{ padding: "7px 8px" }}>{line.unit}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {note.lines.map((line, i) => (
-                  <tr key={i} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                    <td style={{ padding: "7px 8px", fontWeight: 600 }}>{line.name}</td>
-                    <td style={{ padding: "7px 8px", textAlign: "center" }}>
-                      {line.quantity}
-                    </td>
-                    <td style={{ padding: "7px 8px" }}>{line.unit}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {note.notes && (
-              <div style={{ marginTop: "16px", fontSize: "12px", color: "#6b7280" }}>
-                <strong>Megjegyzés:</strong> {note.notes}
-              </div>
-            )}
-          </UnifiedPdfTemplate>
-        </div>
+              ))}
+            </tbody>
+          </table>
+
+          {note.notes && (
+            <div style={{ marginTop: "16px", fontSize: "12px", color: "#6b7280" }}>
+              <strong>Megjegyzés:</strong> {note.notes}
+            </div>
+          )}
+        </UnifiedPdfTemplate>
       </div>
     </div>
   );

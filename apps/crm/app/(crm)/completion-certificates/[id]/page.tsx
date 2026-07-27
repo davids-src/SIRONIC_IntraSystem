@@ -368,21 +368,9 @@ export default function CompletionCertificateFormPage({
     if (!el) return;
     setGeneratingPdf(true);
 
-    const prevDisplay = el.style.display;
-    const prevPosition = el.style.position;
-    const prevLeft = el.style.left;
-    const prevTop = el.style.top;
-    const prevZIndex = el.style.zIndex;
-    const prevBg = el.style.backgroundColor;
-
-    el.style.display = "block";
-    el.style.position = "fixed";
-    el.style.left = "0px";
-    el.style.top = "0px";
-    el.style.zIndex = "99999";
-    el.style.backgroundColor = "#ffffff";
-
     try {
+      el.style.left = "0px";
+
       const imgs = Array.from(el.querySelectorAll("img"));
       await Promise.all(
         imgs.map((img) => {
@@ -416,12 +404,7 @@ export default function CompletionCertificateFormPage({
     } catch {
       alert("Hiba történt a PDF generálása során.");
     } finally {
-      el.style.display = prevDisplay || "none";
-      el.style.position = prevPosition;
-      el.style.left = prevLeft;
-      el.style.top = prevTop;
-      el.style.zIndex = prevZIndex;
-      el.style.backgroundColor = prevBg;
+      el.style.left = "-9999px";
       setGeneratingPdf(false);
     }
   };
@@ -824,341 +807,350 @@ export default function CompletionCertificateFormPage({
 
       {/* Hidden PDF template */}
       {!isNew && doc && (
-        <div style={{ display: "none" }}>
-          <div ref={printRef}>
-            <UnifiedPdfTemplate
-              documentTitle="Teljesítési igazolás"
-              documentId={doc.certificate_number}
-              date={new Date()}
-              provider={companyDetails}
-              client={
-                clientContact ??
-                (doc.client_name
-                  ? ({
-                      _id: "",
-                      contact_number: "",
-                      partner_id: null,
-                      tenantId: "",
-                      type: "company" as const,
-                      name: doc.client_name,
-                      short_name: null,
-                      tax_number: null,
-                      registration_number: null,
-                      address: { zip: "", city: "", street: "", country: "HU" },
-                      billing_address: null,
-                      contact_persons: [],
-                      phone: null,
-                      email: null,
-                      notes: null,
-                      tags: [],
-                      has_portal_access: false,
-                      portal_permissions: {
-                        menu_tickets: false,
-                        menu_worklogs: false,
-                        menu_offers: false,
-                        menu_completion_certificates: false,
-                        menu_projects: false,
-                        menu_contracts: false,
-                        menu_invoices: false,
-                        menu_company_profile: false,
-                        menu_settings: false,
-                      },
-                      active_services: [],
-                      contract_type: null,
-                    } as unknown as Contact)
-                  : null)
-              }
-            >
-              <div style={{ fontSize: "13px", lineHeight: 1.7, color: "#111" }}>
-                <h3 style={{ fontWeight: 700, fontSize: "14px", marginBottom: "8px" }}>
-                  {doc.title}
-                </h3>
+        <div
+          ref={printRef}
+          style={{
+            position: "fixed",
+            left: "-9999px",
+            top: "0px",
+            width: "210mm",
+            backgroundColor: "#ffffff",
+            color: "#000000",
+            zIndex: 99999,
+          }}
+        >
+          <UnifiedPdfTemplate
+            documentTitle="Teljesítési igazolás"
+            documentId={doc.certificate_number}
+            date={new Date()}
+            provider={companyDetails}
+            client={
+              clientContact ??
+              (doc.client_name
+                ? ({
+                    _id: "",
+                    contact_number: "",
+                    partner_id: null,
+                    tenantId: "",
+                    type: "company" as const,
+                    name: doc.client_name,
+                    short_name: null,
+                    tax_number: null,
+                    registration_number: null,
+                    address: { zip: "", city: "", street: "", country: "HU" },
+                    billing_address: null,
+                    contact_persons: [],
+                    phone: null,
+                    email: null,
+                    notes: null,
+                    tags: [],
+                    has_portal_access: false,
+                    portal_permissions: {
+                      menu_tickets: false,
+                      menu_worklogs: false,
+                      menu_offers: false,
+                      menu_completion_certificates: false,
+                      menu_projects: false,
+                      menu_contracts: false,
+                      menu_invoices: false,
+                      menu_company_profile: false,
+                      menu_settings: false,
+                    },
+                    active_services: [],
+                    contract_type: null,
+                  } as unknown as Contact)
+                : null)
+            }
+          >
+            <div style={{ fontSize: "13px", lineHeight: 1.7, color: "#111" }}>
+              <h3 style={{ fontWeight: 700, fontSize: "14px", marginBottom: "8px" }}>
+                {doc.title}
+              </h3>
 
-                <table
-                  style={{
-                    width: "100%",
-                    marginBottom: "16px",
-                    fontSize: "12px",
-                    borderCollapse: "collapse",
-                  }}
-                >
-                  <tbody>
+              <table
+                style={{
+                  width: "100%",
+                  marginBottom: "16px",
+                  fontSize: "12px",
+                  borderCollapse: "collapse",
+                }}
+              >
+                <tbody>
+                  <tr>
+                    <td style={{ padding: "4px 8px", color: "#6b7280", width: "40%" }}>
+                      Munkaidőszak:
+                    </td>
+                    <td style={{ padding: "4px 8px", fontWeight: 600 }}>
+                      {fmtDate(doc.work_period_start)} – {fmtDate(doc.work_period_end)}
+                    </td>
+                  </tr>
+                  {doc.total_hours != null && (
                     <tr>
-                      <td style={{ padding: "4px 8px", color: "#6b7280", width: "40%" }}>
-                        Munkaidőszak:
+                      <td style={{ padding: "4px 8px", color: "#6b7280" }}>
+                        Összesített órák:
                       </td>
                       <td style={{ padding: "4px 8px", fontWeight: 600 }}>
-                        {fmtDate(doc.work_period_start)} – {fmtDate(doc.work_period_end)}
+                        {doc.total_hours} h
                       </td>
                     </tr>
-                    {doc.total_hours != null && (
-                      <tr>
-                        <td style={{ padding: "4px 8px", color: "#6b7280" }}>
-                          Összesített órák:
-                        </td>
-                        <td style={{ padding: "4px 8px", fontWeight: 600 }}>
-                          {doc.total_hours} h
-                        </td>
-                      </tr>
-                    )}
-                    {doc.client_name && (
-                      <tr>
-                        <td style={{ padding: "4px 8px", color: "#6b7280" }}>
-                          Ügyfél aláíró:
-                        </td>
-                        <td style={{ padding: "4px 8px", fontWeight: 600 }}>
-                          {doc.client_name}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                  )}
+                  {doc.client_name && (
+                    <tr>
+                      <td style={{ padding: "4px 8px", color: "#6b7280" }}>
+                        Ügyfél aláíró:
+                      </td>
+                      <td style={{ padding: "4px 8px", fontWeight: 600 }}>
+                        {doc.client_name}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
 
-                <div
-                  style={{
-                    padding: "12px",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "6px",
-                    backgroundColor: "#f9fafb",
-                    whiteSpace: "pre-wrap",
-                    marginBottom: "20px",
-                  }}
-                >
-                  {doc.work_summary}
-                </div>
+              <div
+                style={{
+                  padding: "12px",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "6px",
+                  backgroundColor: "#f9fafb",
+                  whiteSpace: "pre-wrap",
+                  marginBottom: "20px",
+                }}
+              >
+                {doc.work_summary}
+              </div>
 
-                {doc.lines && doc.lines.length > 0 && (
-                  <div style={{ marginTop: "20px", marginBottom: "20px" }}>
-                    <h4
-                      style={{
-                        fontWeight: 700,
-                        fontSize: "12px",
-                        marginBottom: "8px",
-                        borderBottom: "1px solid #e5e7eb",
-                        paddingBottom: "4px",
-                      }}
-                    >
-                      Igazolt tételek / anyagok
-                    </h4>
-                    <table
-                      style={{
-                        width: "100%",
-                        fontSize: "11px",
-                        borderCollapse: "collapse",
-                      }}
-                    >
-                      <thead>
-                        <tr style={{ backgroundColor: "#f3f4f6", textAlign: "left" }}>
-                          <th
-                            style={{
-                              padding: "6px 8px",
-                              borderBottom: "1px solid #e5e7eb",
-                            }}
-                          >
-                            Megnevezés
-                          </th>
-                          <th
-                            style={{
-                              padding: "6px 8px",
-                              borderBottom: "1px solid #e5e7eb",
-                              width: "70px",
-                              textAlign: "right",
-                            }}
-                          >
-                            Mennyiség
-                          </th>
-                          <th
-                            style={{
-                              padding: "6px 8px",
-                              borderBottom: "1px solid #e5e7eb",
-                              width: "50px",
-                            }}
-                          >
-                            Egység
-                          </th>
-                          <th
-                            style={{
-                              padding: "6px 8px",
-                              borderBottom: "1px solid #e5e7eb",
-                              width: "100px",
-                              textAlign: "right",
-                            }}
-                          >
-                            Nettó egységár
-                          </th>
-                          <th
-                            style={{
-                              padding: "6px 8px",
-                              borderBottom: "1px solid #e5e7eb",
-                              width: "100px",
-                              textAlign: "right",
-                            }}
-                          >
-                            Nettó összeg
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {doc.lines.map((l, idx) => (
-                          <tr key={idx} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                            <td style={{ padding: "6px 8px" }}>{l.description}</td>
-                            <td
-                              style={{
-                                padding: "6px 8px",
-                                textAlign: "right",
-                                fontWeight: 600,
-                              }}
-                            >
-                              {l.quantity}
-                            </td>
-                            <td style={{ padding: "6px 8px", color: "#4b5563" }}>
-                              {l.unit}
-                            </td>
-                            <td
-                              style={{
-                                padding: "6px 8px",
-                                textAlign: "right",
-                                color: "#374151",
-                              }}
-                            >
-                              {(l.net_unit_price ?? 0).toLocaleString("hu-HU")} Ft
-                            </td>
-                            <td
-                              style={{
-                                padding: "6px 8px",
-                                textAlign: "right",
-                                fontWeight: 700,
-                                color: "#111827",
-                              }}
-                            >
-                              {((l.net_unit_price ?? 0) * l.quantity).toLocaleString(
-                                "hu-HU",
-                              )}{" "}
-                              Ft
-                            </td>
-                          </tr>
-                        ))}
-                        <tr
+              {doc.lines && doc.lines.length > 0 && (
+                <div style={{ marginTop: "20px", marginBottom: "20px" }}>
+                  <h4
+                    style={{
+                      fontWeight: 700,
+                      fontSize: "12px",
+                      marginBottom: "8px",
+                      borderBottom: "1px solid #e5e7eb",
+                      paddingBottom: "4px",
+                    }}
+                  >
+                    Igazolt tételek / anyagok
+                  </h4>
+                  <table
+                    style={{
+                      width: "100%",
+                      fontSize: "11px",
+                      borderCollapse: "collapse",
+                    }}
+                  >
+                    <thead>
+                      <tr style={{ backgroundColor: "#f3f4f6", textAlign: "left" }}>
+                        <th
                           style={{
-                            borderTop: "2px solid #e5e7eb",
-                            backgroundColor: "#f9fafb",
+                            padding: "6px 8px",
+                            borderBottom: "1px solid #e5e7eb",
                           }}
                         >
+                          Megnevezés
+                        </th>
+                        <th
+                          style={{
+                            padding: "6px 8px",
+                            borderBottom: "1px solid #e5e7eb",
+                            width: "70px",
+                            textAlign: "right",
+                          }}
+                        >
+                          Mennyiség
+                        </th>
+                        <th
+                          style={{
+                            padding: "6px 8px",
+                            borderBottom: "1px solid #e5e7eb",
+                            width: "50px",
+                          }}
+                        >
+                          Egység
+                        </th>
+                        <th
+                          style={{
+                            padding: "6px 8px",
+                            borderBottom: "1px solid #e5e7eb",
+                            width: "100px",
+                            textAlign: "right",
+                          }}
+                        >
+                          Nettó egységár
+                        </th>
+                        <th
+                          style={{
+                            padding: "6px 8px",
+                            borderBottom: "1px solid #e5e7eb",
+                            width: "100px",
+                            textAlign: "right",
+                          }}
+                        >
+                          Nettó összeg
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {doc.lines.map((l, idx) => (
+                        <tr key={idx} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                          <td style={{ padding: "6px 8px" }}>{l.description}</td>
                           <td
-                            colSpan={3}
                             style={{
-                              padding: "8px",
-                              fontWeight: 700,
-                              fontSize: "12px",
+                              padding: "6px 8px",
                               textAlign: "right",
+                              fontWeight: 600,
                             }}
                           >
-                            Nettó összesen:
+                            {l.quantity}
                           </td>
-                          <td />
+                          <td style={{ padding: "6px 8px", color: "#4b5563" }}>
+                            {l.unit}
+                          </td>
                           <td
                             style={{
-                              padding: "8px",
+                              padding: "6px 8px",
                               textAlign: "right",
-                              fontWeight: 800,
-                              fontSize: "13px",
+                              color: "#374151",
+                            }}
+                          >
+                            {(l.net_unit_price ?? 0).toLocaleString("hu-HU")} Ft
+                          </td>
+                          <td
+                            style={{
+                              padding: "6px 8px",
+                              textAlign: "right",
+                              fontWeight: 700,
                               color: "#111827",
                             }}
                           >
-                            {doc.lines
-                              .reduce(
-                                (sum, l) => sum + (l.net_unit_price ?? 0) * l.quantity,
-                                0,
-                              )
-                              .toLocaleString("hu-HU")}{" "}
+                            {((l.net_unit_price ?? 0) * l.quantity).toLocaleString(
+                              "hu-HU",
+                            )}{" "}
                             Ft
                           </td>
                         </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                      ))}
+                      <tr
+                        style={{
+                          borderTop: "2px solid #e5e7eb",
+                          backgroundColor: "#f9fafb",
+                        }}
+                      >
+                        <td
+                          colSpan={3}
+                          style={{
+                            padding: "8px",
+                            fontWeight: 700,
+                            fontSize: "12px",
+                            textAlign: "right",
+                          }}
+                        >
+                          Nettó összesen:
+                        </td>
+                        <td />
+                        <td
+                          style={{
+                            padding: "8px",
+                            textAlign: "right",
+                            fontWeight: 800,
+                            fontSize: "13px",
+                            color: "#111827",
+                          }}
+                        >
+                          {doc.lines
+                            .reduce(
+                              (sum, l) => sum + (l.net_unit_price ?? 0) * l.quantity,
+                              0,
+                            )
+                            .toLocaleString("hu-HU")}{" "}
+                          Ft
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
-                {doc.client_signature ? (
-                  <div
-                    style={{
-                      marginTop: "40px",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-end",
-                    }}
-                  >
-                    <div>
-                      <p style={{ fontSize: "10px", color: "#9ca3af", margin: 0 }}>
-                        Teljesítésigazolás kiállítója:
-                      </p>
-                      <div
-                        style={{
-                          borderBottom: "1px solid #ccc",
-                          width: "180px",
-                          height: "40px",
-                        }}
-                      ></div>
-                      <p
-                        style={{
-                          fontSize: "11px",
-                          fontWeight: 600,
-                          marginTop: "4px",
-                          marginBottom: 0,
-                        }}
-                      >
-                        Sironic Kft.
-                      </p>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <p style={{ fontSize: "10px", color: "#9ca3af", margin: 0 }}>
-                        Vevő általi elfogadás és aláírás:
-                      </p>
-                      <div style={{ marginTop: "4px" }}>
-                        <img
-                          src={doc.client_signature}
-                          alt="Aláírás"
-                          style={{ maxHeight: "60px", maxWidth: "180px" }}
-                        />
-                      </div>
-                      <p
-                        style={{
-                          fontSize: "11px",
-                          fontWeight: 600,
-                          marginTop: "4px",
-                          marginBottom: 0,
-                        }}
-                      >
-                        {doc.client_name || "Vevő képviselője"}
-                      </p>
-                      {doc.client_title && (
-                        <p style={{ fontSize: "10px", color: "#4b5563", margin: 0 }}>
-                          {doc.client_title}
-                        </p>
-                      )}
-                      <p style={{ fontSize: "10px", color: "#9ca3af", margin: 0 }}>
-                        Dátum: {fmtDate(doc.signed_at)}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  doc.signed_at && (
+              {doc.client_signature ? (
+                <div
+                  style={{
+                    marginTop: "40px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-end",
+                  }}
+                >
+                  <div>
+                    <p style={{ fontSize: "10px", color: "#9ca3af", margin: 0 }}>
+                      Teljesítésigazolás kiállítója:
+                    </p>
                     <div
                       style={{
-                        marginTop: "24px",
-                        borderTop: "1px solid #e5e7eb",
-                        paddingTop: "16px",
+                        borderBottom: "1px solid #ccc",
+                        width: "180px",
+                        height: "40px",
+                      }}
+                    ></div>
+                    <p
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        marginTop: "4px",
+                        marginBottom: 0,
                       }}
                     >
-                      <p style={{ fontSize: "12px", color: "#6b7280" }}>
-                        Aláírva: {fmtDate(doc.signed_at)} — {doc.client_name || ""}
-                      </p>
+                      Sironic Kft.
+                    </p>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <p style={{ fontSize: "10px", color: "#9ca3af", margin: 0 }}>
+                      Vevő általi elfogadás és aláírás:
+                    </p>
+                    <div style={{ marginTop: "4px" }}>
+                      <img
+                        src={doc.client_signature}
+                        alt="Aláírás"
+                        style={{ maxHeight: "60px", maxWidth: "180px" }}
+                      />
                     </div>
-                  )
-                )}
-              </div>
-            </UnifiedPdfTemplate>
-          </div>
+                    <p
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        marginTop: "4px",
+                        marginBottom: 0,
+                      }}
+                    >
+                      {doc.client_name || "Vevő képviselője"}
+                    </p>
+                    {doc.client_title && (
+                      <p style={{ fontSize: "10px", color: "#4b5563", margin: 0 }}>
+                        {doc.client_title}
+                      </p>
+                    )}
+                    <p style={{ fontSize: "10px", color: "#9ca3af", margin: 0 }}>
+                      Dátum: {fmtDate(doc.signed_at)}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                doc.signed_at && (
+                  <div
+                    style={{
+                      marginTop: "24px",
+                      borderTop: "1px solid #e5e7eb",
+                      paddingTop: "16px",
+                    }}
+                  >
+                    <p style={{ fontSize: "12px", color: "#6b7280" }}>
+                      Aláírva: {fmtDate(doc.signed_at)} — {doc.client_name || ""}
+                    </p>
+                  </div>
+                )
+              )}
+            </div>
+          </UnifiedPdfTemplate>
         </div>
       )}
       <ItemPickerModal
