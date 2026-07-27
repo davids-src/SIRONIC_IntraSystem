@@ -132,24 +132,26 @@ export default function DeliveryNoteDetailPage({
   };
 
   const handleDownloadPdf = async () => {
-    if (!printRef.current) return;
+    const el = printRef.current;
+    if (!el) return;
     setGeneratingPdf(true);
-    let container: HTMLDivElement | null = null;
+
+    const prevDisplay = el.style.display;
+    const prevPosition = el.style.position;
+    const prevLeft = el.style.left;
+    const prevTop = el.style.top;
+    const prevZIndex = el.style.zIndex;
+    const prevBg = el.style.backgroundColor;
+
+    el.style.display = "block";
+    el.style.position = "fixed";
+    el.style.left = "0px";
+    el.style.top = "0px";
+    el.style.zIndex = "-9999";
+    el.style.backgroundColor = "#ffffff";
+
     try {
       const html2pdf = (await import("html2pdf.js")).default;
-
-      container = document.createElement("div");
-      container.innerHTML = printRef.current.innerHTML;
-      container.style.position = "fixed";
-      container.style.top = "0";
-      container.style.left = "0";
-      container.style.width = "210mm";
-      container.style.zIndex = "99999";
-      container.style.backgroundColor = "#ffffff";
-      container.style.color = "#000000";
-      container.style.opacity = "1";
-      container.style.pointerEvents = "none";
-      document.body.appendChild(container);
 
       const opt = {
         margin: 0,
@@ -158,13 +160,8 @@ export default function DeliveryNoteDetailPage({
         html2canvas: {
           scale: 2,
           useCORS: true,
-          letterRendering: true,
           logging: false,
           backgroundColor: "#ffffff",
-          scrollX: 0,
-          scrollY: 0,
-          x: 0,
-          y: 0,
         },
         jsPDF: {
           unit: "mm" as const,
@@ -172,14 +169,17 @@ export default function DeliveryNoteDetailPage({
           orientation: "portrait" as const,
         },
       };
-      await html2pdf().from(container).set(opt).save();
+      await html2pdf().from(el).set(opt).save();
     } catch (e) {
       console.error("PDF hiba:", e);
       alert("Hiba történt a PDF generálása során.");
     } finally {
-      if (container && document.body.contains(container)) {
-        document.body.removeChild(container);
-      }
+      el.style.display = prevDisplay || "none";
+      el.style.position = prevPosition;
+      el.style.left = prevLeft;
+      el.style.top = prevTop;
+      el.style.zIndex = prevZIndex;
+      el.style.backgroundColor = prevBg;
       setGeneratingPdf(false);
     }
   };

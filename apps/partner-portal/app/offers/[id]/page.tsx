@@ -90,10 +90,22 @@ export default function PartnerOfferDetailsPage() {
 
   const printRef = useRef<HTMLDivElement>(null);
   const handleDownloadPdf = async () => {
-    if (!printRef.current) return;
-    const element = printRef.current;
+    const el = printRef.current;
+    if (!el) return;
 
-    element.style.display = "block";
+    const prevDisplay = el.style.display;
+    const prevPosition = el.style.position;
+    const prevLeft = el.style.left;
+    const prevTop = el.style.top;
+    const prevZIndex = el.style.zIndex;
+    const prevBg = el.style.backgroundColor;
+
+    el.style.display = "block";
+    el.style.position = "fixed";
+    el.style.left = "0px";
+    el.style.top = "0px";
+    el.style.zIndex = "-9999";
+    el.style.backgroundColor = "#ffffff";
 
     try {
       const html2pdf = (await import("html2pdf.js")).default;
@@ -101,19 +113,29 @@ export default function PartnerOfferDetailsPage() {
         margin: 0,
         filename: `Arajanlat_${offer?.offer_number || id}.pdf`,
         image: { type: "jpeg" as const, quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+        },
         jsPDF: {
           unit: "mm" as const,
           format: "a4" as const,
           orientation: "portrait" as const,
         },
       };
-      await html2pdf().from(element).set(opt).save();
+      await html2pdf().from(el).set(opt).save();
     } catch (e) {
       console.error("PDF generálási hiba:", e);
       alert("Hiba történt a PDF generálása során.");
     } finally {
-      element.style.display = "none";
+      el.style.display = prevDisplay || "none";
+      el.style.position = prevPosition;
+      el.style.left = prevLeft;
+      el.style.top = prevTop;
+      el.style.zIndex = prevZIndex;
+      el.style.backgroundColor = prevBg;
     }
   };
 

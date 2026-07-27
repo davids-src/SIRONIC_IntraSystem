@@ -50,8 +50,30 @@ export default function PublicOfferPdfDownloadPage() {
   useEffect(() => {
     if (data && printRef.current && !downloading) {
       setDownloading(true);
-      const element = printRef.current;
-      element.style.display = "block";
+      const el = printRef.current;
+
+      const prevDisplay = el.style.display;
+      const prevPosition = el.style.position;
+      const prevLeft = el.style.left;
+      const prevTop = el.style.top;
+      const prevZIndex = el.style.zIndex;
+      const prevBg = el.style.backgroundColor;
+
+      el.style.display = "block";
+      el.style.position = "fixed";
+      el.style.left = "0px";
+      el.style.top = "0px";
+      el.style.zIndex = "-9999";
+      el.style.backgroundColor = "#ffffff";
+
+      const restore = () => {
+        el.style.display = prevDisplay || "none";
+        el.style.position = prevPosition;
+        el.style.left = prevLeft;
+        el.style.top = prevTop;
+        el.style.zIndex = prevZIndex;
+        el.style.backgroundColor = prevBg;
+      };
 
       import("html2pdf.js").then((html2pdfModule) => {
         const html2pdf = html2pdfModule.default;
@@ -59,7 +81,12 @@ export default function PublicOfferPdfDownloadPage() {
           margin: 0,
           filename: `Arajanlat_${data.offer.offer_number}.pdf`,
           image: { type: "jpeg" as const, quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: "#ffffff",
+          },
           jsPDF: {
             unit: "mm" as const,
             format: "a4" as const,
@@ -67,15 +94,15 @@ export default function PublicOfferPdfDownloadPage() {
           },
         };
         html2pdf()
-          .from(element)
+          .from(el)
           .set(opt)
           .save()
           .then(() => {
-            element.style.display = "none";
+            restore();
           })
           .catch((e: any) => {
             console.error("PDF hiba", e);
-            element.style.display = "none";
+            restore();
           });
       });
     }

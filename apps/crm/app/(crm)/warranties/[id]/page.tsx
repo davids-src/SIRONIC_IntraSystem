@@ -371,28 +371,14 @@ export default function WarrantyDetailPage({
   const handleDownloadPdf = async () => {
     if (!warranty) return;
     setGeneratingPdf(true);
-    let container: HTMLDivElement | null = null;
     try {
       const pdfData = await apiJson<PdfData>(`/api/warranties/${id}/pdf-data`);
       const html = buildPdfHtml(pdfData);
 
       const html2pdf = (await import("html2pdf.js")).default;
 
-      container = document.createElement("div");
-      container.innerHTML = html;
-      container.style.position = "fixed";
-      container.style.top = "0";
-      container.style.left = "0";
-      container.style.width = "210mm";
-      container.style.zIndex = "99999";
-      container.style.backgroundColor = "#ffffff";
-      container.style.color = "#1e293b";
-      container.style.opacity = "1";
-      container.style.pointerEvents = "none";
-      document.body.appendChild(container);
-
       await html2pdf()
-        .from(container)
+        .from(html)
         .set({
           margin: 0,
           filename: `Jótállási_jegy_${warranty.warranty_number}.pdf`,
@@ -400,13 +386,8 @@ export default function WarrantyDetailPage({
           html2canvas: {
             scale: 2,
             useCORS: true,
-            letterRendering: true,
             logging: false,
             backgroundColor: "#ffffff",
-            scrollX: 0,
-            scrollY: 0,
-            x: 0,
-            y: 0,
           },
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
         })
@@ -414,9 +395,6 @@ export default function WarrantyDetailPage({
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "PDF generálás sikertelen.");
     } finally {
-      if (container && document.body.contains(container)) {
-        document.body.removeChild(container);
-      }
       setGeneratingPdf(false);
     }
   };
