@@ -21,9 +21,12 @@ export function UnifiedPdfTemplate({
   showSignatures = true,
 }: UnifiedPdfTemplateProps) {
   // Safe getters for address
-  const clientAddress = client?.address
-    ? `${client.address.zip || ""} ${client.address.city || ""}, ${client.address.street || ""}`.trim()
-    : "—";
+  const clientAddress =
+    typeof client?.address === "string"
+      ? client.address
+      : client?.address
+        ? `${client.address.zip || ""} ${client.address.city || ""}, ${client.address.street || ""}`.trim()
+        : "—";
 
   return (
     <div
@@ -39,6 +42,19 @@ export function UnifiedPdfTemplate({
         position: "relative",
       }}
     >
+      <style>{`
+        .pdf-container tr,
+        .pdf-container table,
+        .pdf-container p,
+        .pdf-container h1,
+        .pdf-container h2,
+        .pdf-container h3,
+        .pdf-container h4,
+        .pdf-container div {
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+        }
+      `}</style>
       {/* Header */}
       <div
         style={{

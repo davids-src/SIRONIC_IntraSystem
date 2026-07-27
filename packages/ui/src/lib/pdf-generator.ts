@@ -33,6 +33,10 @@ export async function generatePdfFromElement(
       format: "a4" as const,
       orientation: "portrait" as const,
     },
+    pagebreak: {
+      mode: ["avoid-all", "css", "legacy"],
+      avoid: ["tr", "td", "h1", "h2", "h3", "h4", "div", "p"],
+    },
   };
 
   await html2pdf().from(el).set(opt).save();

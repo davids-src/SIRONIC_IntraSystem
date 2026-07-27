@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, use } from "react";
 import { useRouter } from "next/navigation";
-import { Card, Button, Badge } from "@crm/ui";
+import { Card, Button, Badge, PdfPreviewModal } from "@crm/ui";
 import {
   ChevronLeft,
   ShieldCheck,
@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   FileText,
   Archive,
+  Eye,
 } from "lucide-react";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 import type { WarrantyCard, Contact, CompanyDetails } from "@crm/types";
@@ -333,6 +334,8 @@ export default function WarrantyDetailPage({
   const [error, setError] = useState<string | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [pdfData, setPdfData] = useState<PdfData | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -367,6 +370,13 @@ export default function WarrantyDetailPage({
       })
       .catch(() => {});
   }, [warranty?.contact_id]);
+
+  useEffect(() => {
+    if (!warranty) return;
+    apiJson<PdfData>(`/api/warranties/${id}/pdf-data`)
+      .then((data) => setPdfData(data))
+      .catch(() => {});
+  }, [warranty, id]);
 
   const handleDownloadPdf = async () => {
     if (!warranty) return;
@@ -517,13 +527,13 @@ export default function WarrantyDetailPage({
               </Button>
             </>
           )}
-          <Button
-            variant="primary"
-            onClick={() => void handleDownloadPdf()}
-            disabled={generatingPdf}
-          >
+          <Button variant="secondary" onClick={() => setShowPreviewModal(true)}>
+            <Eye size={15} className="mr-1.5" />
+            Előnézet
+          </Button>
+          <Button variant="primary" onClick={() => setShowPreviewModal(true)}>
             <Download size={15} className="mr-1.5" />
-            {generatingPdf ? "Generálás…" : "PDF letöltése"}
+            PDF letöltése
           </Button>
           <Button
             variant="ghost"
@@ -662,8 +672,17 @@ export default function WarrantyDetailPage({
         </p>
       </Card>
 
-      {/* Rejtett print div */}
-      <div ref={printRef} style={{ display: "none" }} />
+      {/* PDF Előnézet Modal */}
+      {pdfData && (
+        <PdfPreviewModal
+          open={showPreviewModal}
+          onClose={() => setShowPreviewModal(false)}
+          filename={`Jótállási_jegy_${warranty.warranty_number}.pdf`}
+          title={`Jótállási jegy előnézet — ${warranty.warranty_number}`}
+        >
+          <div dangerouslySetInnerHTML={{ __html: buildPdfHtml(pdfData) }} />
+        </PdfPreviewModal>
+      )}
     </div>
   );
 }

@@ -1152,153 +1152,163 @@ export default function CompletionCertificateFormPage({
       />
 
       {/* PDF Előnézet Modal */}
-      {!isNew && doc && (
-        <PdfPreviewModal
-          open={showPreviewModal}
-          onClose={() => setShowPreviewModal(false)}
-          filename={`Teljesitesi_igazolas_${doc.certificate_number}.pdf`}
-          title={`Teljesítési igazolás előnézet — ${doc.certificate_number}`}
-        >
-          <UnifiedPdfTemplate
-            documentTitle="Teljesítési igazolás"
-            documentId={doc.certificate_number}
-            date={new Date()}
-            provider={companyDetails}
-            client={
-              clientContact ??
-              (doc.client_name
-                ? ({
-                    _id: "",
-                    contact_number: "",
-                    partner_id: null,
-                    tenantId: "",
-                    type: "company" as const,
-                    name: doc.client_name,
-                    short_name: null,
-                    tax_number: null,
-                    registration_number: null,
-                    address: { zip: "", city: "", street: "", country: "HU" },
-                    billing_address: null,
-                    shipping_address: null,
-                    email: null,
-                    phone: null,
-                    website: null,
-                    contacts: [],
-                    notes: null,
-                    is_active: true,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                  } as unknown as Contact)
-                : null)
-            }
+      {(() => {
+        const activeDocNumber = doc?.certificate_number || "TI-ÚJ";
+        const effectiveClientName =
+          clientName.trim() || doc?.client_name || recipientName.trim() || "Megrendelő";
+        const pdfClient: Contact | null =
+          clientContact ??
+          ({
+            _id: "",
+            contact_number: "",
+            partner_id: null,
+            tenantId: "",
+            type: "company" as const,
+            name: effectiveClientName,
+            short_name: null,
+            tax_number: null,
+            registration_number: null,
+            address: { zip: "", city: "", street: "", country: "HU" },
+            billing_address: null,
+            shipping_address: null,
+            email: recipientEmail.trim() || null,
+            phone: null,
+            website: null,
+            contacts: [],
+            notes: null,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as unknown as Contact);
+
+        const effectiveTitle = title.trim() || doc?.title || "Teljesítési igazolás";
+        const effectiveWorkSummary = workSummary.trim() || doc?.work_summary || "";
+        const effectiveStart = periodStart
+          ? new Date(periodStart)
+          : doc?.work_period_start;
+        const effectiveEnd = periodEnd ? new Date(periodEnd) : doc?.work_period_end;
+        const effectiveHours = totalHours.trim() ? Number(totalHours) : doc?.total_hours;
+
+        return (
+          <PdfPreviewModal
+            open={showPreviewModal}
+            onClose={() => setShowPreviewModal(false)}
+            filename={`Teljesitesi_igazolas_${activeDocNumber}.pdf`}
+            title={`Teljesítési igazolás előnézet — ${activeDocNumber}`}
           >
-            <div style={{ marginBottom: "24px" }}>
-              <h3 style={{ fontSize: "16px", fontWeight: 700, marginBottom: "8px" }}>
-                {doc.title}
-              </h3>
-              <p
-                style={{
-                  fontSize: "13px",
-                  lineHeight: "1.6",
-                  color: "#374151",
-                  whiteSpace: "pre-wrap",
-                }}
-              >
-                {doc.work_summary}
-              </p>
-            </div>
-
-            {(doc.work_period_start ||
-              doc.work_period_end ||
-              doc.total_hours != null) && (
-              <div
-                style={{
-                  marginBottom: "24px",
-                  padding: "12px 16px",
-                  backgroundColor: "#f9fafb",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "6px",
-                  fontSize: "12px",
-                }}
-              >
-                {doc.work_period_start && doc.work_period_end && (
-                  <p style={{ margin: "0 0 4px" }}>
-                    <strong>Munkavégzés időszaka:</strong>{" "}
-                    {fmtDate(doc.work_period_start)} – {fmtDate(doc.work_period_end)}
-                  </p>
-                )}
-                {doc.total_hours != null && (
-                  <p style={{ margin: 0 }}>
-                    <strong>Összesített óraszám:</strong> {doc.total_hours} óra
-                  </p>
-                )}
-              </div>
-            )}
-
-            {lines.length > 0 && (
+            <UnifiedPdfTemplate
+              documentTitle="Teljesítési igazolás"
+              documentId={activeDocNumber}
+              date={new Date()}
+              provider={companyDetails}
+              client={pdfClient}
+            >
               <div style={{ marginBottom: "24px" }}>
-                <h4
+                <h3 style={{ fontSize: "16px", fontWeight: 700, marginBottom: "8px" }}>
+                  {effectiveTitle}
+                </h3>
+                <p
                   style={{
                     fontSize: "13px",
-                    fontWeight: 700,
-                    marginBottom: "8px",
-                    color: "#111827",
+                    lineHeight: "1.6",
+                    color: "#374151",
+                    whiteSpace: "pre-wrap",
                   }}
                 >
-                  Elvégzett tételek / Anyagok
-                </h4>
-                <table
+                  {effectiveWorkSummary}
+                </p>
+              </div>
+
+              {(effectiveStart || effectiveEnd || effectiveHours != null) && (
+                <div
                   style={{
-                    width: "100%",
-                    borderCollapse: "collapse",
+                    marginBottom: "24px",
+                    padding: "12px 16px",
+                    backgroundColor: "#f9fafb",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "6px",
                     fontSize: "12px",
                   }}
                 >
-                  <thead>
-                    <tr
-                      style={{
-                        backgroundColor: "#f3f4f6",
-                        borderBottom: "2px solid #e5e7eb",
-                      }}
-                    >
-                      <th style={{ padding: "8px", textAlign: "left" }}>Leírás</th>
-                      <th style={{ padding: "8px", textAlign: "center", width: "15%" }}>
-                        Mennyiség
-                      </th>
-                      <th style={{ padding: "8px", textAlign: "left", width: "15%" }}>
-                        Egység
-                      </th>
-                      <th style={{ padding: "8px", textAlign: "right", width: "20%" }}>
-                        Nettó egységár
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lines.map((l: any, idx: number) => (
-                      <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                        <td style={{ padding: "8px" }}>{l.description}</td>
-                        <td style={{ padding: "8px", textAlign: "center" }}>
-                          {l.quantity}
-                        </td>
-                        <td style={{ padding: "8px" }}>{l.unit}</td>
-                        <td style={{ padding: "8px", textAlign: "right" }}>
-                          {l.net_unit_price
-                            ? new Intl.NumberFormat("hu-HU", {
-                                style: "currency",
-                                currency: "HUF",
-                                maximumFractionDigits: 0,
-                              }).format(l.net_unit_price)
-                            : "-"}
-                        </td>
+                  {effectiveStart && effectiveEnd && (
+                    <p style={{ margin: "0 0 4px" }}>
+                      <strong>Munkavégzés időszaka:</strong> {fmtDate(effectiveStart)} –{" "}
+                      {fmtDate(effectiveEnd)}
+                    </p>
+                  )}
+                  {effectiveHours != null && (
+                    <p style={{ margin: 0 }}>
+                      <strong>Összesített óraszám:</strong> {effectiveHours} óra
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {lines.length > 0 && (
+                <div style={{ marginBottom: "24px" }}>
+                  <h4
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      marginBottom: "8px",
+                      color: "#111827",
+                    }}
+                  >
+                    Elvégzett tételek / Anyagok
+                  </h4>
+                  <table
+                    style={{
+                      width: "100%",
+                      borderCollapse: "collapse",
+                      fontSize: "12px",
+                    }}
+                  >
+                    <thead>
+                      <tr
+                        style={{
+                          backgroundColor: "#f3f4f6",
+                          borderBottom: "2px solid #e5e7eb",
+                        }}
+                      >
+                        <th style={{ padding: "8px", textAlign: "left" }}>Leírás</th>
+                        <th style={{ padding: "8px", textAlign: "center", width: "15%" }}>
+                          Mennyiség
+                        </th>
+                        <th style={{ padding: "8px", textAlign: "left", width: "15%" }}>
+                          Egység
+                        </th>
+                        <th style={{ padding: "8px", textAlign: "right", width: "20%" }}>
+                          Nettó egységár
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </UnifiedPdfTemplate>
-        </PdfPreviewModal>
-      )}
+                    </thead>
+                    <tbody>
+                      {lines.map((l: any, idx: number) => (
+                        <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                          <td style={{ padding: "8px" }}>{l.description}</td>
+                          <td style={{ padding: "8px", textAlign: "center" }}>
+                            {l.quantity}
+                          </td>
+                          <td style={{ padding: "8px" }}>{l.unit}</td>
+                          <td style={{ padding: "8px", textAlign: "right" }}>
+                            {l.net_unit_price
+                              ? new Intl.NumberFormat("hu-HU", {
+                                  style: "currency",
+                                  currency: "HUF",
+                                  maximumFractionDigits: 0,
+                                }).format(l.net_unit_price)
+                              : "-"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </UnifiedPdfTemplate>
+          </PdfPreviewModal>
+        );
+      })()}
     </div>
   );
 }

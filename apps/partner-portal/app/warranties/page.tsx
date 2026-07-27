@@ -254,7 +254,11 @@ export default function PartnerWarrantiesPage() {
             y: 0,
           },
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        })
+          pagebreak: {
+            mode: ["avoid-all", "css", "legacy"],
+            avoid: ["tr", "td", "h1", "h2", "h3", "h4", "div", "p"],
+          },
+        } as any)
         .save();
     } catch (e) {
       alert(e instanceof ApiError ? e.message : "PDF generálás sikertelen.");

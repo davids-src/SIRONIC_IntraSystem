@@ -1537,203 +1537,242 @@ function WorklogFormContent({ id }: { id: string }) {
       />
 
       {/* PDF Előnézet Modal */}
-      <PdfPreviewModal
-        open={showPreviewModal}
-        onClose={() => setShowPreviewModal(false)}
-        filename={`Munkalap_${worklogNumber || id}.pdf`}
-        title={`Munkalap előnézet — ${worklogNumber || id}`}
-      >
-        <UnifiedPdfTemplate
-          documentTitle="Munkalap"
-          documentId={worklogNumber || id}
-          date={workDate ? new Date(workDate) : new Date()}
-          provider={companyDetails}
-          client={contacts.find((c) => c._id === contactId) || null}
-        >
-          <div style={{ marginBottom: "20px" }}>
-            <h3
-              style={{
-                fontSize: "14px",
-                fontWeight: 700,
-                margin: "0 0 10px",
-                color: "#000",
-              }}
-            >
-              Elvégzett feladatok
-            </h3>
-            <div
-              style={{
-                padding: "12px",
-                borderLeft: "3px solid #e53935",
-                backgroundColor: "#fff5f5",
-                fontSize: "13px",
-                lineHeight: 1.6,
-                color: "#333",
-                whiteSpace: "pre-wrap",
-              }}
-            >
-              {description}
-            </div>
-          </div>
+      {(() => {
+        const foundContact = contacts.find((c) => String(c._id) === String(contactId));
+        const pdfClient: Contact | null =
+          foundContact ??
+          (clientName || siteAddress
+            ? ({
+                _id: contactId || "",
+                contact_number: "",
+                partner_id: null,
+                tenantId: "",
+                type: "company" as const,
+                name: clientName || "Megrendelő",
+                short_name: null,
+                tax_number: null,
+                registration_number: null,
+                address: siteAddress
+                  ? ({ zip: "", city: "", street: siteAddress, country: "HU" } as any)
+                  : null,
+                billing_address: null,
+                shipping_address: null,
+                email: null,
+                phone: null,
+                website: null,
+                contacts: [],
+                notes: null,
+                is_active: true,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              } as unknown as Contact)
+            : null);
 
-          <div style={{ marginBottom: "20px" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 8px 0" }}>
-              Felhasznált anyagok és munkadíjak:
-            </h3>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                fontSize: "12px",
-                border: "1px solid #dee2e6",
-              }}
+        return (
+          <PdfPreviewModal
+            open={showPreviewModal}
+            onClose={() => setShowPreviewModal(false)}
+            filename={`Munkalap_${worklogNumber || id}.pdf`}
+            title={`Munkalap előnézet — ${worklogNumber || id}`}
+          >
+            <UnifiedPdfTemplate
+              documentTitle="Munkalap"
+              documentId={worklogNumber || id}
+              date={workDate ? new Date(workDate) : new Date()}
+              provider={companyDetails}
+              client={pdfClient}
             >
-              <thead>
-                <tr
+              <div style={{ marginBottom: "20px" }}>
+                <h3
                   style={{
-                    backgroundColor: "#f8f9fa",
-                    borderBottom: "2px solid #dee2e6",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    margin: "0 0 10px",
+                    color: "#000",
                   }}
                 >
-                  <th
-                    style={{
-                      padding: "8px",
-                      textAlign: "left",
-                      borderRight: "1px solid #dee2e6",
-                    }}
-                  >
-                    Megnevezés
-                  </th>
-                  <th
-                    style={{
-                      padding: "8px",
-                      textAlign: "center",
-                      borderRight: showPricesOnPdf ? "1px solid #dee2e6" : "none",
-                    }}
-                  >
-                    Mennyiség
-                  </th>
-                  {showPricesOnPdf && (
-                    <>
+                  Elvégzett feladatok
+                </h3>
+                <div
+                  style={{
+                    padding: "12px",
+                    borderLeft: "3px solid #e53935",
+                    backgroundColor: "#fff5f5",
+                    fontSize: "13px",
+                    lineHeight: 1.6,
+                    color: "#333",
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {description}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 8px 0" }}>
+                  Felhasznált anyagok és munkadíjak:
+                </h3>
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    fontSize: "12px",
+                    border: "1px solid #dee2e6",
+                  }}
+                >
+                  <thead>
+                    <tr
+                      style={{
+                        backgroundColor: "#f8f9fa",
+                        borderBottom: "2px solid #dee2e6",
+                      }}
+                    >
                       <th
                         style={{
                           padding: "8px",
-                          textAlign: "right",
+                          textAlign: "left",
                           borderRight: "1px solid #dee2e6",
                         }}
                       >
-                        Nettó egységár
+                        Megnevezés
                       </th>
-                      <th style={{ padding: "8px", textAlign: "right" }}>
-                        Nettó összesen
+                      <th
+                        style={{
+                          padding: "8px",
+                          textAlign: "center",
+                          borderRight: showPricesOnPdf ? "1px solid #dee2e6" : "none",
+                        }}
+                      >
+                        Mennyiség
                       </th>
-                    </>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((it, i) => (
-                  <tr key={i} style={{ borderBottom: "1px solid #e9ecef" }}>
-                    <td style={{ padding: "6px 8px", borderRight: "1px solid #e9ecef" }}>
-                      {it.description}
-                    </td>
-                    <td
-                      style={{
-                        padding: "6px 8px",
-                        textAlign: "center",
-                        borderRight: showPricesOnPdf ? "1px solid #e9ecef" : "none",
-                      }}
-                    >
-                      {it.quantity} {it.unit}
-                    </td>
-                    {showPricesOnPdf && (
-                      <>
+                      {showPricesOnPdf && (
+                        <>
+                          <th
+                            style={{
+                              padding: "8px",
+                              textAlign: "right",
+                              borderRight: "1px solid #dee2e6",
+                            }}
+                          >
+                            Nettó egységár
+                          </th>
+                          <th style={{ padding: "8px", textAlign: "right" }}>
+                            Nettó összesen
+                          </th>
+                        </>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((it, i) => (
+                      <tr key={i} style={{ borderBottom: "1px solid #e9ecef" }}>
+                        <td
+                          style={{ padding: "6px 8px", borderRight: "1px solid #e9ecef" }}
+                        >
+                          {it.description}
+                        </td>
                         <td
                           style={{
                             padding: "6px 8px",
-                            textAlign: "right",
-                            borderRight: "1px solid #e9ecef",
+                            textAlign: "center",
+                            borderRight: showPricesOnPdf ? "1px solid #e9ecef" : "none",
                           }}
                         >
-                          {it.unit_price
-                            ? new Intl.NumberFormat("hu-HU", {
-                                style: "currency",
-                                currency: "HUF",
-                                maximumFractionDigits: 0,
-                              }).format(it.unit_price)
-                            : "-"}
+                          {it.quantity} {it.unit}
                         </td>
-                        <td style={{ padding: "6px 8px", textAlign: "right" }}>
-                          {it.unit_price
-                            ? new Intl.NumberFormat("hu-HU", {
-                                style: "currency",
-                                currency: "HUF",
-                                maximumFractionDigits: 0,
-                              }).format(it.unit_price * it.quantity)
-                            : "-"}
+                        {showPricesOnPdf && (
+                          <>
+                            <td
+                              style={{
+                                padding: "6px 8px",
+                                textAlign: "right",
+                                borderRight: "1px solid #e9ecef",
+                              }}
+                            >
+                              {it.unit_price
+                                ? new Intl.NumberFormat("hu-HU", {
+                                    style: "currency",
+                                    currency: "HUF",
+                                    maximumFractionDigits: 0,
+                                  }).format(it.unit_price)
+                                : "-"}
+                            </td>
+                            <td style={{ padding: "6px 8px", textAlign: "right" }}>
+                              {it.unit_price
+                                ? new Intl.NumberFormat("hu-HU", {
+                                    style: "currency",
+                                    currency: "HUF",
+                                    maximumFractionDigits: 0,
+                                  }).format(it.unit_price * it.quantity)
+                                : "-"}
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                    {travelKm && Number(travelKm) > 0 && (
+                      <tr style={{ borderBottom: "1px solid #e9ecef" }}>
+                        <td
+                          style={{ padding: "6px 8px", borderRight: "1px solid #e9ecef" }}
+                        >
+                          Kiszállás / Útiköltség
                         </td>
-                      </>
-                    )}
-                  </tr>
-                ))}
-                {travelKm && Number(travelKm) > 0 && (
-                  <tr style={{ borderBottom: "1px solid #e9ecef" }}>
-                    <td style={{ padding: "6px 8px", borderRight: "1px solid #e9ecef" }}>
-                      Kiszállás / Útiköltség
-                    </td>
-                    <td
-                      style={{
-                        padding: "6px 8px",
-                        textAlign: "center",
-                        borderRight: showPricesOnPdf ? "1px solid #e9ecef" : "none",
-                      }}
-                    >
-                      {travelKm} km
-                    </td>
-                    {showPricesOnPdf && (
-                      <>
                         <td
                           style={{
                             padding: "6px 8px",
-                            textAlign: "right",
-                            borderRight: "1px solid #e9ecef",
+                            textAlign: "center",
+                            borderRight: showPricesOnPdf ? "1px solid #e9ecef" : "none",
                           }}
                         >
-                          -
+                          {travelKm} km
                         </td>
-                        <td style={{ padding: "6px 8px", textAlign: "right" }}>-</td>
-                      </>
+                        {showPricesOnPdf && (
+                          <>
+                            <td
+                              style={{
+                                padding: "6px 8px",
+                                textAlign: "right",
+                                borderRight: "1px solid #e9ecef",
+                              }}
+                            >
+                              -
+                            </td>
+                            <td style={{ padding: "6px 8px", textAlign: "right" }}>-</td>
+                          </>
+                        )}
+                      </tr>
                     )}
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  </tbody>
+                </table>
 
-            {showPricesOnPdf && (
-              <div
-                style={{
-                  marginTop: "12px",
-                  textAlign: "right",
-                  fontSize: "13px",
-                  fontWeight: "bold",
-                }}
-              >
-                Nettó végösszeg:{" "}
-                {new Intl.NumberFormat("hu-HU", {
-                  style: "currency",
-                  currency: "HUF",
-                  maximumFractionDigits: 0,
-                }).format(
-                  items.reduce(
-                    (sum, it) => sum + (it.unit_price ? it.unit_price * it.quantity : 0),
-                    0,
-                  ),
+                {showPricesOnPdf && (
+                  <div
+                    style={{
+                      marginTop: "12px",
+                      textAlign: "right",
+                      fontSize: "13px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Nettó végösszeg:{" "}
+                    {new Intl.NumberFormat("hu-HU", {
+                      style: "currency",
+                      currency: "HUF",
+                      maximumFractionDigits: 0,
+                    }).format(
+                      items.reduce(
+                        (sum, it) =>
+                          sum + (it.unit_price ? it.unit_price * it.quantity : 0),
+                        0,
+                      ),
+                    )}
+                  </div>
                 )}
               </div>
-            )}
-          </div>
-        </UnifiedPdfTemplate>
-      </PdfPreviewModal>
+            </UnifiedPdfTemplate>
+          </PdfPreviewModal>
+        );
+      })()}
     </div>
   );
 }
