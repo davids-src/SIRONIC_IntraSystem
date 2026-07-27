@@ -79,10 +79,21 @@ export default function PurchaseOrderDetailPage() {
     el.style.position = "fixed";
     el.style.left = "0px";
     el.style.top = "0px";
-    el.style.zIndex = "-9999";
+    el.style.zIndex = "99999";
     el.style.backgroundColor = "#ffffff";
 
     try {
+      const imgs = Array.from(el.querySelectorAll("img"));
+      await Promise.all(
+        imgs.map((img) => {
+          if (img.complete) return Promise.resolve();
+          return new Promise((res) => {
+            img.onload = res;
+            img.onerror = res;
+          });
+        }),
+      );
+
       const html2pdf = (await import("html2pdf.js")).default;
 
       await html2pdf()

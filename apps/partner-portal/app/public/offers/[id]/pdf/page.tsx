@@ -63,7 +63,7 @@ export default function PublicOfferPdfDownloadPage() {
       el.style.position = "fixed";
       el.style.left = "0px";
       el.style.top = "0px";
-      el.style.zIndex = "-9999";
+      el.style.zIndex = "99999";
       el.style.backgroundColor = "#ffffff";
 
       const restore = () => {
@@ -75,35 +75,46 @@ export default function PublicOfferPdfDownloadPage() {
         el.style.backgroundColor = prevBg;
       };
 
-      import("html2pdf.js").then((html2pdfModule) => {
-        const html2pdf = html2pdfModule.default;
-        const opt = {
-          margin: 0,
-          filename: `Arajanlat_${data.offer.offer_number}.pdf`,
-          image: { type: "jpeg" as const, quality: 0.98 },
-          html2canvas: {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            backgroundColor: "#ffffff",
-          },
-          jsPDF: {
-            unit: "mm" as const,
-            format: "a4" as const,
-            orientation: "portrait" as const,
-          },
-        };
-        html2pdf()
-          .from(el)
-          .set(opt)
-          .save()
-          .then(() => {
-            restore();
-          })
-          .catch((e: any) => {
-            console.error("PDF hiba", e);
-            restore();
+      const imgs = Array.from(el.querySelectorAll("img"));
+      Promise.all(
+        imgs.map((img) => {
+          if (img.complete) return Promise.resolve();
+          return new Promise((res) => {
+            img.onload = res;
+            img.onerror = res;
           });
+        }),
+      ).then(() => {
+        import("html2pdf.js").then((html2pdfModule) => {
+          const html2pdf = html2pdfModule.default;
+          const opt = {
+            margin: 0,
+            filename: `Arajanlat_${data.offer.offer_number}.pdf`,
+            image: { type: "jpeg" as const, quality: 0.98 },
+            html2canvas: {
+              scale: 2,
+              useCORS: true,
+              logging: false,
+              backgroundColor: "#ffffff",
+            },
+            jsPDF: {
+              unit: "mm" as const,
+              format: "a4" as const,
+              orientation: "portrait" as const,
+            },
+          };
+          html2pdf()
+            .from(el)
+            .set(opt)
+            .save()
+            .then(() => {
+              restore();
+            })
+            .catch((e: any) => {
+              console.error("PDF hiba", e);
+              restore();
+            });
+        });
       });
     }
   }, [data, downloading]);

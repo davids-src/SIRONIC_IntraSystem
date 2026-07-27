@@ -208,13 +208,37 @@ export default function PartnerWarrantiesPage() {
 
   const handleDownload = async (warranty: WarrantyWithStrings) => {
     setDownloadingId(warranty._id);
+    let container: HTMLDivElement | null = null;
     try {
       const pdfData = await apiJson<PdfData>(`/api/warranties/${warranty._id}/pdf-data`);
       const html = buildPdfHtml(pdfData);
 
       const html2pdf = (await import("html2pdf.js")).default;
+
+      container = document.createElement("div");
+      container.innerHTML = html;
+      container.style.position = "fixed";
+      container.style.top = "0px";
+      container.style.left = "0px";
+      container.style.width = "210mm";
+      container.style.zIndex = "99999";
+      container.style.backgroundColor = "#ffffff";
+      container.style.color = "#000000";
+      document.body.appendChild(container);
+
+      const imgs = Array.from(container.querySelectorAll("img"));
+      await Promise.all(
+        imgs.map((img) => {
+          if (img.complete) return Promise.resolve();
+          return new Promise((res) => {
+            img.onload = res;
+            img.onerror = res;
+          });
+        }),
+      );
+
       await html2pdf()
-        .from(html)
+        .from(container)
         .set({
           margin: 0,
           filename: `Jótállási_jegy_${warranty.warranty_number}.pdf`,
@@ -231,6 +255,9 @@ export default function PartnerWarrantiesPage() {
     } catch (e) {
       alert(e instanceof ApiError ? e.message : "PDF generálás sikertelen.");
     } finally {
+      if (container && document.body.contains(container)) {
+        document.body.removeChild(container);
+      }
       setDownloadingId(null);
     }
   };
