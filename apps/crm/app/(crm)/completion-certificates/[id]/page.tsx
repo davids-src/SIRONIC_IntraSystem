@@ -15,6 +15,8 @@ import {
   SelectValue,
   UnifiedPdfTemplate,
   ItemPickerModal,
+  PdfPreviewModal,
+  generatePdfFromElement,
 } from "@crm/ui";
 import type {
   CompletionCertificate,
@@ -25,7 +27,7 @@ import type {
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useRef, useState } from "react";
-import { Download, Mail, Loader2, Save } from "lucide-react";
+import { Download, Mail, Loader2, Save, Eye } from "lucide-react";
 
 function parseCc(raw: unknown): CompletionCertificate {
   const r = raw as Record<string, unknown>;
@@ -92,6 +94,7 @@ export default function CompletionCertificateFormPage({
   const [servicePriceList, setServicePriceList] = useState<any[]>([]);
   const [showPicker, setShowPicker] = useState(false);
   const [clientContact, setClientContact] = useState<Contact | null>(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   // Contacts (for partner picker on new doc)
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -364,47 +367,16 @@ export default function CompletionCertificateFormPage({
   };
 
   const handleDownloadPdf = async () => {
-    const el = printRef.current;
-    if (!el) return;
+    if (!printRef.current) return;
     setGeneratingPdf(true);
-
     try {
-      el.style.left = "0px";
-
-      const imgs = Array.from(el.querySelectorAll("img"));
-      await Promise.all(
-        imgs.map((img) => {
-          if (img.complete) return Promise.resolve();
-          return new Promise((res) => {
-            img.onload = res;
-            img.onerror = res;
-          });
-        }),
+      await generatePdfFromElement(
+        printRef.current,
+        `Teljesitesi_igazolas_${doc?.certificate_number ?? id}.pdf`,
       );
-
-      const html2pdf = (await import("html2pdf.js")).default;
-
-      const opt = {
-        margin: 0,
-        filename: `Teljesitesi_igazolas_${doc?.certificate_number ?? id}.pdf`,
-        image: { type: "jpeg" as const, quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: "#ffffff",
-        },
-        jsPDF: {
-          unit: "mm" as const,
-          format: "a4" as const,
-          orientation: "portrait" as const,
-        },
-      };
-      await html2pdf().from(el).set(opt).save();
     } catch {
       alert("Hiba történt a PDF generálása során.");
     } finally {
-      el.style.left = "-9999px";
       setGeneratingPdf(false);
     }
   };
@@ -463,6 +435,10 @@ export default function CompletionCertificateFormPage({
           <div className="flex items-center gap-2">
             {!isNew && doc && (
               <>
+                <Button variant="secondary" onClick={() => setShowPreviewModal(true)}>
+                  <Eye size={15} className="mr-1.5" />
+                  Előnézet
+                </Button>
                 <Button
                   variant="secondary"
                   onClick={() => void handleDownloadPdf()}
@@ -1174,6 +1150,158 @@ export default function CompletionCertificateFormPage({
         onSelectService={(s) => addServiceItem(s)}
         title="Tétel hozzáadása"
       />
+
+      {/* PDF Előnézet Modal */}
+      {!isNew && doc && (
+        <PdfPreviewModal
+          open={showPreviewModal}
+          onClose={() => setShowPreviewModal(false)}
+          onDownload={() => {
+            setShowPreviewModal(false);
+            void handleDownloadPdf();
+          }}
+          title={`Teljesítési igazolás előnézet — ${doc.certificate_number}`}
+        >
+          <UnifiedPdfTemplate
+            documentTitle="Teljesítési igazolás"
+            documentId={doc.certificate_number}
+            date={new Date()}
+            provider={companyDetails}
+            client={
+              clientContact ??
+              (doc.client_name
+                ? ({
+                    _id: "",
+                    contact_number: "",
+                    partner_id: null,
+                    tenantId: "",
+                    type: "company" as const,
+                    name: doc.client_name,
+                    short_name: null,
+                    tax_number: null,
+                    registration_number: null,
+                    address: { zip: "", city: "", street: "", country: "HU" },
+                    billing_address: null,
+                    shipping_address: null,
+                    email: null,
+                    phone: null,
+                    website: null,
+                    contacts: [],
+                    notes: null,
+                    is_active: true,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                  } as unknown as Contact)
+                : null)
+            }
+          >
+            <div style={{ marginBottom: "24px" }}>
+              <h3 style={{ fontSize: "16px", fontWeight: 700, marginBottom: "8px" }}>
+                {doc.title}
+              </h3>
+              <p
+                style={{
+                  fontSize: "13px",
+                  lineHeight: "1.6",
+                  color: "#374151",
+                  whiteSpace: "pre-wrap",
+                }}
+              >
+                {doc.work_summary}
+              </p>
+            </div>
+
+            {(doc.work_period_start ||
+              doc.work_period_end ||
+              doc.total_hours != null) && (
+              <div
+                style={{
+                  marginBottom: "24px",
+                  padding: "12px 16px",
+                  backgroundColor: "#f9fafb",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "6px",
+                  fontSize: "12px",
+                }}
+              >
+                {doc.work_period_start && doc.work_period_end && (
+                  <p style={{ margin: "0 0 4px" }}>
+                    <strong>Munkavégzés időszaka:</strong>{" "}
+                    {fmtDate(doc.work_period_start)} – {fmtDate(doc.work_period_end)}
+                  </p>
+                )}
+                {doc.total_hours != null && (
+                  <p style={{ margin: 0 }}>
+                    <strong>Összesített óraszám:</strong> {doc.total_hours} óra
+                  </p>
+                )}
+              </div>
+            )}
+
+            {lines.length > 0 && (
+              <div style={{ marginBottom: "24px" }}>
+                <h4
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    marginBottom: "8px",
+                    color: "#111827",
+                  }}
+                >
+                  Elvégzett tételek / Anyagok
+                </h4>
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    fontSize: "12px",
+                  }}
+                >
+                  <thead>
+                    <tr
+                      style={{
+                        backgroundColor: "#f3f4f6",
+                        borderBottom: "2px solid #e5e7eb",
+                      }}
+                    >
+                      <th style={{ padding: "8px", textAlign: "left" }}>Leírás</th>
+                      <th style={{ padding: "8px", textAlign: "center", width: "15%" }}>
+                        Mennyiség
+                      </th>
+                      <th style={{ padding: "8px", textAlign: "left", width: "15%" }}>
+                        Egység
+                      </th>
+                      <th style={{ padding: "8px", textAlign: "right", width: "20%" }}>
+                        Nettó egységár
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lines.map((l: any, idx: number) => (
+                      <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                        <td style={{ padding: "8px" }}>{l.description}</td>
+                        <td style={{ padding: "8px", textAlign: "center" }}>
+                          {l.quantity}
+                        </td>
+                        <td style={{ padding: "8px" }}>{l.unit}</td>
+                        <td style={{ padding: "8px", textAlign: "right" }}>
+                          {l.net_unit_price
+                            ? new Intl.NumberFormat("hu-HU", {
+                                style: "currency",
+                                currency: "HUF",
+                                maximumFractionDigits: 0,
+                              }).format(l.net_unit_price)
+                            : "-"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </UnifiedPdfTemplate>
+        </PdfPreviewModal>
+      )}
     </div>
   );
 }

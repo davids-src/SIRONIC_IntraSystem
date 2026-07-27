@@ -1,7 +1,13 @@
 "use client";
 
-import { PageHeader, Card, Badge, Button } from "@crm/ui";
-import { UnifiedPdfTemplate } from "@crm/ui";
+import {
+  PageHeader,
+  Card,
+  Badge,
+  Button,
+  UnifiedPdfTemplate,
+  generatePdfFromElement,
+} from "@crm/ui";
 import type { Worklog, CompanyDetails, Contact } from "@crm/types";
 import { apiJson } from "@/lib/api-client";
 import { parseWorklog } from "@/lib/entity-parsers";
@@ -44,46 +50,12 @@ export default function PartnerWorklogDetailPage({
   }, [id]);
 
   const handleDownloadPdf = async () => {
-    const el = printRef.current;
-    if (!el || !wl) return;
-
+    if (!printRef.current || !wl) return;
     try {
-      el.style.left = "0px";
-
-      const imgs = Array.from(el.querySelectorAll("img"));
-      await Promise.all(
-        imgs.map((img) => {
-          if (img.complete) return Promise.resolve();
-          return new Promise((res) => {
-            img.onload = res;
-            img.onerror = res;
-          });
-        }),
-      );
-
-      const html2pdf = (await import("html2pdf.js")).default;
-      const opt = {
-        margin: 0,
-        filename: `Munkalap_${wl.worklog_number}.pdf`,
-        image: { type: "jpeg" as const, quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: "#ffffff",
-        },
-        jsPDF: {
-          unit: "mm" as const,
-          format: "a4" as const,
-          orientation: "portrait" as const,
-        },
-      };
-      await html2pdf().from(el).set(opt).save();
+      await generatePdfFromElement(printRef.current, `Munkalap_${wl.worklog_number}.pdf`);
     } catch (e) {
       console.error("PDF generálási hiba:", e);
       alert("Hiba történt a PDF generálása során.");
-    } finally {
-      el.style.left = "-9999px";
     }
   };
 

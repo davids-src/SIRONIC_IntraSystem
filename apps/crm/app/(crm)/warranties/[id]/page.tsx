@@ -411,6 +411,10 @@ export default function WarrantyDetailPage({
             useCORS: true,
             logging: false,
             backgroundColor: "#ffffff",
+            scrollX: 0,
+            scrollY: 0,
+            x: 0,
+            y: 0,
           },
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
         })

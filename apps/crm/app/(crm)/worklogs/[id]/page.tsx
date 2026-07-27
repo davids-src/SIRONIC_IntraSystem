@@ -14,8 +14,10 @@ import {
   SelectValue,
   InputControl,
   ItemPickerModal,
+  UnifiedPdfTemplate,
+  PdfPreviewModal,
+  generatePdfFromElement,
 } from "@crm/ui";
-import { UnifiedPdfTemplate } from "@crm/ui";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, use, Suspense, useEffect, useCallback, useRef } from "react";
 import type {
@@ -38,6 +40,7 @@ import {
   Plus,
   Trash2,
   Download,
+  Eye,
   ArrowLeft,
   Send,
 } from "lucide-react";
@@ -99,6 +102,7 @@ function WorklogFormContent({ id }: { id: string }) {
   const [saving, setSaving] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSuccess, setEmailSuccess] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   const [contactId, setContactId] = useState("");
   const [projectId, setProjectId] = useState("");
@@ -384,47 +388,15 @@ function WorklogFormContent({ id }: { id: string }) {
 
   const printRef = useRef<HTMLDivElement>(null);
   const handleDownloadPdf = async () => {
-    const el = printRef.current;
-    if (!el) return;
-
+    if (!printRef.current) return;
     try {
-      el.style.left = "0px";
-
-      const imgs = Array.from(el.querySelectorAll("img"));
-      await Promise.all(
-        imgs.map((img) => {
-          if (img.complete) return Promise.resolve();
-          return new Promise((res) => {
-            img.onload = res;
-            img.onerror = res;
-          });
-        }),
+      await generatePdfFromElement(
+        printRef.current,
+        `Munkalap_${worklogNumber || id}.pdf`,
       );
-
-      const html2pdf = (await import("html2pdf.js")).default;
-
-      const opt = {
-        margin: 0,
-        filename: `Munkalap_${worklogNumber || id}.pdf`,
-        image: { type: "jpeg" as const, quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: "#ffffff",
-        },
-        jsPDF: {
-          unit: "mm" as const,
-          format: "a4" as const,
-          orientation: "portrait" as const,
-        },
-      };
-      await html2pdf().from(el).set(opt).save();
     } catch (e) {
       console.error("PDF generálási hiba:", e);
       alert("Hiba történt a PDF generálása során.");
-    } finally {
-      el.style.left = "-9999px";
     }
   };
 
@@ -502,9 +474,15 @@ function WorklogFormContent({ id }: { id: string }) {
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
           {!isNew && (
-            <Badge variant={status === "draft" ? "default" : "success"}>
-              {status === "draft" ? "Piszkozat" : "Véglegesített"}
-            </Badge>
+            <>
+              <Badge variant={status === "draft" ? "default" : "success"}>
+                {status === "draft" ? "Piszkozat" : "Véglegesített"}
+              </Badge>
+              <Button variant="secondary" onClick={() => setShowPreviewModal(true)}>
+                <Eye size={15} style={{ marginRight: "6px" }} />
+                Előnézet
+              </Button>
+            </>
           )}
           {status === "finalized" && (
             <>
@@ -1557,6 +1535,208 @@ function WorklogFormContent({ id }: { id: string }) {
         }}
         onSelectService={(s) => addServiceItem(s)}
       />
+
+      {/* PDF Előnézet Modal */}
+      <PdfPreviewModal
+        open={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+        onDownload={() => {
+          setShowPreviewModal(false);
+          handleDownloadPdf();
+        }}
+        title={`Munkalap előnézet — ${worklogNumber || id}`}
+      >
+        <UnifiedPdfTemplate
+          documentTitle="Munkalap"
+          documentId={worklogNumber || id}
+          date={workDate ? new Date(workDate) : new Date()}
+          provider={companyDetails}
+          client={contacts.find((c) => c._id === contactId) || null}
+        >
+          <div style={{ marginBottom: "20px" }}>
+            <h3
+              style={{
+                fontSize: "14px",
+                fontWeight: 700,
+                margin: "0 0 10px",
+                color: "#000",
+              }}
+            >
+              Elvégzett feladatok
+            </h3>
+            <div
+              style={{
+                padding: "12px",
+                borderLeft: "3px solid #e53935",
+                backgroundColor: "#fff5f5",
+                fontSize: "13px",
+                lineHeight: 1.6,
+                color: "#333",
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {description}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: "20px" }}>
+            <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 8px 0" }}>
+              Felhasznált anyagok és munkadíjak:
+            </h3>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: "12px",
+                border: "1px solid #dee2e6",
+              }}
+            >
+              <thead>
+                <tr
+                  style={{
+                    backgroundColor: "#f8f9fa",
+                    borderBottom: "2px solid #dee2e6",
+                  }}
+                >
+                  <th
+                    style={{
+                      padding: "8px",
+                      textAlign: "left",
+                      borderRight: "1px solid #dee2e6",
+                    }}
+                  >
+                    Megnevezés
+                  </th>
+                  <th
+                    style={{
+                      padding: "8px",
+                      textAlign: "center",
+                      borderRight: showPricesOnPdf ? "1px solid #dee2e6" : "none",
+                    }}
+                  >
+                    Mennyiség
+                  </th>
+                  {showPricesOnPdf && (
+                    <>
+                      <th
+                        style={{
+                          padding: "8px",
+                          textAlign: "right",
+                          borderRight: "1px solid #dee2e6",
+                        }}
+                      >
+                        Nettó egységár
+                      </th>
+                      <th style={{ padding: "8px", textAlign: "right" }}>
+                        Nettó összesen
+                      </th>
+                    </>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((it, i) => (
+                  <tr key={i} style={{ borderBottom: "1px solid #e9ecef" }}>
+                    <td style={{ padding: "6px 8px", borderRight: "1px solid #e9ecef" }}>
+                      {it.description}
+                    </td>
+                    <td
+                      style={{
+                        padding: "6px 8px",
+                        textAlign: "center",
+                        borderRight: showPricesOnPdf ? "1px solid #e9ecef" : "none",
+                      }}
+                    >
+                      {it.quantity} {it.unit}
+                    </td>
+                    {showPricesOnPdf && (
+                      <>
+                        <td
+                          style={{
+                            padding: "6px 8px",
+                            textAlign: "right",
+                            borderRight: "1px solid #e9ecef",
+                          }}
+                        >
+                          {it.unit_price
+                            ? new Intl.NumberFormat("hu-HU", {
+                                style: "currency",
+                                currency: "HUF",
+                                maximumFractionDigits: 0,
+                              }).format(it.unit_price)
+                            : "-"}
+                        </td>
+                        <td style={{ padding: "6px 8px", textAlign: "right" }}>
+                          {it.unit_price
+                            ? new Intl.NumberFormat("hu-HU", {
+                                style: "currency",
+                                currency: "HUF",
+                                maximumFractionDigits: 0,
+                              }).format(it.unit_price * it.quantity)
+                            : "-"}
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                ))}
+                {travelKm && Number(travelKm) > 0 && (
+                  <tr style={{ borderBottom: "1px solid #e9ecef" }}>
+                    <td style={{ padding: "6px 8px", borderRight: "1px solid #e9ecef" }}>
+                      Kiszállás / Útiköltség
+                    </td>
+                    <td
+                      style={{
+                        padding: "6px 8px",
+                        textAlign: "center",
+                        borderRight: showPricesOnPdf ? "1px solid #e9ecef" : "none",
+                      }}
+                    >
+                      {travelKm} km
+                    </td>
+                    {showPricesOnPdf && (
+                      <>
+                        <td
+                          style={{
+                            padding: "6px 8px",
+                            textAlign: "right",
+                            borderRight: "1px solid #e9ecef",
+                          }}
+                        >
+                          -
+                        </td>
+                        <td style={{ padding: "6px 8px", textAlign: "right" }}>-</td>
+                      </>
+                    )}
+                  </tr>
+                )}
+              </tbody>
+            </table>
+
+            {showPricesOnPdf && (
+              <div
+                style={{
+                  marginTop: "12px",
+                  textAlign: "right",
+                  fontSize: "13px",
+                  fontWeight: "bold",
+                }}
+              >
+                Nettó végösszeg:{" "}
+                {new Intl.NumberFormat("hu-HU", {
+                  style: "currency",
+                  currency: "HUF",
+                  maximumFractionDigits: 0,
+                }).format(
+                  items.reduce(
+                    (sum, it) => sum + (it.unit_price ? it.unit_price * it.quantity : 0),
+                    0,
+                  ),
+                )}
+              </div>
+            )}
+          </div>
+        </UnifiedPdfTemplate>
+      </PdfPreviewModal>
     </div>
   );
 }

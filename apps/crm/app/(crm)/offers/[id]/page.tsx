@@ -1,7 +1,15 @@
 "use client";
 
-import { PageHeader, Card, Badge, Button, UnifiedPdfTemplate } from "@crm/ui";
-import { Download, Edit, ChevronLeft, Send } from "lucide-react";
+import {
+  PageHeader,
+  Card,
+  Badge,
+  Button,
+  UnifiedPdfTemplate,
+  PdfPreviewModal,
+  generatePdfFromElement,
+} from "@crm/ui";
+import { Download, Edit, ChevronLeft, Send, Eye } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import type { Contact, Offer, CompanyDetails, Settings } from "@crm/types";
@@ -36,6 +44,7 @@ export default function OfferDetailsPage() {
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSuccess, setEmailSuccess] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   const handleSendEmail = async () => {
     if (!confirm("Szeretnél e-mail értesítést küldeni a partnernek erről az ajánlatról?"))
@@ -93,47 +102,15 @@ export default function OfferDetailsPage() {
 
   const printRef = useRef<HTMLDivElement>(null);
   const handleDownloadPdf = async () => {
-    const el = printRef.current;
-    if (!el) return;
-
+    if (!printRef.current) return;
     try {
-      el.style.left = "0px";
-
-      const imgs = Array.from(el.querySelectorAll("img"));
-      await Promise.all(
-        imgs.map((img) => {
-          if (img.complete) return Promise.resolve();
-          return new Promise((res) => {
-            img.onload = res;
-            img.onerror = res;
-          });
-        }),
+      await generatePdfFromElement(
+        printRef.current,
+        `Arajanlat_${offer?.offer_number || id}.pdf`,
       );
-
-      const html2pdf = (await import("html2pdf.js")).default;
-
-      const opt = {
-        margin: 0,
-        filename: `Arajanlat_${offer?.offer_number || id}.pdf`,
-        image: { type: "jpeg" as const, quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: "#ffffff",
-        },
-        jsPDF: {
-          unit: "mm" as const,
-          format: "a4" as const,
-          orientation: "portrait" as const,
-        },
-      };
-      await html2pdf().from(el).set(opt).save();
     } catch (e) {
       console.error("PDF generálási hiba:", e);
       alert("Hiba történt a PDF generálása során.");
-    } finally {
-      el.style.left = "-9999px";
     }
   };
 
@@ -167,6 +144,9 @@ export default function OfferDetailsPage() {
             </Button>
             <Button variant="secondary" onClick={() => router.push(`/offers/${id}/edit`)}>
               <Edit size={16} className="mr-2" /> Szerkesztés
+            </Button>
+            <Button variant="secondary" onClick={() => setShowPreviewModal(true)}>
+              <Eye size={16} className="mr-2" /> Előnézet
             </Button>
             <Button variant="secondary" onClick={handleDownloadPdf}>
               <Download size={16} className="mr-2" /> PDF Letöltés
@@ -410,6 +390,132 @@ export default function OfferDetailsPage() {
           </div>
         </UnifiedPdfTemplate>
       </div>
+
+      {/* PDF Előnézet Modal */}
+      <PdfPreviewModal
+        open={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+        onDownload={() => {
+          setShowPreviewModal(false);
+          handleDownloadPdf();
+        }}
+        title={`Árajánlat előnézet — ${offer.offer_number}`}
+      >
+        <UnifiedPdfTemplate
+          documentTitle="ÁRAJÁNLAT"
+          documentId={offer.offer_number}
+          date={new Date(offer.created_at)}
+          provider={provider}
+          client={contact}
+          showSignatures={false}
+        >
+          <div style={{ marginBottom: "30px" }}>
+            <h3 style={{ fontSize: "16px", marginBottom: "10px", color: "#333" }}>
+              {offer.title}
+            </h3>
+            {offer.notes && (
+              <p
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "20px",
+                  whiteSpace: "pre-wrap",
+                }}
+              >
+                {offer.notes}
+              </p>
+            )}
+          </div>
+
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              fontSize: "12px",
+              marginBottom: "30px",
+            }}
+          >
+            <thead>
+              <tr style={{ borderBottom: "2px solid #000" }}>
+                <th style={{ textAlign: "left", padding: "8px" }}>Megnevezés</th>
+                <th style={{ textAlign: "right", padding: "8px" }}>Mennyiség</th>
+                <th style={{ textAlign: "right", padding: "8px" }}>Nettó egységár</th>
+                <th style={{ textAlign: "right", padding: "8px" }}>Nettó összesen</th>
+              </tr>
+            </thead>
+            <tbody>
+              {offer.lines.map((l, i) => {
+                const discountedPrice =
+                  l.net_unit_price * (1 - (l.discount_percent ?? 0) / 100);
+                return (
+                  <tr key={i} style={{ borderBottom: "1px solid #eee" }}>
+                    <td style={{ padding: "8px", fontWeight: 600 }}>
+                      {l.description}
+                      {l.discount_percent ? (
+                        <span
+                          style={{
+                            marginLeft: "6px",
+                            color: "#22c55e",
+                            fontSize: "10px",
+                          }}
+                        >
+                          (-{l.discount_percent}%)
+                        </span>
+                      ) : null}
+                    </td>
+                    <td style={{ textAlign: "right", padding: "8px" }}>
+                      {l.quantity} {l.unit}
+                    </td>
+                    <td style={{ textAlign: "right", padding: "8px" }}>
+                      {fmt(discountedPrice)}
+                    </td>
+                    <td style={{ textAlign: "right", padding: "8px" }}>
+                      {fmt(l.quantity * discountedPrice)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          <div style={{ width: "250px", marginLeft: "auto", fontSize: "12px" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "4px",
+              }}
+            >
+              <span>Nettó összesen:</span>
+              <span>{fmt(totalNet)}</span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "4px",
+              }}
+            >
+              <span>ÁFA:</span>
+              <span>{fmt(totalVat)}</span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontWeight: 700,
+                fontSize: "14px",
+                marginTop: "8px",
+                paddingTop: "8px",
+                borderTop: "2px solid #000",
+              }}
+            >
+              <span>Fizetendő:</span>
+              <span>{fmt(offer.total_amount)}</span>
+            </div>
+          </div>
+        </UnifiedPdfTemplate>
+      </PdfPreviewModal>
     </div>
   );
 }

@@ -1,7 +1,15 @@
 "use client";
 
-import { PageHeader, Card, Badge, Button, UnifiedPdfTemplate } from "@crm/ui";
-import { Download, ChevronLeft, Edit } from "lucide-react";
+import {
+  PageHeader,
+  Card,
+  Badge,
+  Button,
+  UnifiedPdfTemplate,
+  PdfPreviewModal,
+  generatePdfFromElement,
+} from "@crm/ui";
+import { Download, ChevronLeft, Edit, Eye } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { PurchaseOrder, Supplier, Settings, CompanyDetails } from "@crm/types";
@@ -37,6 +45,7 @@ export default function PurchaseOrderDetailPage() {
   const [provider, setProvider] = useState<CompanyDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -65,48 +74,14 @@ export default function PurchaseOrderDetailPage() {
   }, [id]);
 
   const handleDownloadPdf = async () => {
-    const el = printRef.current;
-    if (!el) return;
-
+    if (!printRef.current) return;
     try {
-      el.style.left = "0px";
-
-      const imgs = Array.from(el.querySelectorAll("img"));
-      await Promise.all(
-        imgs.map((img) => {
-          if (img.complete) return Promise.resolve();
-          return new Promise((res) => {
-            img.onload = res;
-            img.onerror = res;
-          });
-        }),
+      await generatePdfFromElement(
+        printRef.current,
+        `Megrendelo_${order?.order_number || id}.pdf`,
       );
-
-      const html2pdf = (await import("html2pdf.js")).default;
-
-      await html2pdf()
-        .from(el)
-        .set({
-          margin: 0,
-          filename: `Megrendelo_${order?.order_number || id}.pdf`,
-          image: { type: "jpeg" as const, quality: 0.98 },
-          html2canvas: {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            backgroundColor: "#ffffff",
-          },
-          jsPDF: {
-            unit: "mm" as const,
-            format: "a4" as const,
-            orientation: "portrait" as const,
-          },
-        })
-        .save();
     } catch {
       alert("Hiba történt a PDF generálása során.");
-    } finally {
-      el.style.left = "-9999px";
     }
   };
 
@@ -222,6 +197,9 @@ export default function PurchaseOrderDetailPage() {
                 Lemondás
               </Button>
             )}
+            <Button variant="secondary" onClick={() => setShowPreviewModal(true)}>
+              <Eye size={16} className="mr-2" /> Előnézet
+            </Button>
             <Button variant="secondary" onClick={handleDownloadPdf}>
               <Download size={16} className="mr-2" /> PDF Letöltés
             </Button>
@@ -557,6 +535,118 @@ export default function PurchaseOrderDetailPage() {
           )}
         </UnifiedPdfTemplate>
       </div>
+
+      {/* PDF Előnézet Modal */}
+      <PdfPreviewModal
+        open={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+        onDownload={() => {
+          setShowPreviewModal(false);
+          void handleDownloadPdf();
+        }}
+        title={`Megrendelőlap előnézet — ${order.order_number}`}
+      >
+        <UnifiedPdfTemplate
+          documentTitle="MEGRENDELŐLAP"
+          documentId={order.order_number}
+          date={new Date(order.created_at)}
+          provider={provider}
+          client={supplierAsClient}
+          showSignatures={true}
+        >
+          {order.expected_delivery_date && (
+            <div style={{ marginBottom: "20px", fontSize: "13px" }}>
+              <strong>Várható szállítási határidő:</strong>{" "}
+              {new Date(order.expected_delivery_date).toLocaleDateString("hu-HU")}
+            </div>
+          )}
+
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              fontSize: "12px",
+              marginBottom: "30px",
+            }}
+          >
+            <thead>
+              <tr style={{ borderBottom: "2px solid #000" }}>
+                <th style={{ padding: "8px", textAlign: "left" }}>Megnevezés</th>
+                <th style={{ padding: "8px", textAlign: "center" }}>Menny.</th>
+                <th style={{ padding: "8px", textAlign: "center" }}>Egység</th>
+                <th style={{ padding: "8px", textAlign: "right" }}>Nettó egységár</th>
+                <th style={{ padding: "8px", textAlign: "right" }}>Nettó összesen</th>
+              </tr>
+            </thead>
+            <tbody>
+              {order.lines.map((l, i) => (
+                <tr key={i} style={{ borderBottom: "1px solid #eee" }}>
+                  <td style={{ padding: "8px", fontWeight: 600 }}>{l.description}</td>
+                  <td style={{ padding: "8px", textAlign: "center" }}>{l.quantity}</td>
+                  <td style={{ padding: "8px", textAlign: "center" }}>{l.unit}</td>
+                  <td style={{ padding: "8px", textAlign: "right" }}>
+                    {fmt(l.net_unit_price)}
+                  </td>
+                  <td style={{ padding: "8px", textAlign: "right" }}>
+                    {fmt(l.net_unit_price * l.quantity)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div style={{ width: "260px", marginLeft: "auto", fontSize: "12px" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "4px",
+              }}
+            >
+              <span>Nettó összesen:</span>
+              <span>{fmt(totalNet)}</span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "4px",
+              }}
+            >
+              <span>ÁFA:</span>
+              <span>{fmt(totalVat)}</span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontWeight: 700,
+                fontSize: "14px",
+                borderTop: "2px solid #000",
+                paddingTop: "8px",
+                marginTop: "8px",
+              }}
+            >
+              <span>Fizetendő bruttó:</span>
+              <span>{fmt(order.total_amount)}</span>
+            </div>
+          </div>
+
+          {order.notes && (
+            <div
+              style={{
+                marginTop: "30px",
+                padding: "12px",
+                background: "#f8f9fa",
+                borderRadius: "6px",
+                fontSize: "12px",
+              }}
+            >
+              <strong>Megjegyzés:</strong> {order.notes}
+            </div>
+          )}
+        </UnifiedPdfTemplate>
+      </PdfPreviewModal>
     </div>
   );
 }

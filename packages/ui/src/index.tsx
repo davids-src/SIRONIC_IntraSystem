@@ -70,5 +70,10 @@ export type {
   ServiceCategoryForPicker,
 } from "./components/ItemPickerModal";
 
+export { PdfPreviewModal } from "./components/PdfPreviewModal";
+export type { PdfPreviewModalProps } from "./components/PdfPreviewModal";
+
+export { generatePdfFromElement } from "./lib/pdf-generator";
+
 // Tokens
 export { colors, radius, spacing } from "./tokens";

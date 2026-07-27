@@ -2,7 +2,14 @@
 
 import { use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, Badge, Button, UnifiedPdfTemplate } from "@crm/ui";
+import {
+  Card,
+  Badge,
+  Button,
+  UnifiedPdfTemplate,
+  PdfPreviewModal,
+  generatePdfFromElement,
+} from "@crm/ui";
 import {
   ChevronLeft,
   FileOutput,
@@ -14,6 +21,7 @@ import {
   Calendar,
   FileText,
   Download,
+  Eye,
   Mail,
   Loader2,
   Edit,
@@ -88,6 +96,7 @@ export default function DeliveryNoteDetailPage({
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSuccess, setEmailSuccess] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -132,48 +141,17 @@ export default function DeliveryNoteDetailPage({
   };
 
   const handleDownloadPdf = async () => {
-    const el = printRef.current;
-    if (!el) return;
+    if (!printRef.current) return;
     setGeneratingPdf(true);
-
     try {
-      el.style.left = "0px";
-
-      const imgs = Array.from(el.querySelectorAll("img"));
-      await Promise.all(
-        imgs.map((img) => {
-          if (img.complete) return Promise.resolve();
-          return new Promise((res) => {
-            img.onload = res;
-            img.onerror = res;
-          });
-        }),
+      await generatePdfFromElement(
+        printRef.current,
+        `Szallitolevel_${note?.delivery_number ?? id}.pdf`,
       );
-
-      const html2pdf = (await import("html2pdf.js")).default;
-
-      const opt = {
-        margin: 0,
-        filename: `Szallitolevel_${note?.delivery_number ?? id}.pdf`,
-        image: { type: "jpeg" as const, quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: "#ffffff",
-        },
-        jsPDF: {
-          unit: "mm" as const,
-          format: "a4" as const,
-          orientation: "portrait" as const,
-        },
-      };
-      await html2pdf().from(el).set(opt).save();
     } catch (e) {
       console.error("PDF hiba:", e);
       alert("Hiba történt a PDF generálása során.");
     } finally {
-      el.style.left = "-9999px";
       setGeneratingPdf(false);
     }
   };
@@ -243,6 +221,12 @@ export default function DeliveryNoteDetailPage({
 
         {/* Action buttons */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* PDF Preview */}
+          <Button variant="secondary" onClick={() => setShowPreviewModal(true)}>
+            <Eye size={15} className="mr-1.5" />
+            Előnézet
+          </Button>
+
           {/* PDF download */}
           <Button
             variant="secondary"
@@ -443,6 +427,59 @@ export default function DeliveryNoteDetailPage({
           )}
         </UnifiedPdfTemplate>
       </div>
+
+      {/* PDF Előnézet Modal */}
+      <PdfPreviewModal
+        open={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+        onDownload={() => {
+          setShowPreviewModal(false);
+          void handleDownloadPdf();
+        }}
+        title={`Szállítólevél előnézet — ${note.delivery_number}`}
+      >
+        <UnifiedPdfTemplate
+          documentTitle="Szállítólevél"
+          documentId={note.delivery_number}
+          date={new Date(note.issue_date)}
+          provider={companyDetails}
+          client={contact}
+        >
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              fontSize: "13px",
+              marginTop: "8px",
+            }}
+          >
+            <thead>
+              <tr style={{ borderBottom: "2px solid #000" }}>
+                <th style={{ textAlign: "left", padding: "8px" }}>Megnevezés</th>
+                <th style={{ textAlign: "right", padding: "8px" }}>Mennyiség</th>
+                <th style={{ textAlign: "left", padding: "8px" }}>Mértékegység</th>
+              </tr>
+            </thead>
+            <tbody>
+              {note.lines.map((line, i) => (
+                <tr key={i} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                  <td style={{ padding: "7px 8px", fontWeight: 600 }}>{line.name}</td>
+                  <td style={{ padding: "7px 8px", textAlign: "center" }}>
+                    {line.quantity}
+                  </td>
+                  <td style={{ padding: "7px 8px" }}>{line.unit}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {note.notes && (
+            <div style={{ marginTop: "16px", fontSize: "12px", color: "#6b7280" }}>
+              <strong>Megjegyzés:</strong> {note.notes}
+            </div>
+          )}
+        </UnifiedPdfTemplate>
+      </PdfPreviewModal>
     </div>
   );
 }

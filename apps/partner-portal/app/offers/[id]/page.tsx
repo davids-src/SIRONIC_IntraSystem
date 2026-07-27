@@ -1,6 +1,13 @@
 "use client";
 
-import { PageHeader, Card, Badge, Button, UnifiedPdfTemplate } from "@crm/ui";
+import {
+  PageHeader,
+  Card,
+  Badge,
+  Button,
+  UnifiedPdfTemplate,
+  generatePdfFromElement,
+} from "@crm/ui";
 import { Download, ChevronLeft, Check, X } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
@@ -90,46 +97,15 @@ export default function PartnerOfferDetailsPage() {
 
   const printRef = useRef<HTMLDivElement>(null);
   const handleDownloadPdf = async () => {
-    const el = printRef.current;
-    if (!el) return;
-
+    if (!printRef.current) return;
     try {
-      el.style.left = "0px";
-
-      const imgs = Array.from(el.querySelectorAll("img"));
-      await Promise.all(
-        imgs.map((img) => {
-          if (img.complete) return Promise.resolve();
-          return new Promise((res) => {
-            img.onload = res;
-            img.onerror = res;
-          });
-        }),
+      await generatePdfFromElement(
+        printRef.current,
+        `Arajanlat_${offer?.offer_number || id}.pdf`,
       );
-
-      const html2pdf = (await import("html2pdf.js")).default;
-      const opt = {
-        margin: 0,
-        filename: `Arajanlat_${offer?.offer_number || id}.pdf`,
-        image: { type: "jpeg" as const, quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: "#ffffff",
-        },
-        jsPDF: {
-          unit: "mm" as const,
-          format: "a4" as const,
-          orientation: "portrait" as const,
-        },
-      };
-      await html2pdf().from(el).set(opt).save();
     } catch (e) {
       console.error("PDF generálási hiba:", e);
       alert("Hiba történt a PDF generálása során.");
-    } finally {
-      el.style.left = "-9999px";
     }
   };
 
