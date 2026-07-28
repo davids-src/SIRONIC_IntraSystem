@@ -10,6 +10,9 @@ import {
 import { guard, handleApiError, requireCrmAuth, withDb } from "@/lib/api-helpers";
 import { hasPermission } from "@crm/rbac";
 
+const isValidObjectId = (id: string | null | undefined): boolean =>
+  !!(id && typeof id === "string" && /^[0-9a-fA-F]{24}$/.test(id));
+
 const unitBasedTierSchema = z.object({
   label: z.string().min(1),
   min_units: z.number().int().min(0),
@@ -56,8 +59,8 @@ export async function GET(req: Request) {
       if (!include_archived) {
         filter.is_archived = false;
       }
-      if (category_id) filter.category_id = category_id;
-      if (subcategory_id) filter.subcategory_id = subcategory_id;
+      if (isValidObjectId(category_id)) filter.category_id = category_id;
+      if (isValidObjectId(subcategory_id)) filter.subcategory_id = subcategory_id;
       if (pricing_type) filter.pricing_type = pricing_type;
       if (search) {
         const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -72,7 +75,6 @@ export async function GET(req: Request) {
         .sort({ category_id: 1, sort_order: 1, name: 1 })
         .lean();
 
-      // crm.staff számára internal_base_price szűrése
       const isAdmin = hasPermission(actor, {
         module: "pricing_settings",
         action: "view",
@@ -105,8 +107,8 @@ export async function POST(req: Request) {
     }
     const b = parsed.data;
     return await withDb(async () => {
-      // 1. Kategória keresése vagy automatikus létrehozása
-      let category = b.category_id
+      // 1. Kategória keresése vagy automatikus létrehozása (Mongoose CastError elkerülése validációval)
+      let category = isValidObjectId(b.category_id)
         ? await ServiceCategoryModel.findOne({
             _id: b.category_id,
             tenantId: actor.tenantId,
@@ -132,6 +134,7 @@ export async function POST(req: Request) {
 
       const categoryId = String((category as any)._id);
       const skuPrefix = (category as any).sku_prefix || "SZOLG";
+      const subcategoryId = isValidObjectId(b.subcategory_id) ? b.subcategory_id : null;
 
       // 2. SKU auto-generálás
       const counterKey = `service_sku_${skuPrefix}`;
@@ -143,7 +146,7 @@ export async function POST(req: Request) {
         sku,
         ...b,
         category_id: categoryId,
-        subcategory_id: b.subcategory_id || null,
+        subcategory_id: subcategoryId,
         description: b.description || null,
         notes: b.notes || null,
         client_note: b.client_note || null,

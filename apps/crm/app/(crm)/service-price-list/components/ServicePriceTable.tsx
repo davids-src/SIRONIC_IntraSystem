@@ -56,8 +56,10 @@ export function ServicePriceTable({
       setSelectedItem(null);
       setIsSheetOpen(true);
     };
+    window.addEventListener("open-new-service-item", handleOpenNew);
     document.addEventListener("open-new-service-item", handleOpenNew);
     return () => {
+      window.removeEventListener("open-new-service-item", handleOpenNew);
       document.removeEventListener("open-new-service-item", handleOpenNew);
     };
   }, []);

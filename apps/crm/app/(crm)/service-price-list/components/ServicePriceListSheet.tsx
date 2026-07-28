@@ -93,7 +93,8 @@ export default function ServicePriceListSheet({
       setClientNote(item.client_note ?? "");
       setSortOrder(item.sort_order);
     } else {
-      setCategoryId("");
+      const defaultCat = categories.find((c) => c.is_active) || categories[0];
+      setCategoryId(defaultCat?._id ?? "");
       setSubcategoryId("");
       setName("");
       setDescription("");
@@ -106,7 +107,7 @@ export default function ServicePriceListSheet({
       setClientNote("");
       setSortOrder(0);
     }
-  }, [item, isOpen]);
+  }, [item, isOpen, categories]);
 
   // Mutation
   const saveMutation = useMutation({
