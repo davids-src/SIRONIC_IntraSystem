@@ -21,12 +21,14 @@ export function UnifiedPdfTemplate({
   showSignatures = true,
 }: UnifiedPdfTemplateProps) {
   // Safe getters for address
-  const clientAddress =
+  const rawAddress =
     typeof client?.address === "string"
       ? client.address
       : client?.address
         ? `${client.address.zip || ""} ${client.address.city || ""}, ${client.address.street || ""}`.trim()
-        : "—";
+        : "";
+
+  const clientAddress = rawAddress.replace(/^,\s*|\s*,\s*$/g, "").trim() || "—";
 
   return (
     <div

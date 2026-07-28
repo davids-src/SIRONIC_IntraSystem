@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, FileText, SearchX } from "lucide-react";
+import { Search, FileText, SearchX, Plus } from "lucide-react";
 import { Input, Button, Card } from "@crm/ui";
 import type {
   ServicePriceListItem,
@@ -49,6 +49,18 @@ export function ServicePriceTable({
   // Modals state
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ServicePriceListItem | null>(null);
+
+  // Event listener for header button "Új tétel"
+  useEffect(() => {
+    const handleOpenNew = () => {
+      setSelectedItem(null);
+      setIsSheetOpen(true);
+    };
+    document.addEventListener("open-new-service-item", handleOpenNew);
+    return () => {
+      document.removeEventListener("open-new-service-item", handleOpenNew);
+    };
+  }, []);
 
   // Data fetching
   const { data: categories } = useQuery({
@@ -303,6 +315,22 @@ export function ServicePriceTable({
               setPartnerName(name);
             }}
           />
+        </div>
+
+        {/* Új tétel gomb */}
+        <div className="flex items-center self-end pb-0.5">
+          <Button
+            variant="primary"
+            onClick={() => {
+              setSelectedItem(null);
+              setIsSheetOpen(true);
+            }}
+            className="h-10 px-4 flex items-center gap-1.5"
+            style={{ backgroundColor: "#E8271A", color: "white" }}
+          >
+            <Plus size={16} />
+            <span className="whitespace-nowrap">Új tétel</span>
+          </Button>
         </div>
       </div>
 

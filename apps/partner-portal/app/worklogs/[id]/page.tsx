@@ -282,37 +282,43 @@ export default function PartnerWorklogDetailPage({
 
       {/* PDF Előnézet Modal */}
       {(() => {
-        const pdfClient: Contact =
-          client ??
-          ({
-            _id: wl.contact_id || "",
-            contact_number: "",
-            partner_id: null,
-            tenantId: "",
-            type: "company" as const,
-            name: wl.client_name?.trim() || "Megrendelő",
-            short_name: null,
-            tax_number: null,
-            registration_number: null,
-            address: wl.site_address?.trim()
-              ? ({
-                  zip: "",
-                  city: "",
-                  street: wl.site_address.trim(),
-                  country: "HU",
-                } as any)
-              : null,
-            billing_address: null,
-            shipping_address: null,
-            email: null,
-            phone: null,
-            website: null,
-            contacts: [],
-            notes: null,
-            is_active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          } as unknown as Contact);
+        const contactAddr = client?.address
+          ? typeof client.address === "string"
+            ? client.address
+            : `${client.address.zip || ""} ${client.address.city || ""}, ${client.address.street || ""}`.trim()
+          : "";
+
+        const effectiveAddress = wl.site_address?.trim() || contactAddr || "";
+
+        const pdfClient: Contact = (client
+          ? {
+              ...client,
+              name: wl.client_name?.trim() || client.name || "Megrendelő",
+              address: effectiveAddress
+                ? ({ zip: "", city: "", street: effectiveAddress, country: "HU" } as any)
+                : client.address,
+            }
+          : {
+              _id: wl.contact_id || "",
+              contact_number: "",
+              partner_id: null,
+              tenantId: "",
+              type: "company",
+              name: wl.client_name?.trim() || "Megrendelő",
+              short_name: null,
+              tax_number: null,
+              registration_number: null,
+              address: effectiveAddress
+                ? ({ zip: "", city: "", street: effectiveAddress, country: "HU" } as any)
+                : null,
+              billing_address: null,
+              email: null,
+              phone: null,
+              notes: null,
+              is_active: true,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }) as unknown as Contact;
 
         return (
           <PdfPreviewModal
@@ -328,6 +334,98 @@ export default function PartnerWorklogDetailPage({
               provider={provider}
               client={pdfClient}
             >
+              {/* Munkalap alapadatok kártya */}
+              <div
+                style={{
+                  marginBottom: "20px",
+                  padding: "14px 16px",
+                  backgroundColor: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "8px",
+                  fontSize: "12px",
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "12px 24px",
+                }}
+              >
+                <div>
+                  <span
+                    style={{
+                      color: "#64748b",
+                      fontSize: "10px",
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      display: "block",
+                      marginBottom: "2px",
+                    }}
+                  >
+                    Munkavégzés Helyszíne (Cím)
+                  </span>
+                  <span style={{ fontWeight: 700, color: "#0f172a", fontSize: "13px" }}>
+                    {effectiveAddress || "—"}
+                  </span>
+                </div>
+                <div>
+                  <span
+                    style={{
+                      color: "#64748b",
+                      fontSize: "10px",
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      display: "block",
+                      marginBottom: "2px",
+                    }}
+                  >
+                    Munkakategória
+                  </span>
+                  <span style={{ fontWeight: 600, color: "#0f172a" }}>
+                    {wl.work_category || "Általános munkavégzés"}
+                  </span>
+                </div>
+                <div>
+                  <span
+                    style={{
+                      color: "#64748b",
+                      fontSize: "10px",
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      display: "block",
+                      marginBottom: "2px",
+                    }}
+                  >
+                    Felelős Munkatárs / Technikus
+                  </span>
+                  <span style={{ fontWeight: 600, color: "#0f172a" }}>
+                    {wl.technician_name || "—"}
+                  </span>
+                </div>
+                <div>
+                  <span
+                    style={{
+                      color: "#64748b",
+                      fontSize: "10px",
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      display: "block",
+                      marginBottom: "2px",
+                    }}
+                  >
+                    Munkavégzés Időpontja & Időtartama
+                  </span>
+                  <span style={{ fontWeight: 600, color: "#0f172a" }}>
+                    {wl.work_date
+                      ? new Date(wl.work_date).toLocaleDateString("hu-HU")
+                      : "—"}{" "}
+                    {wl.work_start && wl.work_end
+                      ? `(${wl.work_start} – ${wl.work_end})`
+                      : ""}
+                  </span>
+                </div>
+              </div>
               <div style={{ marginBottom: "20px" }}>
                 <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 10px" }}>
                   Elvégzett munka leírása

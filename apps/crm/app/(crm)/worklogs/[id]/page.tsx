@@ -446,6 +446,49 @@ function WorklogFormContent({ id }: { id: string }) {
     }
   };
 
+  const foundContact = contacts.find(
+    (c) =>
+      String(c._id) === String(contactId) || String((c as any).id) === String(contactId),
+  );
+
+  const contactAddr = foundContact?.address
+    ? typeof foundContact.address === "string"
+      ? foundContact.address
+      : `${foundContact.address.zip || ""} ${foundContact.address.city || ""}, ${foundContact.address.street || ""}`.trim()
+    : "";
+
+  const effectiveAddress = siteAddress.trim() || contactAddr || "";
+
+  const pdfClient: Contact = (foundContact
+    ? {
+        ...foundContact,
+        name: clientName.trim() || foundContact.name || "Megrendelő",
+        address: effectiveAddress
+          ? ({ zip: "", city: "", street: effectiveAddress, country: "HU" } as any)
+          : foundContact.address,
+      }
+    : {
+        _id: contactId || "",
+        contact_number: "",
+        partner_id: null,
+        tenantId: "",
+        type: "company",
+        name: clientName.trim() || "Megrendelő",
+        short_name: null,
+        tax_number: null,
+        registration_number: null,
+        address: effectiveAddress
+          ? ({ zip: "", city: "", street: effectiveAddress, country: "HU" } as any)
+          : null,
+        billing_address: null,
+        email: null,
+        phone: null,
+        notes: null,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }) as unknown as Contact;
+
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
@@ -1325,8 +1368,100 @@ function WorklogFormContent({ id }: { id: string }) {
           documentId={worklogNumber || id}
           date={workDate ? new Date(workDate) : new Date()}
           provider={companyDetails}
-          client={contacts.find((c) => c._id === contactId) || null}
+          client={pdfClient}
         >
+          {/* Munkalap alapadatok kártya */}
+          <div
+            style={{
+              marginBottom: "20px",
+              padding: "14px 16px",
+              backgroundColor: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: "8px",
+              fontSize: "12px",
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "12px 24px",
+            }}
+          >
+            <div>
+              <span
+                style={{
+                  color: "#64748b",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  display: "block",
+                  marginBottom: "2px",
+                }}
+              >
+                Munkavégzés Helyszíne (Cím)
+              </span>
+              <span style={{ fontWeight: 700, color: "#0f172a", fontSize: "13px" }}>
+                {pdfClient.address
+                  ? typeof pdfClient.address === "string"
+                    ? pdfClient.address
+                    : `${pdfClient.address.street || ""}`
+                  : siteAddress.trim() || "—"}
+              </span>
+            </div>
+            <div>
+              <span
+                style={{
+                  color: "#64748b",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  display: "block",
+                  marginBottom: "2px",
+                }}
+              >
+                Munkakategória
+              </span>
+              <span style={{ fontWeight: 600, color: "#0f172a" }}>
+                {category || "Általános munkavégzés"}
+              </span>
+            </div>
+            <div>
+              <span
+                style={{
+                  color: "#64748b",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  display: "block",
+                  marginBottom: "2px",
+                }}
+              >
+                Felelős Munkatárs / Technikus
+              </span>
+              <span style={{ fontWeight: 600, color: "#0f172a" }}>
+                {technicianName || "—"}
+              </span>
+            </div>
+            <div>
+              <span
+                style={{
+                  color: "#64748b",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  display: "block",
+                  marginBottom: "2px",
+                }}
+              >
+                Munkavégzés Időpontja & Időtartama
+              </span>
+              <span style={{ fontWeight: 600, color: "#0f172a" }}>
+                {workDate ? new Date(workDate).toLocaleDateString("hu-HU") : "—"}{" "}
+                {workStart && workEnd ? `(${workStart} – ${workEnd})` : ""}
+              </span>
+            </div>
+          </div>
           <div style={{ marginBottom: "20px" }}>
             <h3
               style={{
@@ -1537,168 +1672,221 @@ function WorklogFormContent({ id }: { id: string }) {
       />
 
       {/* PDF Előnézet Modal */}
-      {(() => {
-        const foundContact = contacts.find(
-          (c) =>
-            String(c._id) === String(contactId) ||
-            String((c as any).id) === String(contactId),
-        );
-        const pdfClient: Contact =
-          foundContact ??
-          ({
-            _id: contactId || "",
-            contact_number: "",
-            partner_id: null,
-            tenantId: "",
-            type: "company" as const,
-            name: clientName.trim() || "Megrendelő",
-            short_name: null,
-            tax_number: null,
-            registration_number: null,
-            address: siteAddress.trim()
-              ? ({ zip: "", city: "", street: siteAddress.trim(), country: "HU" } as any)
-              : null,
-            billing_address: null,
-            shipping_address: null,
-            email: null,
-            phone: null,
-            website: null,
-            contacts: [],
-            notes: null,
-            is_active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          } as unknown as Contact);
-
-        return (
-          <PdfPreviewModal
-            open={showPreviewModal}
-            onClose={() => setShowPreviewModal(false)}
-            filename={`Munkalap_${worklogNumber || id}.pdf`}
-            title={`Munkalap előnézet — ${worklogNumber || id}`}
+      <PdfPreviewModal
+        open={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+        filename={`Munkalap_${worklogNumber || id}.pdf`}
+        title={`Munkalap előnézet — ${worklogNumber || id}`}
+      >
+        <UnifiedPdfTemplate
+          documentTitle="Munkalap"
+          documentId={worklogNumber || id}
+          date={workDate ? new Date(workDate) : new Date()}
+          provider={companyDetails}
+          client={pdfClient}
+        >
+          {/* Munkalap alapadatok kártya */}
+          <div
+            style={{
+              marginBottom: "20px",
+              padding: "14px 16px",
+              backgroundColor: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: "8px",
+              fontSize: "12px",
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "12px 24px",
+            }}
           >
-            <UnifiedPdfTemplate
-              documentTitle="Munkalap"
-              documentId={worklogNumber || id}
-              date={workDate ? new Date(workDate) : new Date()}
-              provider={companyDetails}
-              client={pdfClient}
-            >
-              <div style={{ marginBottom: "20px" }}>
-                <h3
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: 700,
-                    margin: "0 0 10px",
-                    color: "#000",
-                  }}
-                >
-                  Elvégzett feladatok
-                </h3>
-                <div
-                  style={{
-                    padding: "12px",
-                    borderLeft: "3px solid #e53935",
-                    backgroundColor: "#fff5f5",
-                    fontSize: "13px",
-                    lineHeight: 1.6,
-                    color: "#333",
-                    whiteSpace: "pre-wrap",
-                  }}
-                >
-                  {description}
-                </div>
-              </div>
+            <div>
+              <span
+                style={{
+                  color: "#64748b",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  display: "block",
+                  marginBottom: "2px",
+                }}
+              >
+                Munkavégzés Helyszíne (Cím)
+              </span>
+              <span style={{ fontWeight: 700, color: "#0f172a", fontSize: "13px" }}>
+                {effectiveAddress || "—"}
+              </span>
+            </div>
+            <div>
+              <span
+                style={{
+                  color: "#64748b",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  display: "block",
+                  marginBottom: "2px",
+                }}
+              >
+                Munkakategória
+              </span>
+              <span style={{ fontWeight: 600, color: "#0f172a" }}>
+                {category || "Általános munkavégzés"}
+              </span>
+            </div>
+            <div>
+              <span
+                style={{
+                  color: "#64748b",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  display: "block",
+                  marginBottom: "2px",
+                }}
+              >
+                Felelős Munkatárs / Technikus
+              </span>
+              <span style={{ fontWeight: 600, color: "#0f172a" }}>
+                {technicianName || "—"}
+              </span>
+            </div>
+            <div>
+              <span
+                style={{
+                  color: "#64748b",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  display: "block",
+                  marginBottom: "2px",
+                }}
+              >
+                Munkavégzés Időpontja & Időtartama
+              </span>
+              <span style={{ fontWeight: 600, color: "#0f172a" }}>
+                {workDate ? new Date(workDate).toLocaleDateString("hu-HU") : "—"}{" "}
+                {workStart && workEnd ? `(${workStart} – ${workEnd})` : ""}
+              </span>
+            </div>
+          </div>
 
-              <div style={{ marginBottom: "20px" }}>
-                <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 8px 0" }}>
-                  Felhasznált anyagok és tételek:
-                </h3>
-                <table
+          <div style={{ marginBottom: "20px" }}>
+            <h3
+              style={{
+                fontSize: "14px",
+                fontWeight: 700,
+                margin: "0 0 10px",
+                color: "#000",
+              }}
+            >
+              Elvégzett feladatok
+            </h3>
+            <div
+              style={{
+                padding: "12px",
+                borderLeft: "3px solid #e53935",
+                backgroundColor: "#fff5f5",
+                fontSize: "13px",
+                lineHeight: 1.6,
+                color: "#333",
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {description}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: "20px" }}>
+            <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 8px 0" }}>
+              Felhasznált anyagok és tételek:
+            </h3>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: "12px",
+                border: "1px solid #dee2e6",
+              }}
+            >
+              <thead>
+                <tr
                   style={{
-                    width: "100%",
-                    borderCollapse: "collapse",
-                    fontSize: "12px",
-                    border: "1px solid #dee2e6",
+                    backgroundColor: "#f8f9fa",
+                    borderBottom: "2px solid #dee2e6",
                   }}
                 >
-                  <thead>
-                    <tr
+                  <th
+                    style={{
+                      padding: "8px 12px",
+                      textAlign: "left",
+                      borderRight: "1px solid #dee2e6",
+                    }}
+                  >
+                    Megnevezés
+                  </th>
+                  <th
+                    style={{
+                      padding: "8px 12px",
+                      textAlign: "center",
+                      width: "25%",
+                    }}
+                  >
+                    Mennyiség
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((it, i) => (
+                  <tr key={i} style={{ borderBottom: "1px solid #e9ecef" }}>
+                    <td
                       style={{
-                        backgroundColor: "#f8f9fa",
-                        borderBottom: "2px solid #dee2e6",
+                        padding: "8px 12px",
+                        borderRight: "1px solid #e9ecef",
                       }}
                     >
-                      <th
-                        style={{
-                          padding: "8px 12px",
-                          textAlign: "left",
-                          borderRight: "1px solid #dee2e6",
-                        }}
-                      >
-                        Megnevezés
-                      </th>
-                      <th
-                        style={{
-                          padding: "8px 12px",
-                          textAlign: "center",
-                          width: "25%",
-                        }}
-                      >
-                        Mennyiség
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((it, i) => (
-                      <tr key={i} style={{ borderBottom: "1px solid #e9ecef" }}>
-                        <td
-                          style={{
-                            padding: "8px 12px",
-                            borderRight: "1px solid #e9ecef",
-                          }}
-                        >
-                          {it.description}
-                        </td>
-                        <td
-                          style={{
-                            padding: "8px 12px",
-                            textAlign: "center",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {it.quantity} {it.unit}
-                        </td>
-                      </tr>
-                    ))}
-                    {travelKm && Number(travelKm) > 0 && (
-                      <tr style={{ borderBottom: "1px solid #e9ecef" }}>
-                        <td
-                          style={{
-                            padding: "8px 12px",
-                            borderRight: "1px solid #e9ecef",
-                          }}
-                        >
-                          Kiszállás / Útiköltség
-                        </td>
-                        <td
-                          style={{
-                            padding: "8px 12px",
-                            textAlign: "center",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {travelKm} km
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </UnifiedPdfTemplate>
-          </PdfPreviewModal>
-        );
-      })()}
+                      {it.description}
+                    </td>
+                    <td
+                      style={{
+                        padding: "8px 12px",
+                        textAlign: "center",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {it.quantity} {it.unit}
+                    </td>
+                  </tr>
+                ))}
+                {travelKm && Number(travelKm) > 0 && (
+                  <tr style={{ borderBottom: "1px solid #e9ecef" }}>
+                    <td
+                      style={{
+                        padding: "8px 12px",
+                        borderRight: "1px solid #e9ecef",
+                      }}
+                    >
+                      Kiszállás / Útiköltség
+                    </td>
+                    <td
+                      style={{
+                        padding: "8px 12px",
+                        textAlign: "center",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {travelKm} km
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </UnifiedPdfTemplate>
+      </PdfPreviewModal>
     </div>
   );
 }
