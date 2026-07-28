@@ -443,7 +443,7 @@ export default function PartnerOfferDetailsPage() {
               <tr style={{ borderBottom: "2px solid #000" }}>
                 <th style={{ textAlign: "left", padding: "8px" }}>Tétel</th>
                 <th style={{ textAlign: "right", padding: "8px" }}>Mennyiség</th>
-                <th style={{ textAlign: "right", padding: "8px" }}>Egységár</th>
+                <th style={{ textAlign: "right", padding: "8px" }}>Nettó egységár</th>
                 <th style={{ textAlign: "right", padding: "8px" }}>Összesen</th>
               </tr>
             </thead>

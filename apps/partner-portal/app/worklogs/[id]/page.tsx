@@ -281,88 +281,142 @@ export default function PartnerWorklogDetailPage({
       </div>
 
       {/* PDF Előnézet Modal */}
-      <PdfPreviewModal
-        open={showPreviewModal}
-        onClose={() => setShowPreviewModal(false)}
-        filename={`Munkalap_${wl.worklog_number}.pdf`}
-        title={`Munkalap előnézet — ${wl.worklog_number}`}
-      >
-        <UnifiedPdfTemplate
-          documentTitle="Munkalap"
-          documentId={wl.worklog_number}
-          date={wl.work_date}
-          provider={provider}
-          client={client}
-        >
-          <div style={{ marginBottom: "20px" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 10px" }}>
-              Elvégzett munka leírása
-            </h3>
-            <div
-              style={{
-                fontSize: "13px",
-                lineHeight: "1.6",
-                color: "#374151",
-                whiteSpace: "pre-wrap",
-                backgroundColor: "#f9fafb",
-                border: "1px solid #e5e7eb",
-                borderRadius: "6px",
-                padding: "12px",
-              }}
-            >
-              {wl.work_description}
-            </div>
-          </div>
+      {(() => {
+        const pdfClient: Contact =
+          client ??
+          ({
+            _id: wl.contact_id || "",
+            contact_number: "",
+            partner_id: null,
+            tenantId: "",
+            type: "company" as const,
+            name: wl.client_name?.trim() || "Megrendelő",
+            short_name: null,
+            tax_number: null,
+            registration_number: null,
+            address: wl.site_address?.trim()
+              ? ({
+                  zip: "",
+                  city: "",
+                  street: wl.site_address.trim(),
+                  country: "HU",
+                } as any)
+              : null,
+            billing_address: null,
+            shipping_address: null,
+            email: null,
+            phone: null,
+            website: null,
+            contacts: [],
+            notes: null,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as unknown as Contact);
 
-          <div style={{ marginBottom: "20px" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 10px" }}>
-              Felhasznált tételek & Anyagok
-            </h3>
-            {wl.items && wl.items.length > 0 && wl.items[0]?.description !== "—" ? (
-              <table
-                style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}
-              >
-                <thead>
-                  <tr
+        return (
+          <PdfPreviewModal
+            open={showPreviewModal}
+            onClose={() => setShowPreviewModal(false)}
+            filename={`Munkalap_${wl.worklog_number}.pdf`}
+            title={`Munkalap előnézet — ${wl.worklog_number}`}
+          >
+            <UnifiedPdfTemplate
+              documentTitle="Munkalap"
+              documentId={wl.worklog_number}
+              date={wl.work_date}
+              provider={provider}
+              client={pdfClient}
+            >
+              <div style={{ marginBottom: "20px" }}>
+                <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 10px" }}>
+                  Elvégzett munka leírása
+                </h3>
+                <div
+                  style={{
+                    fontSize: "13px",
+                    lineHeight: "1.6",
+                    color: "#374151",
+                    whiteSpace: "pre-wrap",
+                    backgroundColor: "#f9fafb",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "6px",
+                    padding: "12px",
+                  }}
+                >
+                  {wl.work_description}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 10px" }}>
+                  Felhasznált tételek & Anyagok
+                </h3>
+                {wl.items && wl.items.length > 0 && wl.items[0]?.description !== "—" ? (
+                  <table
                     style={{
-                      backgroundColor: "#f3f4f6",
-                      borderBottom: "2px solid #e5e7eb",
+                      width: "100%",
+                      borderCollapse: "collapse",
+                      fontSize: "12px",
                     }}
                   >
-                    <th style={{ padding: "8px", textAlign: "left" }}>Megnevezés</th>
-                    <th style={{ padding: "8px", textAlign: "center" }}>Egység</th>
-                    <th style={{ padding: "8px", textAlign: "right" }}>Mennyiség</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {wl.items.map((it, idx) => (
-                    <tr key={idx} style={{ borderBottom: "1px solid #eee" }}>
-                      <td style={{ padding: "8px" }}>{it.description}</td>
-                      <td style={{ padding: "8px", textAlign: "center" }}>{it.unit}</td>
-                      <td style={{ padding: "8px", textAlign: "right", fontWeight: 600 }}>
-                        {it.quantity}
-                      </td>
-                    </tr>
-                  ))}
-                  {wl.travel_km && Number(wl.travel_km) > 0 && (
-                    <tr style={{ borderBottom: "1px solid #eee" }}>
-                      <td style={{ padding: "8px" }}>Kiszállás / Útiköltség</td>
-                      <td style={{ padding: "8px", textAlign: "center" }}>km</td>
-                      <td style={{ padding: "8px", textAlign: "right", fontWeight: 600 }}>
-                        {wl.travel_km}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            ) : (
-              <p style={{ fontSize: "13px", color: "#666" }}>
-                Nincsenek rögzített tételek.
-              </p>
-            )}
-          </div>
-        </UnifiedPdfTemplate>
-      </PdfPreviewModal>
+                    <thead>
+                      <tr
+                        style={{
+                          backgroundColor: "#f3f4f6",
+                          borderBottom: "2px solid #e5e7eb",
+                        }}
+                      >
+                        <th style={{ padding: "8px", textAlign: "left" }}>Megnevezés</th>
+                        <th style={{ padding: "8px", textAlign: "center" }}>Egység</th>
+                        <th style={{ padding: "8px", textAlign: "right" }}>Mennyiség</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {wl.items.map((it, idx) => (
+                        <tr key={idx} style={{ borderBottom: "1px solid #eee" }}>
+                          <td style={{ padding: "8px" }}>{it.description}</td>
+                          <td style={{ padding: "8px", textAlign: "center" }}>
+                            {it.unit}
+                          </td>
+                          <td
+                            style={{
+                              padding: "8px",
+                              textAlign: "right",
+                              fontWeight: 600,
+                            }}
+                          >
+                            {it.quantity}
+                          </td>
+                        </tr>
+                      ))}
+                      {wl.travel_km && Number(wl.travel_km) > 0 && (
+                        <tr style={{ borderBottom: "1px solid #eee" }}>
+                          <td style={{ padding: "8px" }}>Kiszállás / Útiköltség</td>
+                          <td style={{ padding: "8px", textAlign: "center" }}>km</td>
+                          <td
+                            style={{
+                              padding: "8px",
+                              textAlign: "right",
+                              fontWeight: 600,
+                            }}
+                          >
+                            {wl.travel_km}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p style={{ fontSize: "13px", color: "#666" }}>
+                    Nincsenek rögzített tételek.
+                  </p>
+                )}
+              </div>
+            </UnifiedPdfTemplate>
+          </PdfPreviewModal>
+        );
+      })()}
     </div>
   );
 }

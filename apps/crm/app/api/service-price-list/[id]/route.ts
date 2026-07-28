@@ -9,7 +9,14 @@ const patchSchema = z.object({
   description: z.string().nullable().optional(),
   unit: z.string().min(1).optional(),
   pricing_type: z.enum(["fixed", "hourly", "custom", "unit_based"]).optional(),
-  internal_base_price: z.number().nullable().optional(),
+  internal_base_price: z
+    .union([z.number(), z.string(), z.null()])
+    .optional()
+    .transform((val) => {
+      if (typeof val === "number") return val;
+      if (typeof val === "string" && val.trim() !== "") return Number(val);
+      return null;
+    }),
   hourly_rate_category: z.string().nullable().optional(),
   unit_based_tiers: z
     .array(

@@ -142,7 +142,18 @@ export default function ServicePriceListSheet({
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error ?? "Hiba a mentés során");
+        let errMsg = "Hiba a mentés során";
+        if (typeof err.error === "string") {
+          errMsg = err.error;
+        } else if (err.error?.fieldErrors) {
+          const fields = Object.entries(err.error.fieldErrors)
+            .map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`)
+            .join("; ");
+          errMsg = `Érvénytelen mezők: ${fields}`;
+        } else if (err.message) {
+          errMsg = err.message;
+        }
+        throw new Error(errMsg);
       }
       return res.json();
     },
@@ -466,7 +477,7 @@ export default function ServicePriceListSheet({
         <Button
           variant="primary"
           onClick={() => saveMutation.mutate()}
-          disabled={saveMutation.isPending || !category_id || !name}
+          disabled={saveMutation.isPending || !name.trim()}
         >
           {saveMutation.isPending ? "Mentés..." : "Mentés"}
         </Button>

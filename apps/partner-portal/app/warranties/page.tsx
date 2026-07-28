@@ -89,12 +89,12 @@ function buildPdfHtml(data: PdfData): string {
     .map(
       (l, i) => `
     <tr style="border-bottom:1px solid #e5e7eb;">
-      <td style="padding:10px 12px;font-size:13px;">${i + 1}.</td>
-      <td style="padding:10px 12px;font-size:13px;font-weight:600;">${l.name}</td>
-      <td style="padding:10px 12px;font-size:13px;font-family:monospace;">${l.serial_number ?? "—"}</td>
-      <td style="padding:10px 12px;font-size:13px;text-align:center;">${l.warranty_years} év</td>
-      <td style="padding:10px 12px;font-size:13px;">${fmtDate(l.warranty_start)}</td>
-      <td style="padding:10px 12px;font-size:13px;font-weight:600;color:#1d4ed8;">${fmtDate(l.warranty_end)}</td>
+      <td style="padding:10px 12px;font-size:12px;text-align:center;">${i + 1}.</td>
+      <td style="padding:10px 12px;font-size:12px;font-weight:600;word-break:break-word;">${l.name}</td>
+      <td style="padding:10px 12px;font-size:11px;font-family:'Courier New', monospace;white-space:nowrap;"><span style="background:#f1f5f9;border:1px solid #cbd5e1;padding:4px 8px;border-radius:4px;display:inline-block;">${l.serial_number ?? "—"}</span></td>
+      <td style="padding:10px 12px;font-size:12px;text-align:center;white-space:nowrap;">${l.warranty_years} év</td>
+      <td style="padding:10px 12px;font-size:12px;white-space:nowrap;text-align:center;">${fmtDate(l.warranty_start)}</td>
+      <td style="padding:10px 12px;font-size:12px;font-weight:600;color:#1d4ed8;white-space:nowrap;text-align:center;">${fmtDate(l.warranty_end)}</td>
     </tr>`,
     )
     .join("");
@@ -116,7 +116,7 @@ function buildPdfHtml(data: PdfData): string {
 <style>* { box-sizing:border-box;margin:0;padding:0; } body { font-family:Arial,sans-serif;background:#fff;color:#111827; }
 .page { width:210mm;min-height:297mm;padding:18mm 16mm;page-break-after:always; }
 .page:last-child { page-break-after:auto; }
-table { width:100%;border-collapse:collapse; }
+table { width:100%;border-collapse:collapse;table-layout:fixed; }
 thead th { background:#f3f4f6;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;padding:10px 12px;text-align:left; }
 </style></head><body>
 <div class="page">
@@ -153,10 +153,14 @@ thead th { background:#f3f4f6;font-size:11px;text-transform:uppercase;letter-spa
 </div>
 <div style="margin-bottom:28px;">
   <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#374151;margin-bottom:10px;">Jótállással érintett termékek</div>
-  <table style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+  <table style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;table-layout:fixed;width:100%;">
     <thead><tr>
-      <th style="width:36px;">#</th><th>Termék neve</th><th>Gyártási szám</th>
-      <th style="text-align:center;">Időtartam</th><th>Kezdete</th><th>Lejárat</th>
+      <th style="width:36px;text-align:center;">#</th>
+      <th style="width:34%;">Termék neve</th>
+      <th style="width:28%;">Gyártási szám</th>
+      <th style="width:11%;text-align:center;">Időtartam</th>
+      <th style="width:13.5%;text-align:center;">Kezdete</th>
+      <th style="width:13.5%;text-align:center;">Lejárat</th>
     </tr></thead>
     <tbody>${linesRows}</tbody>
   </table>

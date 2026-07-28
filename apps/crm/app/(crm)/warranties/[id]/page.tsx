@@ -98,11 +98,11 @@ function buildPdfHtml(data: PdfData): string {
       (l, i) => `
     <tr>
       <td style="text-align: center; font-weight: 600; color: #94a3b8;">${i + 1}.</td>
-      <td style="font-weight: 600; color: #0f172a;">${l.name}</td>
-      <td><span class="serial-number">${l.serial_number ?? "—"}</span></td>
-      <td style="text-align: center;"><span class="years-badge">${l.warranty_years} év</span></td>
-      <td style="color: #475569;">${fmtDate(l.warranty_start)}</td>
-      <td style="font-weight: 700; color: #2563eb;">${fmtDate(l.warranty_end)}</td>
+      <td style="font-weight: 600; color: #0f172a; word-break: break-word;">${l.name}</td>
+      <td style="white-space: nowrap;"><span class="serial-number">${l.serial_number ?? "—"}</span></td>
+      <td style="text-align: center; white-space: nowrap;"><span class="years-badge">${l.warranty_years} év</span></td>
+      <td style="color: #475569; white-space: nowrap; text-align: center;">${fmtDate(l.warranty_start)}</td>
+      <td style="font-weight: 700; color: #2563eb; white-space: nowrap; text-align: center;">${fmtDate(l.warranty_end)}</td>
     </tr>`,
     )
     .join("");
@@ -159,13 +159,13 @@ function buildPdfHtml(data: PdfData): string {
     /* Table */
     .section-title { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #0f172a; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
     .table-wrapper { border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; margin-bottom: 32px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
-    table { width: 100%; border-collapse: collapse; }
-    thead th { background: #f8fafc; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; padding: 16px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-    tbody td { padding: 16px; font-size: 13px; color: #334155; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    thead th { background: #f8fafc; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; padding: 12px 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    tbody td { padding: 12px 10px; font-size: 12px; color: #334155; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
     tbody tr:last-child td { border-bottom: none; }
     tbody tr:nth-child(even) { background-color: #fafaf9; }
-    .serial-number { font-family: monospace; font-size: 12px; color: #475569; background: #f1f5f9; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0; }
-    .years-badge { background: #eff6ff; color: #2563eb; font-weight: 800; font-size: 12px; padding: 6px 12px; border-radius: 20px; display: inline-block; border: 1px solid #bfdbfe; }
+    .serial-number { font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: 700; color: #1e293b; background: #f1f5f9; padding: 5px 10px; border-radius: 6px; border: 1px solid #cbd5e1; letter-spacing: 0.05em; display: inline-block; white-space: nowrap; word-break: break-all; }
+    .years-badge { background: #eff6ff; color: #2563eb; font-weight: 800; font-size: 11px; padding: 4px 10px; border-radius: 20px; display: inline-block; border: 1px solid #bfdbfe; white-space: nowrap; }
     
     /* Notes */
     .notes-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 20px; margin-bottom: 32px; border-left: 4px solid #f59e0b; }
@@ -253,15 +253,15 @@ function buildPdfHtml(data: PdfData): string {
     Jótállással érintett termékek és eszközök
   </div>
   <div class="table-wrapper">
-    <table>
+    <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
       <thead>
         <tr>
-          <th style="width: 50px; text-align: center;">#</th>
-          <th>Termék megnevezése</th>
-          <th>Gyári / Sorozatszám</th>
-          <th style="text-align: center;">Időtartam</th>
-          <th>Kezdete</th>
-          <th>Lejárata</th>
+          <th style="width: 35px; text-align: center;">#</th>
+          <th style="width: 34%;">Termék megnevezése</th>
+          <th style="width: 28%;">Gyári / Sorozatszám</th>
+          <th style="width: 11%; text-align: center;">Időtartam</th>
+          <th style="width: 13.5%; text-align: center;">Kezdete</th>
+          <th style="width: 13.5%; text-align: center;">Lejárata</th>
         </tr>
       </thead>
       <tbody>${linesRows}</tbody>

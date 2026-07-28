@@ -18,17 +18,24 @@ const unitBasedTierSchema = z.object({
 });
 
 const createSchema = z.object({
-  category_id: z.string().min(1),
-  subcategory_id: z.string().nullable().optional(),
-  name: z.string().min(1),
-  description: z.string().nullable().optional(),
-  unit: z.string().min(1),
-  pricing_type: z.enum(["fixed", "hourly", "custom", "unit_based"]),
-  internal_base_price: z.number().nullable().optional(),
-  hourly_rate_category: z.string().nullable().optional(),
+  category_id: z.string().optional().nullable(),
+  subcategory_id: z.string().optional().nullable(),
+  name: z.string().min(1, "A szolgáltatás megnevezése kötelező"),
+  description: z.string().optional().nullable(),
+  unit: z.string().default("db"),
+  pricing_type: z.enum(["fixed", "hourly", "custom", "unit_based"]).default("fixed"),
+  internal_base_price: z
+    .union([z.number(), z.string(), z.null()])
+    .optional()
+    .transform((val) => {
+      if (typeof val === "number") return val;
+      if (typeof val === "string" && val.trim() !== "") return Number(val);
+      return null;
+    }),
+  hourly_rate_category: z.string().optional().nullable(),
   unit_based_tiers: z.array(unitBasedTierSchema).optional(),
-  notes: z.string().nullable().optional(),
-  client_note: z.string().nullable().optional(),
+  notes: z.string().optional().nullable(),
+  client_note: z.string().optional().nullable(),
   sort_order: z.number().int().min(0).default(0),
 });
 
@@ -98,24 +105,48 @@ export async function POST(req: Request) {
     }
     const b = parsed.data;
     return await withDb(async () => {
-      // Kategória megkeresése a SKU prefix-hez
-      const category = await ServiceCategoryModel.findOne({
-        _id: b.category_id,
-        tenantId: actor.tenantId,
-      }).lean();
+      // 1. Kategória keresése vagy automatikus létrehozása
+      let category = b.category_id
+        ? await ServiceCategoryModel.findOne({
+            _id: b.category_id,
+            tenantId: actor.tenantId,
+          }).lean()
+        : null;
+
       if (!category) {
-        return NextResponse.json({ error: "Kategória nem található" }, { status: 404 });
+        category = await ServiceCategoryModel.findOne({
+          tenantId: actor.tenantId,
+        }).lean();
       }
 
-      // SKU auto-generálás – per kategória számláló
-      const counterKey = `service_sku_${(category as any).sku_prefix}`;
+      if (!category) {
+        const createdCat = await ServiceCategoryModel.create({
+          tenantId: actor.tenantId,
+          name: "Általános szolgáltatások",
+          sku_prefix: "SZOLG",
+          sort_order: 1,
+          is_active: true,
+        });
+        category = createdCat.toObject();
+      }
+
+      const categoryId = String((category as any)._id);
+      const skuPrefix = (category as any).sku_prefix || "SZOLG";
+
+      // 2. SKU auto-generálás
+      const counterKey = `service_sku_${skuPrefix}`;
       const n = await nextCounterValue(actor.tenantId, counterKey);
-      const sku = formatNumber((category as any).sku_prefix, n);
+      const sku = formatNumber(skuPrefix, n);
 
       const doc = await ServicePriceListItemModel.create({
         tenantId: actor.tenantId,
         sku,
         ...b,
+        category_id: categoryId,
+        subcategory_id: b.subcategory_id || null,
+        description: b.description || null,
+        notes: b.notes || null,
+        client_note: b.client_note || null,
         is_active: true,
         is_archived: false,
       });
