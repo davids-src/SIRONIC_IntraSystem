@@ -196,7 +196,7 @@ export default function ServicePriceListSheet({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-xl flex-col border-l border-border bg-background shadow-2xl">
+    <div className="fixed inset-y-0 right-0 z-[99999] flex w-full max-w-xl flex-col border-l border-border bg-background shadow-2xl">
       {/* Fejléc */}
       <div className="flex items-center justify-between border-b border-border px-6 py-4">
         <div>

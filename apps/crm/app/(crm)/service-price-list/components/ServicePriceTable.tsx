@@ -2,8 +2,8 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, FileText, SearchX, Plus } from "lucide-react";
-import { Input, Button, Card } from "@crm/ui";
+import { Search, FileText, SearchX, Plus, Settings2 } from "lucide-react";
+import { PageHeader, Input, Button, Card } from "@crm/ui";
 import type {
   ServicePriceListItem,
   ServiceCategory,
@@ -16,6 +16,7 @@ import { SubCategoryRow } from "./SubCategoryRow";
 import { ServiceItemRow } from "./ServiceItemRow";
 import { PartnerPricePanel } from "./PartnerPricePanel";
 import ServicePriceListSheet from "./ServicePriceListSheet";
+import CategoryManagerModal from "./CategoryManagerModal";
 
 interface ServicePriceTableProps {
   initialCategories: ServiceCategory[];
@@ -48,6 +49,7 @@ export function ServicePriceTable({
 
   // Modals state
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ServicePriceListItem | null>(null);
 
   // Event listener for header button "Új tétel"
@@ -235,7 +237,31 @@ export function ServicePriceTable({
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 pb-20">
+      <PageHeader
+        title="Szolgáltatás Árlista"
+        subtitle="Vállalati szolgáltatások, belső óradíjak és dinamikus árképzési tételek"
+        actions={
+          <div className="flex items-center gap-3">
+            <Button variant="secondary" onClick={() => setIsCategoryModalOpen(true)}>
+              <Settings2 size={16} className="mr-2" />
+              Kategóriák kezelése
+            </Button>
+            <Button
+              variant="primary"
+              style={{ backgroundColor: "#E8271A", color: "white" }}
+              onClick={() => {
+                setSelectedItem(null);
+                setIsSheetOpen(true);
+              }}
+            >
+              <Plus size={16} className="mr-2" />
+              Új tétel
+            </Button>
+          </div>
+        }
+      />
+
       {/* ── Szűrősáv ── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end p-4 bg-card border border-border rounded-lg">
         {/* Keresés */}
@@ -536,6 +562,11 @@ export function ServicePriceTable({
           )}
         </div>
       </div>
+
+      <CategoryManagerModal
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
+      />
 
       <ServicePriceListSheet
         isOpen={isSheetOpen}

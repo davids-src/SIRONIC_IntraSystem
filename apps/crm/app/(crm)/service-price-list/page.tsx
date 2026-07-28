@@ -1,6 +1,5 @@
 import React from "react";
-import { PageHeader, Button } from "@crm/ui";
-import { Plus, Settings2 } from "lucide-react";
+import { PageHeader } from "@crm/ui";
 import {
   ServiceCategoryModel,
   ServiceSubCategoryModel,
@@ -12,9 +11,6 @@ import {
 import { requireCrmAuth } from "@/lib/api-helpers";
 import { hasPermission } from "@crm/rbac";
 import { ServicePriceTable } from "./components/ServicePriceTable";
-import Link from "next/link";
-import CategoryManagerModalClientWrapper from "./components/CategoryManagerModalClientWrapper";
-import NewServiceItemButton from "./components/NewServiceItemButton";
 
 export const metadata = {
   title: "Szolgáltatás Árlista | SIRONIC",
@@ -69,25 +65,12 @@ export default async function ServicePriceListPage() {
   });
 
   return (
-    <div className="flex flex-col gap-6 pb-20">
-      <PageHeader
-        title="Szolgáltatás Árlista"
-        subtitle="Vállalati szolgáltatások, belső óradíjak és dinamikus árképzési tételek"
-        actions={
-          <div className="flex items-center gap-3">
-            <CategoryManagerModalClientWrapper />
-            <NewServiceItemButton />
-          </div>
-        }
-      />
-
-      <ServicePriceTable
-        initialCategories={serializeForJson(cats) as any}
-        initialSubcategories={serializeForJson(subcats) as any}
-        initialItems={serializeForJson(sanitizedItems) as any}
-        initialPricingSettings={serializeForJson(settings) as any}
-        isAdmin={isAdmin}
-      />
-    </div>
+    <ServicePriceTable
+      initialCategories={serializeForJson(cats) as any}
+      initialSubcategories={serializeForJson(subcats) as any}
+      initialItems={serializeForJson(sanitizedItems) as any}
+      initialPricingSettings={serializeForJson(settings) as any}
+      isAdmin={isAdmin}
+    />
   );
 }
