@@ -262,7 +262,7 @@ export default function PublicOfferPdfDownloadPage() {
               }}
             >
               <span>Fizetendő:</span>
-              <span>{fmt(offer.total_amount)}</span>
+              <span>{fmt(totalNet + totalVat)}</span>
             </div>
           </div>
         </UnifiedPdfTemplate>

@@ -12,6 +12,8 @@ import { requireCrmAuth } from "@/lib/api-helpers";
 import { hasPermission } from "@crm/rbac";
 import { ServicePriceTable } from "./components/ServicePriceTable";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Szolgáltatás Árlista | SIRONIC",
 };

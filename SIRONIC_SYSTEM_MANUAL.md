@@ -337,7 +337,9 @@ Hogy a kiállított ajánlatok, munkalapok és teljesítési igazolások utólag
 - Minden dokumentum (`OfferLine`, `WorklogItem`, `CompletionCertificateLine`) kibővült a `service_price_list_item_id` és `price_snapshot` mezőkkel.
 - A tétel felvitelekor a rendszer lekéri az adott pillanatban érvényes árat és a snapshotot az API-tól, és elmenti a dokumentumba.
 - Későbbi megtekintéskor vagy letöltéskor (PDF generálás) szigorúan a dokumentumba ágyazott `price_snapshot.calculated_price` vagy a rögzített `unit_price` érvényesül.
-- Ez az adatintegritás biztosítja a jogi és pénzügyi nyomonkövethetőséget.
+- **Dinamikus Bruttó Végszázalék Újraszámolás:** Az ajánlatok szerkesztésekor (`PATCH /api/offers/[id]`) a szerver a megadott tételekből (`lines`) automatikusan újraszámolja a `total_amount` bruttó értéket. A megjelenítő oldalak (CRM, Partner Portál, Publikus PDF) a tételekből dinamikusan kalkulált `totalNet + totalVat` értéket jelenítik meg a fizetendő bruttó mezőben, biztosítva a meglévő és módosított árajánlatok retroaktív pontosságát.
+- **Szolgáltatás Árlista Sheet & Layout UI (`ServicePriceTable`):** A Szolgáltatás Árlista teljes felülete átdolgozásra került a Termék Árlistához hasonló szellős, átlátható struktúrában. Tartalmaz 3 darab KPI statisztikai kártyát (Összes tétel, Aktív tételek, Kategóriák), egy rendezett szűrősávot, kinyitható tételenkénti **Teljes Árképzési Részletező Kártyát** (amely egyetlen kattintással megmutatja az adott szolgáltatáshoz tartozó összes kategóriás és partner árat), valamint a váltási lehetőséget a letisztult fő nézet és a részletes "Mátrix nézet" között. Az éles (production) build stabilitás érdekében az API végpontok és az oldal `export const dynamic = "force-dynamic"` jelölést kaptak a statikus gyorsítótárazási hibák megelőzésére.
+- **Portainer Docker Stack Konfiguráció:** A projekt gyökerében lévő `PORTAINER_DOCKER_COMPOSE.md` tartalmazza a Portainer Stacks menüjébe illeszthető, production-ready `docker-compose.yml` fájlt (MongoDB 7.0 healthcheckkel, CRM app 3000-es porton, Partner Portál 3001-es porton).
 
 ---
 

@@ -230,7 +230,7 @@ export default function PartnerOfferDetailsPage() {
             </div>
             <div className="flex justify-between font-bold text-lg mt-2">
               <span>Bruttó összesen:</span>
-              <span className="text-red-500">{fmt(offer.total_amount)}</span>
+              <span className="text-red-500">{fmt(totalNet + totalVat)}</span>
             </div>
           </div>
         </Card>
@@ -392,7 +392,7 @@ export default function PartnerOfferDetailsPage() {
               }}
             >
               <span>Fizetendő:</span>
-              <span>{fmt(offer.total_amount)}</span>
+              <span>{fmt(totalNet + totalVat)}</span>
             </div>
           </div>
         </UnifiedPdfTemplate>
@@ -509,7 +509,7 @@ export default function PartnerOfferDetailsPage() {
               }}
             >
               <span>Fizetendő:</span>
-              <span>{fmt(offer.total_amount)}</span>
+              <span>{fmt(totalNet + totalVat)}</span>
             </div>
           </div>
         </UnifiedPdfTemplate>

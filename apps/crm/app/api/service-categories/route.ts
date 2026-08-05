@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+
+export const dynamic = "force-dynamic";
 import { ServiceCategoryModel, serializeForJson } from "@crm/db";
 import { guard, handleApiError, requireCrmAuth, withDb } from "@/lib/api-helpers";
 

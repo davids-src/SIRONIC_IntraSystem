@@ -21,6 +21,24 @@ export async function GET(_req: Request, ctx: RouteCtx) {
   }
 }
 
+/**
+ * Calculates the gross total (net + VAT) from offer line items.
+ * Mirrors the logic in POST /api/offers.
+ */
+function grossTotalFromLines(
+  lines: {
+    quantity: number;
+    net_unit_price: number;
+    tax_rate: number;
+    discount_percent?: number;
+  }[],
+): number {
+  return lines.reduce((sum, l) => {
+    const discountedNet = l.net_unit_price * (1 - (l.discount_percent ?? 0) / 100);
+    return sum + l.quantity * discountedNet * (1 + l.tax_rate / 100);
+  }, 0);
+}
+
 export async function PATCH(req: Request, ctx: RouteCtx) {
   try {
     const { id } = await ctx.params;
@@ -30,6 +48,14 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
     delete patch._id;
     delete patch.tenantId;
     delete patch.offer_number;
+
+    // Recalculate total_amount whenever lines are present in the patch
+    if (Array.isArray(patch.lines) && patch.lines.length > 0) {
+      patch.total_amount = Math.round(
+        grossTotalFromLines(patch.lines as Parameters<typeof grossTotalFromLines>[0]),
+      );
+    }
+
     return await withDb(async () => {
       const doc = await OfferModel.findOneAndUpdate(
         { _id: id, tenantId: actor.tenantId },
