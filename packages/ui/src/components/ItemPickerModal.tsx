@@ -356,7 +356,8 @@ export function ItemPickerModal({
           {/* Left: category list */}
           <div
             style={{
-              width: "200px",
+              width: "240px",
+              minWidth: "220px",
               flexShrink: 0,
               borderRight: `1px solid ${colors.border.default}`,
               overflowY: "auto",
@@ -407,10 +408,11 @@ export function ItemPickerModal({
               >
                 <span
                   style={{
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
                     flex: 1,
+                    whiteSpace: "normal",
+                    wordBreak: "break-word",
+                    lineHeight: 1.3,
+                    paddingRight: "4px",
                   }}
                 >
                   {cat.label}

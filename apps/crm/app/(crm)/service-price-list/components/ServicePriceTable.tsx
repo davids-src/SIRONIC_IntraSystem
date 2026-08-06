@@ -502,11 +502,11 @@ export function ServicePriceTable({
               <div className="w-[110px] flex-shrink-0 text-right">Belső ár</div>
             )}
 
-            {/* KKV 1 Év – Fő Eladási Ár */}
+            {/* KKV Eseti – Fő Eladási Ár (Alapár) */}
             <div className="w-[120px] flex-shrink-0 text-right text-emerald-400 font-bold">
               Eladási ár (nettó)
               <span className="block text-[9px] font-normal text-muted-foreground/70 normal-case mt-0.5">
-                KKV 1 Év (×{getMult("smb_1year")})
+                KKV Eseti (×{getMult("smb_occasional")})
               </span>
             </div>
 
@@ -514,9 +514,9 @@ export function ServicePriceTable({
             {showMatrixView && (
               <>
                 <div className="w-[100px] flex-shrink-0 text-right">
-                  KKV Eseti
+                  KKV 1 Év
                   <span className="block text-[9px] font-normal text-muted-foreground/60 mt-0.5">
-                    ×{getMult("smb_occasional")}
+                    ×{getMult("smb_1year")}
                   </span>
                 </div>
                 <div className="w-[100px] flex-shrink-0 text-right">

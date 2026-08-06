@@ -1,9 +1,9 @@
 "use client";
 
-import { Card, Button, Badge } from "@crm/ui";
+import { Card, Button, Badge, UnifiedPdfTemplate } from "@crm/ui";
 import { useRouter } from "next/navigation";
 import { useState, use, useEffect, useCallback } from "react";
-import type { Project, StagingLink } from "@crm/types";
+import type { Project, StagingLink, CompanyDetails, Contact, Settings } from "@crm/types";
 import {
   Edit,
   FolderKanban,
@@ -71,6 +71,8 @@ export default function ProjectDetailPage({
   const [contractWarningDismissed, setContractWarningDismissed] = useState(false);
   const [project, setProject] = useState<Project | null>(null);
   const [contactName, setContactName] = useState<string>("—");
+  const [contactObj, setContactObj] = useState<Contact | null>(null);
+  const [companyDetails, setCompanyDetails] = useState<CompanyDetails | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [ticketCount, setTicketCount] = useState(0);
   const [worklogCount, setWorklogCount] = useState(0);
@@ -97,15 +99,27 @@ export default function ProjectDetailPage({
       setProject(pr);
       setContractWarningDismissed(pr.contract_warning_dismissed);
       setLoadError(null);
+
+      // Fetch company details for PDF template
+      try {
+        const setRes = await apiJson<Settings>("/api/settings");
+        if (setRes.company_details) setCompanyDetails(setRes.company_details);
+      } catch {
+        /* non-fatal */
+      }
+
       if (pr.contact_id) {
         try {
-          const c = await apiJson<{ name: string }>(`/api/contacts/${pr.contact_id}`);
+          const c = await apiJson<Contact>(`/api/contacts/${pr.contact_id}`);
           setContactName(c.name);
+          setContactObj(c);
         } catch {
           setContactName("—");
+          setContactObj(null);
         }
       } else {
         setContactName("—");
+        setContactObj(null);
       }
       const [tickets, worklogs, certs, contracts] = await Promise.all([
         apiJson<unknown[]>(`/api/tickets?project_id=${encodeURIComponent(id)}`),
@@ -1408,7 +1422,7 @@ export default function ProjectDetailPage({
             padding: "16px",
           }}
         >
-          <Card className="p-6 w-full max-w-4xl flex flex-col max-h-[90vh] print:max-h-none print:w-full print:p-0 print:border-none print:shadow-none print:bg-white print:text-black">
+          <Card className="p-6 w-full max-w-5xl flex flex-col max-h-[92vh] print:max-h-none print:w-full print:p-0 print:border-none print:shadow-none print:bg-white print:text-black">
             {/* Action Bar (hidden on print) */}
             <div className="flex justify-between items-center pb-4 border-b border-[var(--color-border-subtle)] mb-4 print:hidden">
               <div className="flex items-center gap-2">
@@ -1427,156 +1441,241 @@ export default function ProjectDetailPage({
               </div>
             </div>
 
-            {/* Printable Content */}
-            <div className="overflow-y-auto flex-1 p-2 print:overflow-visible print:p-0 print:text-black">
-              {/* Header Box */}
-              <div className="p-4 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border-subtle)] mb-6 print:bg-white print:border-black print:text-black">
-                <div className="flex justify-between items-start mb-4 border-b border-[var(--color-border-subtle)] pb-3 print:border-black">
-                  <div>
-                    <h1 className="text-xl font-bold text-white print:text-black uppercase tracking-wide">
-                      Komissziós Lista / Szerelési Anyagigény
-                    </h1>
-                    <p className="text-xs text-gray-400 print:text-gray-700 mt-0.5">
-                      SIROTECH Kft. · Raktári és Területi Operáció
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs font-mono px-2.5 py-1 rounded bg-amber-500/20 text-amber-400 print:border print:border-black print:text-black font-bold">
-                      PROJEKT #{project.project_number}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-                  <div>
-                    <span className="text-gray-400 print:text-gray-600 block uppercase font-semibold text-[10px]">
-                      Projekt neve
-                    </span>
-                    <strong className="text-white print:text-black text-sm">
-                      {project.name}
-                    </strong>
-                  </div>
-                  <div>
-                    <span className="text-gray-400 print:text-gray-600 block uppercase font-semibold text-[10px]">
-                      Partner / Megrendelő
-                    </span>
-                    <strong className="text-white print:text-black text-sm">
-                      {contactName ?? "—"}
-                    </strong>
-                  </div>
-                  <div>
-                    <span className="text-gray-400 print:text-gray-600 block uppercase font-semibold text-[10px]">
-                      Felelős technikus
-                    </span>
-                    <strong className="text-white print:text-black text-sm">
-                      {project.assigned_to ?? "—"}
-                    </strong>
-                  </div>
-                  <div>
-                    <span className="text-gray-400 print:text-gray-600 block uppercase font-semibold text-[10px]">
-                      Határidő / Dátum
-                    </span>
-                    <strong className="text-white print:text-black text-sm">
-                      {project.deadline
-                        ? new Date(project.deadline).toLocaleDateString("hu-HU")
-                        : new Date().toLocaleDateString("hu-HU")}
-                    </strong>
-                  </div>
-                </div>
-              </div>
-
-              {/* Items Table */}
-              <table className="w-full text-left border-collapse text-sm print:text-black">
-                <thead>
-                  <tr className="border-b-2 border-[var(--color-border-subtle)] text-gray-400 print:text-black print:border-black text-xs font-bold uppercase tracking-wider">
-                    <th className="py-2.5 px-3 text-center w-12 print:hidden">Pipa</th>
-                    <th className="py-2.5 px-3 hidden print:table-cell text-center w-12">
-                      Pipa
-                    </th>
-                    <th className="py-2.5 px-3">Cikkszám / SKU</th>
-                    <th className="py-2.5 px-3">Tétel megnevezése</th>
-                    <th className="py-2.5 px-3 text-right">Szükséges</th>
-                    <th className="py-2.5 px-3 text-right">Lefoglalt</th>
-                    <th className="py-2.5 px-3 text-center w-36">Állapot</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(project.required_items ?? []).map((item, idx) => {
-                    const isChecked = !!checkedItems[item.price_list_item_id];
-                    return (
-                      <tr
-                        key={item.price_list_item_id || idx}
-                        className={`border-b border-[var(--color-border-subtle)] print:border-gray-300 transition-colors ${
-                          isChecked
-                            ? "bg-emerald-950/20 print:bg-gray-100"
-                            : "hover:bg-[var(--color-bg-secondary)]"
-                        }`}
+            {/* Printable Content - UnifiedPdfTemplate */}
+            <div className="overflow-y-auto flex-1 p-2 print:overflow-visible print:p-0">
+              <UnifiedPdfTemplate
+                documentTitle="KOMISSZIÓS LISTA"
+                documentId={`PROJ-${project.project_number}`}
+                date={new Date()}
+                provider={companyDetails}
+                client={
+                  contactObj ??
+                  ({
+                    name: contactName,
+                  } as any)
+                }
+                showSignatures={true}
+              >
+                {/* Project Header Box */}
+                <div
+                  style={{
+                    padding: "14px",
+                    backgroundColor: "#f8f9fa",
+                    borderRadius: "6px",
+                    border: "1px solid #e9ecef",
+                    marginBottom: "20px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr 1fr",
+                      gap: "10px",
+                      fontSize: "12px",
+                    }}
+                  >
+                    <div>
+                      <span
+                        style={{
+                          color: "#6c757d",
+                          textTransform: "uppercase",
+                          fontSize: "10px",
+                          fontWeight: 600,
+                          display: "block",
+                        }}
                       >
-                        <td className="py-3 px-3 text-center print:hidden">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={(e) =>
-                              setCheckedItems((prev) => ({
-                                ...prev,
-                                [item.price_list_item_id]: e.target.checked,
-                              }))
-                            }
-                            className="w-5 h-5 rounded cursor-pointer accent-emerald-500"
-                          />
-                        </td>
-                        <td className="py-3 px-3 text-center hidden print:table-cell">
-                          <div className="w-4 h-4 border border-black rounded-xs inline-block"></div>
-                        </td>
-                        <td className="py-3 px-3 font-mono text-xs text-gray-400 print:text-black font-semibold">
-                          {item.price_list_item_id?.slice(-8).toUpperCase() || "—"}
-                        </td>
-                        <td className="py-3 px-3 font-semibold text-white print:text-black">
-                          {item.name}
-                        </td>
-                        <td className="py-3 px-3 text-right font-mono font-bold text-white print:text-black">
-                          {item.required_quantity} {item.unit}
-                        </td>
-                        <td className="py-3 px-3 text-right font-mono text-amber-400 print:text-black font-bold">
-                          {item.reserved_quantity} {item.unit}
-                        </td>
-                        <td className="py-3 px-3 text-center text-xs">
-                          {isChecked ? (
-                            <span className="text-emerald-400 print:text-black font-bold uppercase text-[11px]">
-                              ✓ Összepakolva
+                        PROJEKT NEVE
+                      </span>
+                      <strong style={{ fontSize: "13px", color: "#000" }}>
+                        {project.name}
+                      </strong>
+                    </div>
+                    <div>
+                      <span
+                        style={{
+                          color: "#6c757d",
+                          textTransform: "uppercase",
+                          fontSize: "10px",
+                          fontWeight: 600,
+                          display: "block",
+                        }}
+                      >
+                        FELELŐS TECHNIKUS
+                      </span>
+                      <strong style={{ fontSize: "13px", color: "#000" }}>
+                        {project.assigned_to ?? "—"}
+                      </strong>
+                    </div>
+                    <div>
+                      <span
+                        style={{
+                          color: "#6c757d",
+                          textTransform: "uppercase",
+                          fontSize: "10px",
+                          fontWeight: 600,
+                          display: "block",
+                        }}
+                      >
+                        HATÁRIDŐ / DÁTUM
+                      </span>
+                      <strong style={{ fontSize: "13px", color: "#000" }}>
+                        {project.deadline
+                          ? new Date(project.deadline).toLocaleDateString("hu-HU")
+                          : new Date().toLocaleDateString("hu-HU")}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Items Table */}
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    fontSize: "12px",
+                    marginBottom: "20px",
+                  }}
+                >
+                  <thead>
+                    <tr
+                      style={{
+                        backgroundColor: "#f1f5f9",
+                        borderBottom: "2px solid #000",
+                        textAlign: "left",
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      <th style={{ padding: "8px", width: "45px", textAlign: "center" }}>
+                        Pipa
+                      </th>
+                      <th style={{ padding: "8px", width: "120px" }}>Cikkszám / SKU</th>
+                      <th style={{ padding: "8px" }}>Tétel megnevezése</th>
+                      <th style={{ padding: "8px", textAlign: "right", width: "90px" }}>
+                        Szükséges
+                      </th>
+                      <th style={{ padding: "8px", textAlign: "right", width: "90px" }}>
+                        Lefoglalt
+                      </th>
+                      <th style={{ padding: "8px", width: "120px", textAlign: "center" }}>
+                        Státusz
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(project.required_items ?? []).map((item, idx) => {
+                      const isChecked = !!checkedItems[item.price_list_item_id];
+                      return (
+                        <tr
+                          key={item.price_list_item_id || idx}
+                          style={{
+                            borderBottom: "1px solid #e2e8f0",
+                            backgroundColor: isChecked ? "#f0fdf4" : "transparent",
+                          }}
+                        >
+                          <td style={{ padding: "8px", textAlign: "center" }}>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) =>
+                                setCheckedItems((prev) => ({
+                                  ...prev,
+                                  [item.price_list_item_id]: e.target.checked,
+                                }))
+                              }
+                              style={{ width: "16px", height: "16px", cursor: "pointer" }}
+                            />
+                          </td>
+                          <td
+                            style={{
+                              padding: "8px",
+                              fontFamily: "monospace",
+                              fontSize: "11px",
+                              fontWeight: 600,
+                              color: "#475569",
+                            }}
+                          >
+                            {item.price_list_item_id?.slice(-8).toUpperCase() || "—"}
+                          </td>
+                          <td style={{ padding: "8px", fontWeight: 600, color: "#000" }}>
+                            {item.name}
+                          </td>
+                          <td
+                            style={{
+                              padding: "8px",
+                              textAlign: "right",
+                              fontWeight: 700,
+                              fontFamily: "monospace",
+                            }}
+                          >
+                            {item.required_quantity} {item.unit}
+                          </td>
+                          <td
+                            style={{
+                              padding: "8px",
+                              textAlign: "right",
+                              fontFamily: "monospace",
+                              fontWeight: 700,
+                              color: "#d97706",
+                            }}
+                          >
+                            {item.reserved_quantity} {item.unit}
+                          </td>
+                          <td
+                            style={{
+                              padding: "8px",
+                              textAlign: "center",
+                              fontSize: "11px",
+                            }}
+                          >
+                            <span
+                              style={{
+                                padding: "2px 8px",
+                                borderRadius: "12px",
+                                fontSize: "10px",
+                                fontWeight: 700,
+                                textTransform: "uppercase",
+                                backgroundColor: isChecked
+                                  ? "#dcfce7"
+                                  : item.reserved_quantity >= item.required_quantity
+                                    ? "#dbeafe"
+                                    : "#fef3c7",
+                                color: isChecked
+                                  ? "#15803d"
+                                  : item.reserved_quantity >= item.required_quantity
+                                    ? "#1e40af"
+                                    : "#b45309",
+                              }}
+                            >
+                              {isChecked
+                                ? "✓ Összepakolva"
+                                : item.reserved_quantity >= item.required_quantity
+                                  ? "Készleten"
+                                  : "Beszerzendő"}
                             </span>
-                          ) : (
-                            <span className="text-gray-500 print:text-gray-500 italic text-[11px]">
-                              Összepakolásra vár
-                            </span>
-                          )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {(project.required_items ?? []).length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={6}
+                          style={{
+                            padding: "24px",
+                            textAlign: "center",
+                            color: "#666",
+                            fontStyle: "italic",
+                          }}
+                        >
+                          Nincsenek tételek a projekt bevásárlólistáján.
                         </td>
                       </tr>
-                    );
-                  })}
-                  {(project.required_items ?? []).length === 0 && (
-                    <tr>
-                      <td colSpan={7} className="py-8 text-center text-gray-500 italic">
-                        Nincsenek tételek a projekt bevásárlólistáján.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-
-              {/* Signatures for Print */}
-              <div className="hidden print:grid grid-cols-2 gap-12 mt-16 pt-8 border-t border-black text-xs">
-                <div>
-                  <p className="font-bold mb-8">Összepakolta (Raktáros / Technikus):</p>
-                  <div className="border-b border-black w-48 mb-1"></div>
-                  <p className="text-[10px] text-gray-600">Aláírás / Dátum</p>
-                </div>
-                <div>
-                  <p className="font-bold mb-8">Átvette (Szerelő / Projektfelelős):</p>
-                  <div className="border-b border-black w-48 mb-1"></div>
-                  <p className="text-[10px] text-gray-600">Aláírás / Dátum</p>
-                </div>
-              </div>
+                    )}
+                  </tbody>
+                </table>
+              </UnifiedPdfTemplate>
             </div>
           </Card>
         </div>

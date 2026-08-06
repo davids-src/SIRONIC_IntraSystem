@@ -1085,35 +1085,81 @@ export default function NewOfferPage() {
               )}
             </Card>
 
-            {/* Termék kártyák */}
-            {pickerTab === "product" && (
-              <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
-                {/* Category sidebar */}
-                <div
-                  style={{
-                    width: "180px",
-                    flexShrink: 0,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "2px",
-                  }}
-                >
-                  {pickerTab === "product" ? (
-                    <>
-                      <p
+            {/* Termék / Szolgáltatás kártyák és kategória oldalsáv */}
+            <div
+              style={{
+                display: "flex",
+                gap: "16px",
+                alignItems: "flex-start",
+                marginTop: "16px",
+              }}
+            >
+              {/* Category sidebar (rendered for BOTH product AND service) */}
+              <div
+                style={{
+                  width: "240px",
+                  minWidth: "220px",
+                  flexShrink: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "2px",
+                }}
+              >
+                {pickerTab === "product" ? (
+                  <>
+                    <p
+                      style={{
+                        fontSize: "0.6875rem",
+                        fontWeight: 700,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.08em",
+                        color: "var(--color-text-muted)",
+                        padding: "0 4px",
+                        marginBottom: "6px",
+                      }}
+                    >
+                      Kategóriák
+                    </p>
+                    <button
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "6px 10px",
+                        borderRadius: "6px",
+                        border: "none",
+                        cursor: "pointer",
+                        fontSize: "0.8125rem",
+                        fontWeight: productCategoryFilter === "__all__" ? 600 : 400,
+                        background:
+                          productCategoryFilter === "__all__"
+                            ? "var(--color-accent-badge-bg)"
+                            : "transparent",
+                        color:
+                          productCategoryFilter === "__all__"
+                            ? "var(--color-accent-primary)"
+                            : "var(--color-text-muted)",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                      onClick={() => setProductCategoryFilter("__all__")}
+                    >
+                      <span>Összes</span>
+                      <span
                         style={{
-                          fontSize: "0.6875rem",
-                          fontWeight: 700,
-                          textTransform: "uppercase",
-                          letterSpacing: "0.08em",
-                          color: "var(--color-text-muted)",
-                          padding: "0 4px",
-                          marginBottom: "6px",
+                          fontSize: "0.7rem",
+                          background: "var(--color-border-default)",
+                          padding: "1px 6px",
+                          borderRadius: "999px",
+                          color: "var(--color-text-secondary)",
                         }}
                       >
-                        Kategóriák
-                      </p>
+                        {priceList.length}
+                      </span>
+                    </button>
+                    {productCategories.map((cat) => (
                       <button
+                        key={cat.id}
                         style={{
                           width: "100%",
                           textAlign: "left",
@@ -1122,22 +1168,32 @@ export default function NewOfferPage() {
                           border: "none",
                           cursor: "pointer",
                           fontSize: "0.8125rem",
-                          fontWeight: productCategoryFilter === "__all__" ? 600 : 400,
+                          fontWeight: productCategoryFilter === cat.id ? 600 : 400,
                           background:
-                            productCategoryFilter === "__all__"
+                            productCategoryFilter === cat.id
                               ? "var(--color-accent-badge-bg)"
                               : "transparent",
                           color:
-                            productCategoryFilter === "__all__"
+                            productCategoryFilter === cat.id
                               ? "var(--color-accent-primary)"
                               : "var(--color-text-muted)",
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "center",
                         }}
-                        onClick={() => setProductCategoryFilter("__all__")}
+                        onClick={() => setProductCategoryFilter(cat.id)}
                       >
-                        <span>Összes</span>
+                        <span
+                          style={{
+                            flex: 1,
+                            whiteSpace: "normal",
+                            wordBreak: "break-word",
+                            lineHeight: 1.3,
+                            paddingRight: "4px",
+                          }}
+                        >
+                          {cat.label}
+                        </span>
                         <span
                           style={{
                             fontSize: "0.7rem",
@@ -1145,568 +1201,710 @@ export default function NewOfferPage() {
                             padding: "1px 6px",
                             borderRadius: "999px",
                             color: "var(--color-text-secondary)",
+                            flexShrink: 0,
                           }}
                         >
-                          {priceList.length}
+                          {cat.count}
                         </span>
                       </button>
-                      {productCategories.map((cat) => (
-                        <button
-                          key={cat.id}
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    <p
+                      style={{
+                        fontSize: "0.6875rem",
+                        fontWeight: 700,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.08em",
+                        color: "var(--color-text-muted)",
+                        padding: "0 4px",
+                        marginBottom: "6px",
+                      }}
+                    >
+                      Szolgáltatás Kategóriák
+                    </p>
+                    <button
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "6px 10px",
+                        borderRadius: "6px",
+                        border: "none",
+                        cursor: "pointer",
+                        fontSize: "0.8125rem",
+                        fontWeight: serviceCategoryFilter === "__all__" ? 600 : 400,
+                        background:
+                          serviceCategoryFilter === "__all__"
+                            ? "var(--color-accent-badge-bg)"
+                            : "transparent",
+                        color:
+                          serviceCategoryFilter === "__all__"
+                            ? "var(--color-accent-primary)"
+                            : "var(--color-text-muted)",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                      onClick={() => setServiceCategoryFilter("__all__")}
+                    >
+                      <span>Összes</span>
+                      <span
+                        style={{
+                          fontSize: "0.7rem",
+                          background: "var(--color-border-default)",
+                          padding: "1px 6px",
+                          borderRadius: "999px",
+                          color: "var(--color-text-secondary)",
+                        }}
+                      >
+                        {servicePriceList.length}
+                      </span>
+                    </button>
+                    {serviceCategories.map((cat: any) => {
+                      const catSubs = serviceSubcategories.filter(
+                        (sc: any) => sc.category_id === cat._id,
+                      );
+                      const catServicesCount = servicePriceList.filter(
+                        (s: any) => s.category_id === cat._id,
+                      ).length;
+                      const isCatSelected = serviceCategoryFilter === `cat:${cat._id}`;
+                      return (
+                        <div
+                          key={cat._id}
                           style={{
-                            width: "100%",
-                            textAlign: "left",
-                            padding: "6px 10px",
-                            borderRadius: "6px",
-                            border: "none",
-                            cursor: "pointer",
-                            fontSize: "0.8125rem",
-                            fontWeight: productCategoryFilter === cat.id ? 600 : 400,
-                            background:
-                              productCategoryFilter === cat.id
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "2px",
+                          }}
+                        >
+                          <button
+                            style={{
+                              width: "100%",
+                              textAlign: "left",
+                              padding: "6px 8px",
+                              borderRadius: "6px",
+                              border: "none",
+                              cursor: "pointer",
+                              fontSize: "0.8125rem",
+                              fontWeight: isCatSelected ? 700 : 600,
+                              background: isCatSelected
                                 ? "var(--color-accent-badge-bg)"
                                 : "transparent",
-                            color:
-                              productCategoryFilter === cat.id
+                              color: isCatSelected
                                 ? "var(--color-accent-primary)"
-                                : "var(--color-text-muted)",
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                          }}
-                          onClick={() => setProductCategoryFilter(cat.id)}
-                        >
-                          <span
-                            style={{
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                              flex: 1,
-                            }}
-                          >
-                            {cat.label}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: "0.7rem",
-                              background: "var(--color-border-default)",
-                              padding: "1px 6px",
-                              borderRadius: "999px",
-                              color: "var(--color-text-secondary)",
-                              flexShrink: 0,
-                            }}
-                          >
-                            {cat.count}
-                          </span>
-                        </button>
-                      ))}
-                    </>
-                  ) : (
-                    <>
-                      <p
-                        style={{
-                          fontSize: "0.6875rem",
-                          fontWeight: 700,
-                          textTransform: "uppercase",
-                          letterSpacing: "0.08em",
-                          color: "var(--color-text-muted)",
-                          padding: "0 4px",
-                          marginBottom: "6px",
-                        }}
-                      >
-                        Szolgáltatások
-                      </p>
-                      <button
-                        style={{
-                          width: "100%",
-                          textAlign: "left",
-                          padding: "6px 10px",
-                          borderRadius: "6px",
-                          border: "none",
-                          cursor: "pointer",
-                          fontSize: "0.8125rem",
-                          fontWeight: serviceCategoryFilter === "__all__" ? 600 : 400,
-                          background:
-                            serviceCategoryFilter === "__all__"
-                              ? "var(--color-accent-badge-bg)"
-                              : "transparent",
-                          color:
-                            serviceCategoryFilter === "__all__"
-                              ? "var(--color-accent-primary)"
-                              : "var(--color-text-muted)",
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                        onClick={() => setServiceCategoryFilter("__all__")}
-                      >
-                        <span>Összes</span>
-                        <span
-                          style={{
-                            fontSize: "0.7rem",
-                            background: "var(--color-border-default)",
-                            padding: "1px 6px",
-                            borderRadius: "999px",
-                            color: "var(--color-text-secondary)",
-                          }}
-                        >
-                          {servicePriceList.length}
-                        </span>
-                      </button>
-                      {serviceCategories.map((cat: any) => {
-                        const catSubs = serviceSubcategories.filter(
-                          (sc: any) => sc.category_id === cat._id,
-                        );
-                        const catServicesCount = servicePriceList.filter(
-                          (s: any) => s.category_id === cat._id,
-                        ).length;
-                        const isCatSelected = serviceCategoryFilter === `cat:${cat._id}`;
-                        return (
-                          <div
-                            key={cat._id}
-                            style={{
+                                : "var(--color-text-primary)",
                               display: "flex",
-                              flexDirection: "column",
-                              gap: "2px",
-                            }}
-                          >
-                            <button
-                              style={{
-                                width: "100%",
-                                textAlign: "left",
-                                padding: "6px 8px",
-                                borderRadius: "6px",
-                                border: "none",
-                                cursor: "pointer",
-                                fontSize: "0.8125rem",
-                                fontWeight: isCatSelected ? 700 : 600,
-                                background: isCatSelected
-                                  ? "var(--color-accent-badge-bg)"
-                                  : "transparent",
-                                color: isCatSelected
-                                  ? "var(--color-accent-primary)"
-                                  : "var(--color-text-primary)",
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                                marginTop: "4px",
-                              }}
-                              onClick={() => setServiceCategoryFilter(`cat:${cat._id}`)}
-                            >
-                              <span
-                                style={{
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  whiteSpace: "nowrap",
-                                  flex: 1,
-                                }}
-                              >
-                                {cat.name}
-                              </span>
-                              <span
-                                style={{
-                                  fontSize: "0.7rem",
-                                  background: "var(--color-border-default)",
-                                  padding: "1px 6px",
-                                  borderRadius: "999px",
-                                  color: "var(--color-text-secondary)",
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {catServicesCount}
-                              </span>
-                            </button>
-                            {catSubs.map((sub: any) => {
-                              const subServicesCount = servicePriceList.filter(
-                                (s: any) => s.subcategory_id === sub._id,
-                              ).length;
-                              const isSubSelected =
-                                serviceCategoryFilter === `sub:${sub._id}`;
-                              return (
-                                <button
-                                  key={sub._id}
-                                  style={{
-                                    width: "calc(100% - 10px)",
-                                    marginLeft: "10px",
-                                    textAlign: "left",
-                                    padding: "4px 6px",
-                                    borderRadius: "4px",
-                                    border: "none",
-                                    cursor: "pointer",
-                                    fontSize: "0.75rem",
-                                    fontWeight: isSubSelected ? 600 : 400,
-                                    background: isSubSelected
-                                      ? "var(--color-accent-badge-bg)"
-                                      : "transparent",
-                                    color: isSubSelected
-                                      ? "var(--color-accent-primary)"
-                                      : "var(--color-text-muted)",
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                  }}
-                                  onClick={() =>
-                                    setServiceCategoryFilter(`sub:${sub._id}`)
-                                  }
-                                >
-                                  <span
-                                    style={{
-                                      overflow: "hidden",
-                                      textOverflow: "ellipsis",
-                                      whiteSpace: "nowrap",
-                                      flex: 1,
-                                    }}
-                                  >
-                                    • {sub.name}
-                                  </span>
-                                  <span
-                                    style={{
-                                      fontSize: "0.65rem",
-                                      background: "var(--color-border-subtle)",
-                                      padding: "1px 5px",
-                                      borderRadius: "999px",
-                                      color: "var(--color-text-muted)",
-                                      flexShrink: 0,
-                                    }}
-                                  >
-                                    {subServicesCount}
-                                  </span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        );
-                      })}
-                    </>
-                  )}
-                </div>
-
-                {/* Product cards */}
-                <div
-                  style={{
-                    flex: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "6px",
-                  }}
-                >
-                  {filtered.map((item) => {
-                    const inCart = isInCart(item._id);
-                    return (
-                      <button
-                        key={item._id}
-                        onClick={() => addItem(item)}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "16px",
-                          padding: "16px 20px",
-                          background: inCart
-                            ? "rgba(34,197,94,0.06)"
-                            : "var(--color-bg-card, #1a1a1a)",
-                          border: inCart
-                            ? "1px solid rgba(34,197,94,0.3)"
-                            : "1px solid var(--color-border-default, #222)",
-                          borderRadius: "10px",
-                          textAlign: "left",
-                          cursor: "pointer",
-                          transition: "all 0.12s",
-                          width: "100%",
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!inCart)
-                            (e.currentTarget as HTMLElement).style.borderColor =
-                              "var(--color-accent-primary, #e53935)";
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!inCart)
-                            (e.currentTarget as HTMLElement).style.borderColor =
-                              "var(--color-border-default, #222)";
-                        }}
-                      >
-                        {/* Zöld pipa ha már kosárban van */}
-                        <div
-                          style={{
-                            width: "32px",
-                            height: "32px",
-                            borderRadius: "8px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            flexShrink: 0,
-                            background: inCart
-                              ? "rgba(34,197,94,0.15)"
-                              : "var(--color-bg-secondary, #111)",
-                            color: inCart ? "#22c55e" : "var(--color-text-muted, #555)",
-                            transition: "all 0.12s",
-                          }}
-                        >
-                          {inCart ? <CheckCircle2 size={16} /> : <Plus size={16} />}
-                        </div>
-
-                        {/* Név + leírás */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div
-                            style={{
-                              display: "flex",
+                              justifyContent: "space-between",
                               alignItems: "center",
-                              gap: "8px",
-                              marginBottom: "3px",
+                              marginTop: "4px",
                             }}
-                          >
-                            <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>
-                              {item.name}
-                            </span>
-                            <Badge
-                              variant={(categoryVariant as any)[item.category] || "info"}
-                            >
-                              {getItemCategoryName(item.category)}
-                            </Badge>
-                            {inCart && (
-                              <span
-                                style={{
-                                  fontSize: "0.7rem",
-                                  fontWeight: 700,
-                                  color: "#22c55e",
-                                }}
-                              >
-                                Kosárban
-                              </span>
-                            )}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: "0.72rem",
-                              color: "var(--color-text-muted, #555)",
-                              display: "flex",
-                              gap: "8px",
-                            }}
+                            onClick={() => setServiceCategoryFilter(`cat:${cat._id}`)}
                           >
                             <span
                               style={{
-                                fontFamily: "monospace",
-                                color: "var(--color-text-secondary, #a0a0a0)",
+                                flex: 1,
+                                whiteSpace: "normal",
+                                wordBreak: "break-word",
+                                lineHeight: 1.3,
+                                paddingRight: "4px",
                               }}
                             >
-                              {item.code}
+                              {cat.name}
                             </span>
-                            {item.preferred_supplier && (
-                              <span
+                            <span
+                              style={{
+                                fontSize: "0.7rem",
+                                background: "var(--color-border-default)",
+                                padding: "1px 6px",
+                                borderRadius: "999px",
+                                color: "var(--color-text-secondary)",
+                                flexShrink: 0,
+                              }}
+                            >
+                              {catServicesCount}
+                            </span>
+                          </button>
+                          {catSubs.map((sub: any) => {
+                            const subServicesCount = servicePriceList.filter(
+                              (s: any) => s.subcategory_id === sub._id,
+                            ).length;
+                            const isSubSelected =
+                              serviceCategoryFilter === `sub:${sub._id}`;
+                            return (
+                              <button
+                                key={sub._id}
                                 style={{
+                                  width: "calc(100% - 10px)",
+                                  marginLeft: "10px",
+                                  textAlign: "left",
+                                  padding: "4px 6px",
+                                  borderRadius: "4px",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  fontSize: "0.75rem",
+                                  fontWeight: isSubSelected ? 600 : 400,
+                                  background: isSubSelected
+                                    ? "var(--color-accent-badge-bg)"
+                                    : "transparent",
+                                  color: isSubSelected
+                                    ? "var(--color-accent-primary)"
+                                    : "var(--color-text-muted)",
                                   display: "flex",
+                                  justifyContent: "space-between",
                                   alignItems: "center",
-                                  gap: "3px",
                                 }}
+                                onClick={() => setServiceCategoryFilter(`sub:${sub._id}`)}
                               >
-                                <Building2 size={10} />
-                                {item.preferred_supplier}
-                              </span>
-                            )}
-                          </div>
+                                <span
+                                  style={{
+                                    flex: 1,
+                                    whiteSpace: "normal",
+                                    wordBreak: "break-word",
+                                    lineHeight: 1.3,
+                                    paddingRight: "4px",
+                                  }}
+                                >
+                                  • {sub.name}
+                                </span>
+                                <span
+                                  style={{
+                                    fontSize: "0.65rem",
+                                    background: "var(--color-border-subtle)",
+                                    padding: "1px 5px",
+                                    borderRadius: "999px",
+                                    color: "var(--color-text-muted)",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {subServicesCount}
+                                </span>
+                              </button>
+                            );
+                          })}
                         </div>
+                      );
+                    })}
+                  </>
+                )}
+              </div>
 
-                        {/* Ár */}
-                        <div style={{ textAlign: "right", flexShrink: 0 }}>
-                          <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>
-                            {fmt(item.unit_price)}
-                          </div>
+              {/* Main Cards Content */}
+              <div
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "6px",
+                }}
+              >
+                {pickerTab === "product" && (
+                  <>
+                    {filtered.map((item) => {
+                      const inCart = isInCart(item._id);
+                      return (
+                        <button
+                          key={item._id}
+                          onClick={() => addItem(item)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "16px",
+                            padding: "16px 20px",
+                            background: inCart
+                              ? "rgba(34,197,94,0.06)"
+                              : "var(--color-bg-card, #1a1a1a)",
+                            border: inCart
+                              ? "1px solid rgba(34,197,94,0.3)"
+                              : "1px solid var(--color-border-default, #222)",
+                            borderRadius: "10px",
+                            textAlign: "left",
+                            cursor: "pointer",
+                            transition: "all 0.12s",
+                            width: "100%",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!inCart)
+                              (e.currentTarget as HTMLElement).style.borderColor =
+                                "var(--color-accent-primary, #e53935)";
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!inCart)
+                              (e.currentTarget as HTMLElement).style.borderColor =
+                                "var(--color-border-default, #222)";
+                          }}
+                        >
+                          {/* Zöld pipa ha már kosárban van */}
                           <div
                             style={{
-                              fontSize: "0.7rem",
-                              color: "var(--color-text-muted, #555)",
-                            }}
-                          >
-                            / {item.unit} · nettó
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Szolgáltatás kártyák */}
-            {pickerTab === "service" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                {groupedServices.map((group) => (
-                  <div key={group.category._id}>
-                    <h3
-                      style={{
-                        fontSize: "0.8rem",
-                        fontWeight: 700,
-                        color: "var(--color-text-muted)",
-                        textTransform: "uppercase",
-                        marginBottom: "8px",
-                        letterSpacing: "0.05em",
-                      }}
-                    >
-                      {group.category.name}
-                    </h3>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                      {group.items.map((item) => {
-                        const inCart = isInCart(item._id);
-                        return (
-                          <button
-                            key={item._id}
-                            onClick={() => addServiceItem(item)}
-                            style={{
+                              width: "32px",
+                              height: "32px",
+                              borderRadius: "8px",
                               display: "flex",
                               alignItems: "center",
-                              gap: "16px",
-                              padding: "16px 20px",
+                              justifyContent: "center",
+                              flexShrink: 0,
                               background: inCart
-                                ? "rgba(34,197,94,0.06)"
-                                : "var(--color-bg-card, #1a1a1a)",
-                              border: inCart
-                                ? "1px solid rgba(34,197,94,0.3)"
-                                : "1px solid var(--color-border-default, #222)",
-                              borderRadius: "10px",
-                              textAlign: "left",
-                              cursor: "pointer",
+                                ? "rgba(34,197,94,0.15)"
+                                : "var(--color-bg-secondary, #111)",
+                              color: inCart ? "#22c55e" : "var(--color-text-muted, #555)",
                               transition: "all 0.12s",
-                              width: "100%",
-                            }}
-                            onMouseEnter={(e) => {
-                              if (!inCart)
-                                (e.currentTarget as HTMLElement).style.borderColor =
-                                  "var(--color-accent-primary, #e53935)";
-                            }}
-                            onMouseLeave={(e) => {
-                              if (!inCart)
-                                (e.currentTarget as HTMLElement).style.borderColor =
-                                  "var(--color-border-default, #222)";
                             }}
                           >
-                            {/* Zöld pipa ha már kosárban van */}
+                            {inCart ? <CheckCircle2 size={16} /> : <Plus size={16} />}
+                          </div>
+
+                          {/* Név + leírás */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
                             <div
                               style={{
-                                width: "32px",
-                                height: "32px",
-                                borderRadius: "8px",
                                 display: "flex",
                                 alignItems: "center",
-                                justifyContent: "center",
-                                flexShrink: 0,
-                                background: inCart
-                                  ? "rgba(34,197,94,0.15)"
-                                  : "var(--color-bg-secondary, #111)",
-                                color: inCart
-                                  ? "#22c55e"
-                                  : "var(--color-text-muted, #555)",
-                                transition: "all 0.12s",
+                                gap: "8px",
+                                marginBottom: "3px",
                               }}
                             >
-                              {inCart ? <CheckCircle2 size={16} /> : <Plus size={16} />}
+                              <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>
+                                {item.name}
+                              </span>
+                              <Badge
+                                variant={
+                                  (categoryVariant as any)[item.category] || "info"
+                                }
+                              >
+                                {getItemCategoryName(item.category)}
+                              </Badge>
+                              {inCart && (
+                                <span
+                                  style={{
+                                    fontSize: "0.7rem",
+                                    fontWeight: 700,
+                                    color: "#22c55e",
+                                  }}
+                                >
+                                  Kosárban
+                                </span>
+                              )}
                             </div>
+                            <div
+                              style={{
+                                fontSize: "0.72rem",
+                                color: "var(--color-text-muted, #555)",
+                                display: "flex",
+                                gap: "8px",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontFamily: "monospace",
+                                  color: "var(--color-text-secondary, #a0a0a0)",
+                                }}
+                              >
+                                {item.code}
+                              </span>
+                              {item.preferred_supplier && (
+                                <span
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "3px",
+                                  }}
+                                >
+                                  <Building2 size={10} />
+                                  {item.preferred_supplier}
+                                </span>
+                              )}
+                            </div>
+                          </div>
 
-                            {(() => {
-                              const subCat = serviceSubcategories.find(
-                                (sc: any) => sc._id === item.subcategory_id,
-                              );
-                              const mainCat = serviceCategories.find(
-                                (c: any) => c._id === item.category_id,
-                              );
-                              const badgeText = subCat
+                          {/* Ár */}
+                          <div style={{ textAlign: "right", flexShrink: 0 }}>
+                            <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>
+                              {fmt(item.unit_price)}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "0.7rem",
+                                color: "var(--color-text-muted, #555)",
+                              }}
+                            >
+                              / {item.unit} · nettó
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                    {filtered.length === 0 && (
+                      <div
+                        style={{
+                          textAlign: "center",
+                          color: "var(--color-text-muted)",
+                          padding: "20px",
+                        }}
+                      >
+                        Nincs találat a termékek között.
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {pickerTab === "service" && (
+                  <>
+                    {serviceCategoryFilter === "__all__" ? (
+                      <div
+                        style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+                      >
+                        {groupedServices.map((group) => (
+                          <div key={group.category._id}>
+                            <h3
+                              style={{
+                                fontSize: "0.8rem",
+                                fontWeight: 700,
+                                color: "var(--color-text-muted)",
+                                textTransform: "uppercase",
+                                marginBottom: "8px",
+                                letterSpacing: "0.05em",
+                              }}
+                            >
+                              {group.category.name}
+                            </h3>
+                            <div
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: "6px",
+                              }}
+                            >
+                              {group.items.map((item) => {
+                                const inCart = isInCart(item._id);
+                                const subCat = serviceSubcategories.find(
+                                  (sc: any) => sc._id === item.subcategory_id,
+                                );
+                                const mainCat = serviceCategories.find(
+                                  (c: any) => c._id === item.category_id,
+                                );
+                                const badgeText =
+                                  mainCat && subCat
+                                    ? `${mainCat.name} › ${subCat.name}`
+                                    : subCat
+                                      ? subCat.name
+                                      : mainCat
+                                        ? mainCat.name
+                                        : "Szolgáltatás";
+                                const displayPrice =
+                                  serviceCalculatedPrices[item._id] ??
+                                  item.internal_base_price ??
+                                  0;
+                                return (
+                                  <button
+                                    key={item._id}
+                                    onClick={() => addServiceItem(item)}
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "16px",
+                                      padding: "16px 20px",
+                                      background: inCart
+                                        ? "rgba(34,197,94,0.06)"
+                                        : "var(--color-bg-card, #1a1a1a)",
+                                      border: inCart
+                                        ? "1px solid rgba(34,197,94,0.3)"
+                                        : "1px solid var(--color-border-default, #222)",
+                                      borderRadius: "10px",
+                                      textAlign: "left",
+                                      cursor: "pointer",
+                                      transition: "all 0.12s",
+                                      width: "100%",
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      if (!inCart)
+                                        (
+                                          e.currentTarget as HTMLElement
+                                        ).style.borderColor =
+                                          "var(--color-accent-primary, #e53935)";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      if (!inCart)
+                                        (
+                                          e.currentTarget as HTMLElement
+                                        ).style.borderColor =
+                                          "var(--color-border-default, #222)";
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        width: "32px",
+                                        height: "32px",
+                                        borderRadius: "8px",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        flexShrink: 0,
+                                        background: inCart
+                                          ? "rgba(34,197,94,0.15)"
+                                          : "var(--color-bg-secondary, #111)",
+                                        color: inCart
+                                          ? "#22c55e"
+                                          : "var(--color-text-muted, #555)",
+                                        transition: "all 0.12s",
+                                      }}
+                                    >
+                                      {inCart ? (
+                                        <CheckCircle2 size={16} />
+                                      ) : (
+                                        <Plus size={16} />
+                                      )}
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <div
+                                        style={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: "8px",
+                                          marginBottom: "3px",
+                                          flexWrap: "wrap",
+                                        }}
+                                      >
+                                        <span
+                                          style={{
+                                            fontWeight: 600,
+                                            fontSize: "0.875rem",
+                                          }}
+                                        >
+                                          {item.name}
+                                        </span>
+                                        <Badge variant="info">{badgeText}</Badge>
+                                        {inCart && (
+                                          <span
+                                            style={{
+                                              fontSize: "0.7rem",
+                                              fontWeight: 700,
+                                              color: "#22c55e",
+                                            }}
+                                          >
+                                            Kosárban
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div
+                                        style={{
+                                          fontSize: "0.72rem",
+                                          color: "var(--color-text-muted, #555)",
+                                          display: "flex",
+                                          gap: "8px",
+                                        }}
+                                      >
+                                        <span
+                                          style={{
+                                            fontFamily: "monospace",
+                                            color: "var(--color-text-secondary, #a0a0a0)",
+                                          }}
+                                        >
+                                          Kód: {item.sku || "—"}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                                      <div
+                                        style={{
+                                          fontWeight: 700,
+                                          fontSize: "0.95rem",
+                                          color: "var(--color-accent-primary, #e53935)",
+                                        }}
+                                      >
+                                        {fmt(displayPrice)}
+                                      </div>
+                                      <div
+                                        style={{
+                                          fontSize: "0.7rem",
+                                          color: "var(--color-text-muted, #555)",
+                                        }}
+                                      >
+                                        / {item.unit || "db"} ·{" "}
+                                        {header.contact_id ? "partner ár" : "alapár"}
+                                      </div>
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                        {groupedServices.length === 0 && (
+                          <div
+                            style={{
+                              textAlign: "center",
+                              color: "var(--color-text-muted)",
+                              padding: "20px",
+                            }}
+                          >
+                            Nincs találat a szolgáltatások között.
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div
+                        style={{ display: "flex", flexDirection: "column", gap: "6px" }}
+                      >
+                        {filteredServices.map((item) => {
+                          const inCart = isInCart(item._id);
+                          const subCat = serviceSubcategories.find(
+                            (sc: any) => sc._id === item.subcategory_id,
+                          );
+                          const mainCat = serviceCategories.find(
+                            (c: any) => c._id === item.category_id,
+                          );
+                          const badgeText =
+                            mainCat && subCat
+                              ? `${mainCat.name} › ${subCat.name}`
+                              : subCat
                                 ? subCat.name
                                 : mainCat
                                   ? mainCat.name
                                   : "Szolgáltatás";
-                              const displayPrice =
-                                serviceCalculatedPrices[item._id] ??
-                                item.internal_base_price ??
-                                0;
-                              return (
-                                <>
-                                  <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div
-                                      style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "8px",
-                                        marginBottom: "3px",
-                                      }}
-                                    >
-                                      <span
-                                        style={{ fontWeight: 600, fontSize: "0.875rem" }}
-                                      >
-                                        {item.name}
-                                      </span>
-                                      <Badge variant="info">{badgeText}</Badge>
-                                      {inCart && (
-                                        <span
-                                          style={{
-                                            fontSize: "0.7rem",
-                                            fontWeight: 700,
-                                            color: "#22c55e",
-                                          }}
-                                        >
-                                          Kosárban
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div
-                                      style={{
-                                        fontSize: "0.72rem",
-                                        color: "var(--color-text-muted, #555)",
-                                        display: "flex",
-                                        gap: "8px",
-                                      }}
-                                    >
-                                      <span
-                                        style={{
-                                          fontFamily: "monospace",
-                                          color: "var(--color-text-secondary, #a0a0a0)",
-                                        }}
-                                      >
-                                        Kód: {item.sku || "—"}
-                                      </span>
-                                    </div>
-                                  </div>
-
-                                  {/* Ár */}
-                                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                                    <div
-                                      style={{
-                                        fontWeight: 700,
-                                        fontSize: "0.95rem",
-                                        color: "var(--color-accent-primary, #e53935)",
-                                      }}
-                                    >
-                                      {fmt(displayPrice)}
-                                    </div>
-                                    <div
+                          const displayPrice =
+                            serviceCalculatedPrices[item._id] ??
+                            item.internal_base_price ??
+                            0;
+                          return (
+                            <button
+                              key={item._id}
+                              onClick={() => addServiceItem(item)}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "16px",
+                                padding: "16px 20px",
+                                background: inCart
+                                  ? "rgba(34,197,94,0.06)"
+                                  : "var(--color-bg-card, #1a1a1a)",
+                                border: inCart
+                                  ? "1px solid rgba(34,197,94,0.3)"
+                                  : "1px solid var(--color-border-default, #222)",
+                                borderRadius: "10px",
+                                textAlign: "left",
+                                cursor: "pointer",
+                                transition: "all 0.12s",
+                                width: "100%",
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!inCart)
+                                  (e.currentTarget as HTMLElement).style.borderColor =
+                                    "var(--color-accent-primary, #e53935)";
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!inCart)
+                                  (e.currentTarget as HTMLElement).style.borderColor =
+                                    "var(--color-border-default, #222)";
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: "32px",
+                                  height: "32px",
+                                  borderRadius: "8px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  flexShrink: 0,
+                                  background: inCart
+                                    ? "rgba(34,197,94,0.15)"
+                                    : "var(--color-bg-secondary, #111)",
+                                  color: inCart
+                                    ? "#22c55e"
+                                    : "var(--color-text-muted, #555)",
+                                  transition: "all 0.12s",
+                                }}
+                              >
+                                {inCart ? <CheckCircle2 size={16} /> : <Plus size={16} />}
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "8px",
+                                    marginBottom: "3px",
+                                    flexWrap: "wrap",
+                                  }}
+                                >
+                                  <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>
+                                    {item.name}
+                                  </span>
+                                  <Badge variant="info">{badgeText}</Badge>
+                                  {inCart && (
+                                    <span
                                       style={{
                                         fontSize: "0.7rem",
-                                        color: "var(--color-text-muted, #555)",
+                                        fontWeight: 700,
+                                        color: "#22c55e",
                                       }}
                                     >
-                                      / {item.unit || "db"} ·{" "}
-                                      {header.contact_id ? "partner ár" : "alapár"}
-                                    </div>
-                                  </div>
-                                </>
-                              );
-                            })()}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-                {groupedServices.length === 0 && (
-                  <div
-                    style={{
-                      textAlign: "center",
-                      color: "var(--color-text-muted)",
-                      padding: "20px",
-                    }}
-                  >
-                    Nincs találat a szolgáltatások között.
-                  </div>
+                                      Kosárban
+                                    </span>
+                                  )}
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: "0.72rem",
+                                    color: "var(--color-text-muted, #555)",
+                                    display: "flex",
+                                    gap: "8px",
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      fontFamily: "monospace",
+                                      color: "var(--color-text-secondary, #a0a0a0)",
+                                    }}
+                                  >
+                                    Kód: {item.sku || "—"}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                                <div
+                                  style={{
+                                    fontWeight: 700,
+                                    fontSize: "0.95rem",
+                                    color: "var(--color-accent-primary, #e53935)",
+                                  }}
+                                >
+                                  {fmt(displayPrice)}
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: "0.7rem",
+                                    color: "var(--color-text-muted, #555)",
+                                  }}
+                                >
+                                  / {item.unit || "db"} ·{" "}
+                                  {header.contact_id ? "partner ár" : "alapár"}
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                        {filteredServices.length === 0 && (
+                          <div
+                            style={{
+                              textAlign: "center",
+                              color: "var(--color-text-muted)",
+                              padding: "20px",
+                            }}
+                          >
+                            Nincs találat a szolgáltatások között.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
-            )}
+            </div>
           </div>
 
           {/* Jobb: Kosár */}

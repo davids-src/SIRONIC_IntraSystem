@@ -189,22 +189,16 @@ export function ServiceItemRow({
           </div>
         )}
 
-        {/* Eladási Ár / KKV 1 év (Fő ár) */}
+        {/* Eladási Ár / KKV Eseti (Fő alapár) */}
         <div className="w-[120px] flex-shrink-0 text-right pr-2">
-          {renderPriceCell(base, getMult("smb_1year"), true, isCustom, isUnitBased)}
+          {renderPriceCell(base, getMult("smb_occasional"), true, isCustom, isUnitBased)}
         </div>
 
         {/* Mátrix nézet extra oszlopok */}
         {showMatrixView && (
           <>
             <div className="w-[100px] flex-shrink-0 text-right pr-2">
-              {renderPriceCell(
-                base,
-                getMult("smb_occasional"),
-                false,
-                isCustom,
-                isUnitBased,
-              )}
+              {renderPriceCell(base, getMult("smb_1year"), false, isCustom, isUnitBased)}
             </div>
             <div className="w-[100px] flex-shrink-0 text-right pr-2">
               {renderPriceCell(base, getMult("smb_2year"), false, isCustom, isUnitBased)}
@@ -281,17 +275,17 @@ export function ServiceItemRow({
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {/* KKV 1 ÉV */}
+            {/* KKV ESETI */}
             <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 flex flex-col gap-1">
               <span className="text-[10px] font-bold text-emerald-400 uppercase">
-                KKV 1 Év (Alap)
+                KKV Eseti (Alapár)
               </span>
               <span className="text-[11px] text-muted-foreground font-mono">
-                Szorzó: ×{getMult("smb_1year")}
+                Szorzó: ×{getMult("smb_occasional")}
               </span>
               <span className="text-sm font-bold font-mono text-foreground mt-1">
-                {getCalcPrice(getMult("smb_1year")) !== null
-                  ? fmt(getCalcPrice(getMult("smb_1year"))!)
+                {getCalcPrice(getMult("smb_occasional")) !== null
+                  ? fmt(getCalcPrice(getMult("smb_occasional"))!)
                   : isCustom
                     ? "Egyedi"
                     : isUnitBased
@@ -300,17 +294,17 @@ export function ServiceItemRow({
               </span>
             </div>
 
-            {/* KKV ESETI */}
+            {/* KKV 1 ÉV */}
             <div className="p-3 rounded-lg border border-border bg-card flex flex-col gap-1">
               <span className="text-[10px] font-semibold text-muted-foreground uppercase">
-                KKV Eseti
+                KKV 1 Év
               </span>
               <span className="text-[11px] text-muted-foreground font-mono">
-                Szorzó: ×{getMult("smb_occasional")}
+                Szorzó: ×{getMult("smb_1year")}
               </span>
               <span className="text-sm font-bold font-mono text-foreground mt-1">
-                {getCalcPrice(getMult("smb_occasional")) !== null
-                  ? fmt(getCalcPrice(getMult("smb_occasional"))!)
+                {getCalcPrice(getMult("smb_1year")) !== null
+                  ? fmt(getCalcPrice(getMult("smb_1year"))!)
                   : isCustom
                     ? "Egyedi"
                     : isUnitBased
