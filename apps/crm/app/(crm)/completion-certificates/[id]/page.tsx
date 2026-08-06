@@ -239,25 +239,33 @@ export default function CompletionCertificateFormPage({
     if (!service) return;
 
     try {
-      const payload: any = { partnerId: null };
-      if (service.category_id) {
-        payload.categoryId = service.category_id;
-      }
-      const calcData = await apiJsonBody<{
-        calculatedPrice: number;
-        snapshot: any;
-      }>(`/api/service-price-list/${service._id}/calculated-price`, "POST", payload);
+      const contactId = doc?.contact_id;
+      const queryParams = contactId ? `?contact_id=${encodeURIComponent(contactId)}` : "";
+      const res = await apiJson<any>(
+        `/api/service-price-list/${service._id}/calculated-price${queryParams}`,
+      );
+      const calculatedPrice =
+        res.final_price ?? res.calculated_price ?? service.internal_base_price ?? 0;
+      const snapshot = {
+        internal_base_price: res.internal_base_price ?? 0,
+        client_multiplier: res.client_multiplier ?? 1,
+        multiplier_key: res.multiplier_key ?? "",
+        calculated_price: calculatedPrice,
+        urgency_multiplier: res.urgency_multiplier ?? 1,
+        pricing_settings_captured_at:
+          res.pricing_settings_captured_at ?? new Date().toISOString(),
+      };
 
       setLines((prev) => [
         ...prev,
         {
           price_list_item_id: null,
           service_price_list_item_id: service._id,
-          price_snapshot: calcData.snapshot,
+          price_snapshot: snapshot,
           description: service.name,
           quantity: 1,
           unit: service.unit || "db",
-          net_unit_price: calcData.calculatedPrice,
+          net_unit_price: calculatedPrice,
         },
       ]);
     } catch (e) {

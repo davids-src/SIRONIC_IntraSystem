@@ -52,6 +52,7 @@ import { ContactContractsTab } from "../../contacts/[id]/ContactContractsTab";
 import { ContactWorklogsTab } from "../../contacts/[id]/ContactWorklogsTab";
 import { ContactCertificatesTab } from "../../contacts/[id]/ContactCertificatesTab";
 import { ContactSecretsTab } from "../../contacts/[id]/ContactSecretsTab";
+import { ContactOffersTab } from "../../contacts/[id]/ContactOffersTab";
 
 const SERVICE_OPTIONS = [
   "IT üzemeltetés",
@@ -455,6 +456,7 @@ export default function OrganizationDetailPage({
     { id: "basic", label: "Alapadatok", icon: <Building2 size={16} /> },
     { id: "services", label: "Szolgáltatások", icon: <Briefcase size={16} /> },
     { id: "pricing", label: "Szerződés & Árképzés", icon: <DollarSign size={16} /> },
+    { id: "offers", label: "Ajánlatok", icon: <FileSignature size={16} /> },
     { id: "projects", label: "Projektek", icon: <FolderKanban size={16} /> },
     { id: "tickets", label: "Ticketek", icon: <Ticket size={16} /> },
     { id: "worklogs", label: "Munkalapok", icon: <ClipboardList size={16} /> },
@@ -1352,6 +1354,12 @@ export default function OrganizationDetailPage({
               </div>
             </Card>
           </>
+        )}
+
+        {activeTab === "offers" && (
+          <div className="py-2">
+            <ContactOffersTab contactId={contact._id} />
+          </div>
         )}
 
         {activeTab === "secrets" && (

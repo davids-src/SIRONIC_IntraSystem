@@ -25,6 +25,7 @@ import {
   User,
   CalendarDays,
   Trash2,
+  Printer,
 } from "lucide-react";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 
@@ -80,6 +81,8 @@ export default function ProjectDetailPage({
   const [priceList, setPriceList] = useState<any[]>([]);
   const [loadingPriceList, setLoadingPriceList] = useState(false);
   const [showItemPicker, setShowItemPicker] = useState(false);
+  const [showCommissionModal, setShowCommissionModal] = useState(false);
+  const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
   const [itemSearch, setItemSearch] = useState("");
   const [showReserveModal, setShowReserveModal] = useState<any | null>(null);
   const [reserveQty, setReserveQty] = useState(0);
@@ -923,13 +926,21 @@ export default function ProjectDetailPage({
                     mennyiségek kezelése.
                   </p>
                 </div>
-                <Button
-                  variant="primary"
-                  onClick={() => setShowItemPicker(true)}
-                  disabled={project.status === "closed"}
-                >
-                  <Plus size={15} className="mr-1.5" /> Új tétel hozzáadása
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowCommissionModal(true)}
+                  >
+                    <Printer size={15} className="mr-1.5" /> Komissziós lista
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={() => setShowItemPicker(true)}
+                    disabled={project.status === "closed"}
+                  >
+                    <Plus size={15} className="mr-1.5" /> Új tétel hozzáadása
+                  </Button>
+                </div>
               </div>
 
               <div className="overflow-x-auto">
@@ -1376,6 +1387,196 @@ export default function ProjectDetailPage({
                   Nincs termék az árlistában.
                 </div>
               )}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {showCommissionModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.8)",
+            zIndex: 100,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: "16px",
+          }}
+        >
+          <Card className="p-6 w-full max-w-4xl flex flex-col max-h-[90vh] print:max-h-none print:w-full print:p-0 print:border-none print:shadow-none print:bg-white print:text-black">
+            {/* Action Bar (hidden on print) */}
+            <div className="flex justify-between items-center pb-4 border-b border-[var(--color-border-subtle)] mb-4 print:hidden">
+              <div className="flex items-center gap-2">
+                <Printer className="text-amber-500" size={20} />
+                <h2 className="text-lg font-bold text-white">
+                  Komissziós Lista / Összepakolás
+                </h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="primary" onClick={() => window.print()}>
+                  <Printer size={15} className="mr-1.5" /> Nyomtatás
+                </Button>
+                <Button variant="ghost" onClick={() => setShowCommissionModal(false)}>
+                  <X size={18} />
+                </Button>
+              </div>
+            </div>
+
+            {/* Printable Content */}
+            <div className="overflow-y-auto flex-1 p-2 print:overflow-visible print:p-0 print:text-black">
+              {/* Header Box */}
+              <div className="p-4 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border-subtle)] mb-6 print:bg-white print:border-black print:text-black">
+                <div className="flex justify-between items-start mb-4 border-b border-[var(--color-border-subtle)] pb-3 print:border-black">
+                  <div>
+                    <h1 className="text-xl font-bold text-white print:text-black uppercase tracking-wide">
+                      Komissziós Lista / Szerelési Anyagigény
+                    </h1>
+                    <p className="text-xs text-gray-400 print:text-gray-700 mt-0.5">
+                      SIROTECH Kft. · Raktári és Területi Operáció
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs font-mono px-2.5 py-1 rounded bg-amber-500/20 text-amber-400 print:border print:border-black print:text-black font-bold">
+                      PROJEKT #{project.project_number}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                  <div>
+                    <span className="text-gray-400 print:text-gray-600 block uppercase font-semibold text-[10px]">
+                      Projekt neve
+                    </span>
+                    <strong className="text-white print:text-black text-sm">
+                      {project.name}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 print:text-gray-600 block uppercase font-semibold text-[10px]">
+                      Partner / Megrendelő
+                    </span>
+                    <strong className="text-white print:text-black text-sm">
+                      {contactName ?? "—"}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 print:text-gray-600 block uppercase font-semibold text-[10px]">
+                      Felelős technikus
+                    </span>
+                    <strong className="text-white print:text-black text-sm">
+                      {project.assigned_to ?? "—"}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 print:text-gray-600 block uppercase font-semibold text-[10px]">
+                      Határidő / Dátum
+                    </span>
+                    <strong className="text-white print:text-black text-sm">
+                      {project.deadline
+                        ? new Date(project.deadline).toLocaleDateString("hu-HU")
+                        : new Date().toLocaleDateString("hu-HU")}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Items Table */}
+              <table className="w-full text-left border-collapse text-sm print:text-black">
+                <thead>
+                  <tr className="border-b-2 border-[var(--color-border-subtle)] text-gray-400 print:text-black print:border-black text-xs font-bold uppercase tracking-wider">
+                    <th className="py-2.5 px-3 text-center w-12 print:hidden">Pipa</th>
+                    <th className="py-2.5 px-3 hidden print:table-cell text-center w-12">
+                      Pipa
+                    </th>
+                    <th className="py-2.5 px-3">Cikkszám / SKU</th>
+                    <th className="py-2.5 px-3">Tétel megnevezése</th>
+                    <th className="py-2.5 px-3 text-right">Szükséges</th>
+                    <th className="py-2.5 px-3 text-right">Lefoglalt</th>
+                    <th className="py-2.5 px-3 text-center w-36">Állapot</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(project.required_items ?? []).map((item, idx) => {
+                    const isChecked = !!checkedItems[item.price_list_item_id];
+                    return (
+                      <tr
+                        key={item.price_list_item_id || idx}
+                        className={`border-b border-[var(--color-border-subtle)] print:border-gray-300 transition-colors ${
+                          isChecked
+                            ? "bg-emerald-950/20 print:bg-gray-100"
+                            : "hover:bg-[var(--color-bg-secondary)]"
+                        }`}
+                      >
+                        <td className="py-3 px-3 text-center print:hidden">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) =>
+                              setCheckedItems((prev) => ({
+                                ...prev,
+                                [item.price_list_item_id]: e.target.checked,
+                              }))
+                            }
+                            className="w-5 h-5 rounded cursor-pointer accent-emerald-500"
+                          />
+                        </td>
+                        <td className="py-3 px-3 text-center hidden print:table-cell">
+                          <div className="w-4 h-4 border border-black rounded-xs inline-block"></div>
+                        </td>
+                        <td className="py-3 px-3 font-mono text-xs text-gray-400 print:text-black font-semibold">
+                          {item.price_list_item_id?.slice(-8).toUpperCase() || "—"}
+                        </td>
+                        <td className="py-3 px-3 font-semibold text-white print:text-black">
+                          {item.name}
+                        </td>
+                        <td className="py-3 px-3 text-right font-mono font-bold text-white print:text-black">
+                          {item.required_quantity} {item.unit}
+                        </td>
+                        <td className="py-3 px-3 text-right font-mono text-amber-400 print:text-black font-bold">
+                          {item.reserved_quantity} {item.unit}
+                        </td>
+                        <td className="py-3 px-3 text-center text-xs">
+                          {isChecked ? (
+                            <span className="text-emerald-400 print:text-black font-bold uppercase text-[11px]">
+                              ✓ Összepakolva
+                            </span>
+                          ) : (
+                            <span className="text-gray-500 print:text-gray-500 italic text-[11px]">
+                              Összepakolásra vár
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {(project.required_items ?? []).length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-gray-500 italic">
+                        Nincsenek tételek a projekt bevásárlólistáján.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+
+              {/* Signatures for Print */}
+              <div className="hidden print:grid grid-cols-2 gap-12 mt-16 pt-8 border-t border-black text-xs">
+                <div>
+                  <p className="font-bold mb-8">Összepakolta (Raktáros / Technikus):</p>
+                  <div className="border-b border-black w-48 mb-1"></div>
+                  <p className="text-[10px] text-gray-600">Aláírás / Dátum</p>
+                </div>
+                <div>
+                  <p className="font-bold mb-8">Átvette (Szerelő / Projektfelelős):</p>
+                  <div className="border-b border-black w-48 mb-1"></div>
+                  <p className="text-[10px] text-gray-600">Aláírás / Dátum</p>
+                </div>
+              </div>
             </div>
           </Card>
         </div>

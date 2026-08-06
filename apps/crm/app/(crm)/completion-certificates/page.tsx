@@ -194,14 +194,26 @@ export default function CompletionCertificatesPage() {
       ),
     },
     {
+      key: "contact_name",
+      header: "Partner",
+      width: "180px",
+      render: (row) => (
+        <div style={{ fontWeight: 600, fontSize: "0.85rem" }}>
+          {row.contact_name ?? "—"}
+        </div>
+      ),
+    },
+    {
       key: "title",
       header: "Tárgy",
       render: (row) => (
         <div>
           <div style={{ fontWeight: 600, marginBottom: "2px" }}>{row.title}</div>
-          <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted, #555)" }}>
-            {row.contact_name ?? "—"} · {row.total_hours}h
-          </div>
+          {row.total_hours != null && row.total_hours > 0 && (
+            <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted, #555)" }}>
+              {row.total_hours}h
+            </div>
+          )}
         </div>
       ),
     },

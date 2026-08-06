@@ -27,13 +27,14 @@ import {
   Send,
 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useCallback } from "react";
 import type { Contact, PriceListItem, Offer } from "@crm/types";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 
 function mapPriceListItem(p: PriceListItem): PriceItem {
-  const category: PriceItem["category"] =
-    p.type === "product" || p.type === "package" ? "hardware" : "service";
+  const category =
+    p.category ||
+    (p.type === "product" || p.type === "package" ? "Hardver" : "Szolgáltatás");
   return {
     _id: p._id,
     code: p.item_number,
@@ -51,7 +52,7 @@ interface PriceItem {
   _id: string;
   code: string;
   name: string;
-  category: "hardware" | "software" | "service" | "license";
+  category: string;
   unit: string;
   unit_price: number;
   tax_percent: number;
@@ -121,25 +122,86 @@ export default function EditOfferPage({ params }: { params: Promise<{ id: string
 
   const [servicePriceList, setServicePriceList] = useState<any[]>([]);
   const [serviceCategories, setServiceCategories] = useState<any[]>([]);
+  const [serviceSubcategories, setServiceSubcategories] = useState<any[]>([]);
+  const [serviceCalculatedPrices, setServiceCalculatedPrices] = useState<
+    Record<string, number>
+  >({});
   const [pickerTab, setPickerTab] = useState<"product" | "service">("product");
+
+  useEffect(() => {
+    if (!header.contact_id || servicePriceList.length === 0) {
+      setServiceCalculatedPrices({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const entries = await Promise.all(
+          servicePriceList.map(async (s: any) => {
+            try {
+              const res = await apiJson<any>(
+                `/api/service-price-list/${s._id}/calculated-price?contact_id=${header.contact_id}`,
+              );
+              return [
+                s._id,
+                res.final_price ?? res.calculated_price ?? s.internal_base_price ?? 0,
+              ];
+            } catch {
+              return [s._id, s.internal_base_price ?? 0];
+            }
+          }),
+        );
+        if (!cancelled) {
+          setServiceCalculatedPrices(Object.fromEntries(entries));
+        }
+      } catch (e) {
+        console.error("Error fetching service calculated prices", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [header.contact_id, servicePriceList]);
   const [productCategoryFilter, setProductCategoryFilter] = useState<string>("__all__");
+  const [serviceCategoryFilter, setServiceCategoryFilter] = useState<string>("__all__");
+  const [itemCategories, setItemCategories] = useState<any[]>([]);
+
+  const getItemCategoryName = useCallback(
+    (catId: string) => {
+      if (!catId) return "Hardver";
+      const found = itemCategories.find(
+        (c: any) => c.id === catId || c._id === catId || c.name === catId,
+      );
+      if (found && found.name) return found.name;
+      if ((categoryLabel as any)[catId]) return (categoryLabel as any)[catId];
+      if (catId.length > 20 && !catId.includes(" ")) return "Termék";
+      return catId;
+    },
+    [itemCategories],
+  );
 
   useEffect(() => {
     const ac = new AbortController();
     (async () => {
       try {
-        const [pl, cr, spl, sc, doc] = await Promise.all([
+        const [pl, cr, spl, sc, ssc, doc, st] = await Promise.all([
           apiJson<unknown[]>("/api/price-list", { signal: ac.signal }),
           apiJson<unknown[]>("/api/contacts", { signal: ac.signal }),
           apiJson<unknown[]>("/api/service-price-list", { signal: ac.signal }),
           apiJson<unknown[]>("/api/service-categories", { signal: ac.signal }),
+          apiJson<unknown[]>("/api/service-subcategories", { signal: ac.signal }),
           apiJson<Offer>(`/api/offers/${id}`, { signal: ac.signal }),
+          apiJson<any>("/api/settings", { signal: ac.signal }).catch(() => null),
         ]);
 
         setPriceList(pl.map((r) => mapPriceListItem(r as PriceListItem)));
         setContacts(cr as Contact[]);
         setServicePriceList(spl);
         setServiceCategories(sc);
+        setServiceSubcategories(ssc);
+        if (st && st.item_categories) {
+          setItemCategories(st.item_categories);
+        }
 
         const validUntilDate = doc.valid_until ? new Date(doc.valid_until) : new Date();
         const createdAtDate = doc.created_at ? new Date(doc.created_at) : new Date();
@@ -255,38 +317,59 @@ export default function EditOfferPage({ params }: { params: Promise<{ id: string
 
   const addServiceItem = async (service: any) => {
     try {
-      const payload: any = { partnerId: header.contact_id || null };
-      if (service.category_id) {
-        payload.categoryId = service.category_id;
-      }
-      const calcData = await apiJsonBody<{
-        calculatedPrice: number;
-        snapshot: any;
-      }>(`/api/service-price-list/${service._id}/calculated-price`, "POST", payload);
+      const queryParams = header.contact_id
+        ? `?contact_id=${encodeURIComponent(header.contact_id)}`
+        : "";
+      const res = await apiJson<any>(
+        `/api/service-price-list/${service._id}/calculated-price${queryParams}`,
+      );
+      const calculatedPrice =
+        res.final_price ?? res.calculated_price ?? service.internal_base_price ?? 0;
+      const snapshot = {
+        internal_base_price: res.internal_base_price ?? 0,
+        client_multiplier: res.client_multiplier ?? 1,
+        multiplier_key: res.multiplier_key ?? "",
+        calculated_price: calculatedPrice,
+        urgency_multiplier: res.urgency_multiplier ?? 1,
+        pricing_settings_captured_at:
+          res.pricing_settings_captured_at ?? new Date().toISOString(),
+      };
 
       const priceItem: PriceItem = {
         _id: service._id,
-        code: "SRV-CALC",
+        code: service.sku || "SRV-CALC",
         name: service.name,
         category: "service",
         unit: service.unit || "db",
-        unit_price: calcData.calculatedPrice,
+        unit_price: calculatedPrice,
         tax_percent: service.tax_rate ?? 27,
         description: service.description ?? "",
         preferred_supplier: null,
         service_price_list_item_id: service._id,
       };
 
-      setCart((prev) => [
-        ...prev,
-        {
-          item: priceItem,
-          qty: 1,
-          custom_price: calcData.calculatedPrice,
-          discount_percent: 0,
-          price_snapshot: calcData.snapshot,
-        },
-      ]);
+      setCart((prev) => {
+        const existing = prev.find(
+          (x) => x.item.service_price_list_item_id === service._id,
+        );
+        if (existing) {
+          return prev.map((x) =>
+            x.item.service_price_list_item_id === service._id
+              ? { ...x, qty: x.qty + 1 }
+              : x,
+          );
+        }
+        return [
+          ...prev,
+          {
+            item: priceItem,
+            qty: 1,
+            custom_price: calculatedPrice,
+            discount_percent: 0,
+            price_snapshot: snapshot,
+          },
+        ];
+      });
     } catch (e) {
       alert("Hiba a szolgáltatás kalkulációja során.");
     }
@@ -347,18 +430,33 @@ export default function EditOfferPage({ params }: { params: Promise<{ id: string
       (productCategoryFilter === "__all__" || p.category === productCategoryFilter) &&
       (p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.code.toLowerCase().includes(search.toLowerCase()) ||
-        categoryLabel[p.category].toLowerCase().includes(search.toLowerCase())),
+        getItemCategoryName(p.category).toLowerCase().includes(search.toLowerCase())),
   );
 
   const productCategories: { id: string; label: string; count: number }[] = (() => {
     return Array.from(new Set(priceList.map((p) => p.category)))
       .map((cat) => ({
         id: cat,
-        label: categoryLabel[cat as keyof typeof categoryLabel] ?? cat,
+        label: getItemCategoryName(cat),
         count: priceList.filter((p) => p.category === cat).length,
       }))
       .sort((a, b) => a.label.localeCompare(b.label, "hu"));
   })();
+
+  const filteredServices = servicePriceList.filter((s: any) => {
+    let matchCat = true;
+    if (serviceCategoryFilter !== "__all__") {
+      if (serviceCategoryFilter.startsWith("cat:")) {
+        matchCat = s.category_id === serviceCategoryFilter.replace("cat:", "");
+      } else if (serviceCategoryFilter.startsWith("sub:")) {
+        matchCat = s.subcategory_id === serviceCategoryFilter.replace("sub:", "");
+      }
+    }
+    const q = search.toLowerCase();
+    const matchSearch =
+      !q || s.name.toLowerCase().includes(q) || (s.sku ?? "").toLowerCase().includes(q);
+    return matchCat && matchSearch;
+  });
 
   if (loading) return <div className="p-6 text-[var(--color-text-muted)]">Betöltés…</div>;
 
@@ -618,8 +716,10 @@ export default function EditOfferPage({ params }: { params: Promise<{ id: string
                               <span className="font-semibold text-sm truncate">
                                 {p.name}
                               </span>
-                              <Badge variant={categoryVariant[p.category]}>
-                                {categoryLabel[p.category]}
+                              <Badge
+                                variant={(categoryVariant as any)[p.category] || "info"}
+                              >
+                                {getItemCategoryName(p.category)}
                               </Badge>
                             </div>
                             <span className="text-xs text-gray-400 block mt-0.5">
@@ -644,42 +744,241 @@ export default function EditOfferPage({ params }: { params: Promise<{ id: string
                   </div>
                 </>
               ) : (
-                <div className="max-h-[450px] overflow-y-auto space-y-2 pr-1">
-                  {serviceCategories.map((cat: any) => {
-                    const servicesInCat = servicePriceList.filter(
-                      (s) => s.category_id === cat._id,
-                    );
-                    if (servicesInCat.length === 0) return null;
-                    return (
-                      <div key={cat._id} className="space-y-2">
-                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mt-2 px-1">
-                          {cat.name}
-                        </h4>
-                        {servicesInCat.map((s) => (
-                          <div
-                            key={s._id}
-                            className="flex justify-between items-center p-3 rounded-md bg-[#111] hover:bg-[#1a1a1a] border border-[#222]"
+                <div className="flex gap-4">
+                  {/* Service Sidebar */}
+                  <div
+                    style={{
+                      width: "180px",
+                      flexShrink: 0,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "2px",
+                      borderRight: "1px solid var(--color-border-subtle)",
+                      paddingRight: "12px",
+                      maxHeight: "450px",
+                      overflowY: "auto",
+                    }}
+                  >
+                    <p
+                      style={{
+                        fontSize: "0.6875rem",
+                        fontWeight: 700,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.08em",
+                        color: "var(--color-text-muted)",
+                        padding: "0 4px",
+                        marginBottom: "6px",
+                      }}
+                    >
+                      Szolgáltatások
+                    </p>
+                    <button
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "6px 10px",
+                        borderRadius: "6px",
+                        border: "none",
+                        cursor: "pointer",
+                        fontSize: "0.8125rem",
+                        fontWeight: serviceCategoryFilter === "__all__" ? 600 : 400,
+                        background:
+                          serviceCategoryFilter === "__all__"
+                            ? "var(--color-accent-badge-bg)"
+                            : "transparent",
+                        color:
+                          serviceCategoryFilter === "__all__"
+                            ? "var(--color-accent-primary)"
+                            : "var(--color-text-muted)",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                      onClick={() => setServiceCategoryFilter("__all__")}
+                    >
+                      <span>Összes</span>
+                      <span
+                        style={{
+                          fontSize: "0.7rem",
+                          background: "var(--color-border-default)",
+                          padding: "1px 6px",
+                          borderRadius: "999px",
+                          color: "var(--color-text-secondary)",
+                        }}
+                      >
+                        {servicePriceList.length}
+                      </span>
+                    </button>
+                    {serviceCategories.map((cat: any) => {
+                      const catSubs = serviceSubcategories.filter(
+                        (sc: any) => sc.category_id === cat._id,
+                      );
+                      const catServicesCount = servicePriceList.filter(
+                        (s: any) => s.category_id === cat._id,
+                      ).length;
+                      const isCatSelected = serviceCategoryFilter === `cat:${cat._id}`;
+                      return (
+                        <div
+                          key={cat._id}
+                          style={{ display: "flex", flexDirection: "column", gap: "2px" }}
+                        >
+                          <button
+                            style={{
+                              width: "100%",
+                              textAlign: "left",
+                              padding: "6px 8px",
+                              borderRadius: "6px",
+                              border: "none",
+                              cursor: "pointer",
+                              fontSize: "0.8125rem",
+                              fontWeight: isCatSelected ? 700 : 600,
+                              background: isCatSelected
+                                ? "var(--color-accent-badge-bg)"
+                                : "transparent",
+                              color: isCatSelected
+                                ? "var(--color-accent-primary)"
+                                : "var(--color-text-primary)",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              marginTop: "4px",
+                            }}
+                            onClick={() => setServiceCategoryFilter(`cat:${cat._id}`)}
                           >
-                            <div className="flex-1 pr-3 min-w-0">
-                              <span className="font-semibold text-sm block truncate">
+                            <span
+                              style={{
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                flex: 1,
+                              }}
+                            >
+                              {cat.name}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: "0.7rem",
+                                background: "var(--color-border-default)",
+                                padding: "1px 6px",
+                                borderRadius: "999px",
+                                color: "var(--color-text-secondary)",
+                                flexShrink: 0,
+                              }}
+                            >
+                              {catServicesCount}
+                            </span>
+                          </button>
+                          {catSubs.map((sub: any) => {
+                            const subServicesCount = servicePriceList.filter(
+                              (s: any) => s.subcategory_id === sub._id,
+                            ).length;
+                            const isSubSelected =
+                              serviceCategoryFilter === `sub:${sub._id}`;
+                            return (
+                              <button
+                                key={sub._id}
+                                style={{
+                                  width: "calc(100% - 10px)",
+                                  marginLeft: "10px",
+                                  textAlign: "left",
+                                  padding: "4px 6px",
+                                  borderRadius: "4px",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  fontSize: "0.75rem",
+                                  fontWeight: isSubSelected ? 600 : 400,
+                                  background: isSubSelected
+                                    ? "var(--color-accent-badge-bg)"
+                                    : "transparent",
+                                  color: isSubSelected
+                                    ? "var(--color-accent-primary)"
+                                    : "var(--color-text-muted)",
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                }}
+                                onClick={() => setServiceCategoryFilter(`sub:${sub._id}`)}
+                              >
+                                <span
+                                  style={{
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                    flex: 1,
+                                  }}
+                                >
+                                  • {sub.name}
+                                </span>
+                                <span
+                                  style={{
+                                    fontSize: "0.65rem",
+                                    background: "var(--color-border-subtle)",
+                                    padding: "1px 5px",
+                                    borderRadius: "999px",
+                                    color: "var(--color-text-muted)",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {subServicesCount}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Service item list */}
+                  <div className="max-h-[450px] overflow-y-auto space-y-2 pr-1 flex-1">
+                    {filteredServices.map((s: any) => {
+                      const subCat = serviceSubcategories.find(
+                        (sc: any) => sc._id === s.subcategory_id,
+                      );
+                      const mainCat = serviceCategories.find(
+                        (c: any) => c._id === s.category_id,
+                      );
+                      const badgeText = subCat
+                        ? subCat.name
+                        : mainCat
+                          ? mainCat.name
+                          : "Szolgáltatás";
+                      return (
+                        <div
+                          key={s._id}
+                          className="flex justify-between items-center p-3 rounded-md bg-[#111] hover:bg-[#1a1a1a] border border-[#222]"
+                        >
+                          <div className="flex-1 pr-3 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-sm truncate">
                                 {s.name}
                               </span>
-                              <span className="text-xs text-gray-400 block mt-0.5">
-                                Kategória: Szolgáltatás
-                              </span>
+                              <Badge variant="info">{badgeText}</Badge>
                             </div>
+                            <span className="text-xs text-gray-400 block mt-0.5">
+                              Kód: {s.sku || "—"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="font-bold text-sm text-red-500">
+                              {fmt(
+                                serviceCalculatedPrices[s._id] ??
+                                  s.internal_base_price ??
+                                  0,
+                              )}
+                            </span>
                             <Button
                               size="sm"
                               variant="secondary"
                               onClick={() => void addServiceItem(s)}
                             >
-                              <Plus size={14} className="mr-1" /> Kalkulál
+                              <Plus size={14} className="mr-1" /> Hozzáadás
                             </Button>
                           </div>
-                        ))}
-                      </div>
-                    );
-                  })}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
@@ -790,9 +1089,20 @@ export default function EditOfferPage({ params }: { params: Promise<{ id: string
                             >
                               <Minus size={12} />
                             </button>
-                            <span className="text-xs font-bold text-white flex-1 text-center">
-                              {c.qty}
-                            </span>
+                            <input
+                              type="number"
+                              min="1"
+                              className="w-10 bg-transparent text-xs font-bold text-white text-center focus:outline-none focus:ring-1 focus:ring-red-500 rounded"
+                              value={c.qty}
+                              onChange={(e) => {
+                                const val = Math.max(1, parseInt(e.target.value) || 1);
+                                setCart((prev) =>
+                                  prev.map((x) =>
+                                    x.item._id === c.item._id ? { ...x, qty: val } : x,
+                                  ),
+                                );
+                              }}
+                            />
                             <button
                               type="button"
                               className="text-gray-400 hover:text-white"

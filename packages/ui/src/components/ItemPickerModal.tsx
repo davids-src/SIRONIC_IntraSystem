@@ -48,6 +48,7 @@ export interface ItemPickerModalProps {
   servicePriceList: ServiceItemForPicker[];
   /** Kategórianevek a szolgáltatásoknál (ha rendelkezésre áll) */
   serviceCategories?: ServiceCategoryForPicker[];
+  itemCategories?: Array<{ id: string; name: string }>;
   /** Raktárkészlet-adatok a termékekhez */
   stockItems?: StockInfoForPicker[];
   /** Csak aktív termékeket mutasson-e */
@@ -81,6 +82,7 @@ export function ItemPickerModal({
   priceList,
   servicePriceList,
   serviceCategories = [],
+  itemCategories = [],
   stockItems = [],
   onlyActive = true,
   onSelectProduct,
@@ -118,6 +120,14 @@ export function ItemPickerModal({
 
   if (!open) return null;
 
+  const itemCategoryMap = new Map((itemCategories ?? []).map((c) => [c.id, c.name]));
+  const getCategoryLabel = (catId: string) => {
+    if (!catId) return "Hardver";
+    if (itemCategoryMap.has(catId)) return itemCategoryMap.get(catId)!;
+    if (catId.length > 20 && !catId.includes(" ")) return "Termék";
+    return catId;
+  };
+
   // ── Product logic ──────────────────────────────────────────────────────────
   const activeProducts = onlyActive ? priceList.filter((p) => p.is_active) : priceList;
 
@@ -128,7 +138,7 @@ export function ItemPickerModal({
       map.set(p.category, (map.get(p.category) ?? 0) + 1);
     }
     return Array.from(map.entries())
-      .map(([id, count]) => ({ id, label: id, count }))
+      .map(([id, count]) => ({ id, label: getCategoryLabel(id), count }))
       .sort((a, b) => a.label.localeCompare(b.label, "hu"));
   })();
 

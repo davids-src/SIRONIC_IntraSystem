@@ -27,13 +27,14 @@ import {
   Send,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import type { Contact, PriceListItem } from "@crm/types";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 
 function mapPriceListItem(p: PriceListItem): PriceItem {
-  const category: PriceItem["category"] =
-    p.type === "product" || p.type === "package" ? "hardware" : "service";
+  const category =
+    p.category ||
+    (p.type === "product" || p.type === "package" ? "Hardver" : "Szolgáltatás");
   return {
     _id: p._id,
     code: p.item_number,
@@ -54,7 +55,7 @@ interface PriceItem {
   _id: string;
   code: string;
   name: string;
-  category: "hardware" | "software" | "service" | "license";
+  category: string;
   unit: string;
   unit_price: number;
   tax_percent: number;
@@ -128,18 +129,37 @@ export default function NewOfferPage() {
 
   const [servicePriceList, setServicePriceList] = useState<any[]>([]);
   const [serviceCategories, setServiceCategories] = useState<any[]>([]);
+  const [serviceSubcategories, setServiceSubcategories] = useState<any[]>([]);
+  const [itemCategories, setItemCategories] = useState<any[]>([]);
   const [pickerTab, setPickerTab] = useState<"product" | "service">("product");
   const [productCategoryFilter, setProductCategoryFilter] = useState<string>("__all__");
+  const [serviceCategoryFilter, setServiceCategoryFilter] = useState<string>("__all__");
+
+  const getItemCategoryName = useCallback(
+    (catId: string) => {
+      if (!catId) return "Hardver";
+      const found = itemCategories.find(
+        (c: any) => c.id === catId || c._id === catId || c.name === catId,
+      );
+      if (found && found.name) return found.name;
+      if ((categoryLabel as any)[catId]) return (categoryLabel as any)[catId];
+      if (catId.length > 20 && !catId.includes(" ")) return "Termék";
+      return catId;
+    },
+    [itemCategories],
+  );
 
   useEffect(() => {
     const ac = new AbortController();
     (async () => {
       try {
-        const [pl, cr, spl, sc] = await Promise.all([
+        const [pl, cr, spl, sc, ssc, st] = await Promise.all([
           apiJson<unknown[]>("/api/price-list", { signal: ac.signal }),
           apiJson<unknown[]>("/api/contacts", { signal: ac.signal }),
           apiJson<unknown[]>("/api/service-price-list", { signal: ac.signal }),
           apiJson<unknown[]>("/api/service-categories", { signal: ac.signal }),
+          apiJson<unknown[]>("/api/service-subcategories", { signal: ac.signal }),
+          apiJson<any>("/api/settings", { signal: ac.signal }).catch(() => null),
         ]);
         setPriceList(pl.map((r) => mapPriceListItem(r as PriceListItem)));
         setContacts(
@@ -154,6 +174,10 @@ export default function NewOfferPage() {
         );
         setServicePriceList(spl);
         setServiceCategories(sc);
+        setServiceSubcategories(ssc);
+        if (st && st.item_categories) {
+          setItemCategories(st.item_categories);
+        }
         setLoadErr(null);
       } catch {
         if (!ac.signal.aborted) {
@@ -163,6 +187,45 @@ export default function NewOfferPage() {
     })();
     return () => ac.abort();
   }, []);
+
+  const [serviceCalculatedPrices, setServiceCalculatedPrices] = useState<
+    Record<string, number>
+  >({});
+
+  useEffect(() => {
+    if (!header.contact_id || servicePriceList.length === 0) {
+      setServiceCalculatedPrices({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const entries = await Promise.all(
+          servicePriceList.map(async (s: any) => {
+            try {
+              const res = await apiJson<any>(
+                `/api/service-price-list/${s._id}/calculated-price?contact_id=${header.contact_id}`,
+              );
+              return [
+                s._id,
+                res.final_price ?? res.calculated_price ?? s.internal_base_price ?? 0,
+              ];
+            } catch {
+              return [s._id, s.internal_base_price ?? 0];
+            }
+          }),
+        );
+        if (!cancelled) {
+          setServiceCalculatedPrices(Object.fromEntries(entries));
+        }
+      } catch (e) {
+        console.error("Error fetching service calculated prices", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [header.contact_id, servicePriceList]);
 
   // -------------------------------------------------------
   // Cart helpers
@@ -248,19 +311,21 @@ export default function NewOfferPage() {
             const res = await apiJson<any>(
               `/api/service-price-list/${c.item.service_price_list_item_id}/calculated-price?contact_id=${contactId}`,
             );
+            const calculatedPrice =
+              res.final_price ?? res.calculated_price ?? c.item.unit_price ?? 0;
             return {
               ...c,
               item: {
                 ...c.item,
-                unit_price: res.total_price,
+                unit_price: calculatedPrice,
               },
               price_snapshot: {
-                internal_base_price: res.internal_base_price,
-                client_multiplier: res.client_multiplier,
-                multiplier_key: res.multiplier_key,
-                calculated_price: res.total_price,
-                urgency_multiplier: res.urgency_multiplier,
-                pricing_settings_captured_at: res.pricing_settings_captured_at,
+                internal_base_price: res.internal_base_price ?? 0,
+                client_multiplier: res.client_multiplier ?? 1,
+                multiplier_key: res.multiplier_key ?? "",
+                calculated_price: calculatedPrice,
+                urgency_multiplier: res.urgency_multiplier ?? 1,
+                pricing_settings_captured_at: res.pricing_settings_captured_at ?? null,
               },
             };
           } catch (e) {
@@ -281,36 +346,35 @@ export default function NewOfferPage() {
   };
 
   const addServiceItem = async (srv: any) => {
-    let unitPrice = 0;
+    let unitPrice = srv.internal_base_price ?? 0;
     let snapshot: any = null;
     if (header.contact_id) {
       try {
         const res = await apiJson<any>(
           `/api/service-price-list/${srv._id}/calculated-price?contact_id=${header.contact_id}`,
         );
-        unitPrice = res.total_price;
+        unitPrice =
+          res.final_price ?? res.calculated_price ?? srv.internal_base_price ?? 0;
         snapshot = {
-          internal_base_price: res.internal_base_price,
-          client_multiplier: res.client_multiplier,
-          multiplier_key: res.multiplier_key,
-          calculated_price: res.total_price,
-          urgency_multiplier: res.urgency_multiplier,
-          pricing_settings_captured_at: res.pricing_settings_captured_at,
+          internal_base_price: res.internal_base_price ?? 0,
+          client_multiplier: res.client_multiplier ?? 1,
+          multiplier_key: res.multiplier_key ?? "",
+          calculated_price: unitPrice,
+          urgency_multiplier: res.urgency_multiplier ?? 1,
+          pricing_settings_captured_at: res.pricing_settings_captured_at ?? null,
         };
       } catch (e) {
         console.error("Error calculating price", e);
         unitPrice = srv.internal_base_price ?? 0;
       }
-    } else {
-      unitPrice = srv.internal_base_price ?? 0;
     }
 
     const priceItem: PriceItem = {
       _id: `srv-${srv._id}`,
-      code: srv.sku,
+      code: srv.sku || "SRV",
       name: srv.name,
       category: "service",
-      unit: srv.unit ?? "óra",
+      unit: srv.unit ?? "db",
       unit_price: unitPrice,
       tax_percent: 27,
       description: srv.description ?? "",
@@ -408,34 +472,34 @@ export default function NewOfferPage() {
       (productCategoryFilter === "__all__" || p.category === productCategoryFilter) &&
       (p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.code.toLowerCase().includes(search.toLowerCase()) ||
-        categoryLabel[p.category].toLowerCase().includes(search.toLowerCase())),
+        getItemCategoryName(p.category).toLowerCase().includes(search.toLowerCase())),
   );
 
   // Build unique product categories for sidebar filter
   const productCategories: { id: string; label: string; count: number }[] = (() => {
-    const map = new Map<string, number>();
-    for (const p of priceList) {
-      const label = categoryLabel[p.category] ?? p.category;
-      map.set(p.category, (map.get(p.category) ?? 0) + 1);
-      // Store label separately
-      if (!map.has(`label:${p.category}`)) {
-        map.set(`label:${p.category}`, label as any);
-      }
-    }
     return Array.from(new Set(priceList.map((p) => p.category)))
       .map((cat) => ({
         id: cat,
-        label: categoryLabel[cat as keyof typeof categoryLabel] ?? cat,
+        label: getItemCategoryName(cat),
         count: priceList.filter((p) => p.category === cat).length,
       }))
       .sort((a, b) => a.label.localeCompare(b.label, "hu"));
   })();
 
-  const filteredServices = servicePriceList.filter(
-    (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.sku.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filteredServices = servicePriceList.filter((s: any) => {
+    let matchCat = true;
+    if (serviceCategoryFilter !== "__all__") {
+      if (serviceCategoryFilter.startsWith("cat:")) {
+        matchCat = s.category_id === serviceCategoryFilter.replace("cat:", "");
+      } else if (serviceCategoryFilter.startsWith("sub:")) {
+        matchCat = s.subcategory_id === serviceCategoryFilter.replace("sub:", "");
+      }
+    }
+    const q = search.toLowerCase();
+    const matchSearch =
+      !q || s.name.toLowerCase().includes(q) || (s.sku ?? "").toLowerCase().includes(q);
+    return matchCat && matchSearch;
+  });
 
   const groupedServices = serviceCategories
     .map((cat) => ({
@@ -534,16 +598,28 @@ export default function NewOfferPage() {
           >
             <Minus size={12} />
           </button>
-          <span
+          <input
+            type="number"
+            min={1}
+            value={c.qty}
+            onChange={(e) => {
+              const val = Math.max(1, parseInt(e.target.value) || 1);
+              setCart((prev) =>
+                prev.map((ci) => (ci.item._id === c.item._id ? { ...ci, qty: val } : ci)),
+              );
+            }}
             style={{
+              width: "44px",
+              padding: "2px 4px",
+              borderRadius: "5px",
+              border: "1px solid var(--color-border-subtle, #333)",
+              background: "var(--color-bg-input, #000)",
+              color: "inherit",
+              fontSize: "0.85rem",
               fontWeight: 700,
-              fontSize: "0.9rem",
-              minWidth: "28px",
               textAlign: "center",
             }}
-          >
-            {c.qty}
-          </span>
+          />
           <button
             onClick={() => updateQty(c.item._id, 1)}
             style={{
@@ -1015,113 +1091,294 @@ export default function NewOfferPage() {
                 {/* Category sidebar */}
                 <div
                   style={{
-                    width: "160px",
+                    width: "180px",
                     flexShrink: 0,
                     display: "flex",
                     flexDirection: "column",
                     gap: "2px",
                   }}
                 >
-                  <p
-                    style={{
-                      fontSize: "0.6875rem",
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.08em",
-                      color: "var(--color-text-muted)",
-                      padding: "0 4px",
-                      marginBottom: "6px",
-                    }}
-                  >
-                    Kategóriák
-                  </p>
-                  <button
-                    style={{
-                      width: "100%",
-                      textAlign: "left",
-                      padding: "6px 10px",
-                      borderRadius: "6px",
-                      border: "none",
-                      cursor: "pointer",
-                      fontSize: "0.8125rem",
-                      fontWeight: productCategoryFilter === "__all__" ? 600 : 400,
-                      background:
-                        productCategoryFilter === "__all__"
-                          ? "var(--color-accent-badge-bg)"
-                          : "transparent",
-                      color:
-                        productCategoryFilter === "__all__"
-                          ? "var(--color-accent-primary)"
-                          : "var(--color-text-muted)",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                    onClick={() => setProductCategoryFilter("__all__")}
-                  >
-                    <span>Összes</span>
-                    <span
-                      style={{
-                        fontSize: "0.7rem",
-                        background: "var(--color-border-default)",
-                        padding: "1px 6px",
-                        borderRadius: "999px",
-                        color: "var(--color-text-secondary)",
-                      }}
-                    >
-                      {priceList.length}
-                    </span>
-                  </button>
-                  {productCategories.map((cat) => (
-                    <button
-                      key={cat.id}
-                      style={{
-                        width: "100%",
-                        textAlign: "left",
-                        padding: "6px 10px",
-                        borderRadius: "6px",
-                        border: "none",
-                        cursor: "pointer",
-                        fontSize: "0.8125rem",
-                        fontWeight: productCategoryFilter === cat.id ? 600 : 400,
-                        background:
-                          productCategoryFilter === cat.id
-                            ? "var(--color-accent-badge-bg)"
-                            : "transparent",
-                        color:
-                          productCategoryFilter === cat.id
-                            ? "var(--color-accent-primary)"
-                            : "var(--color-text-muted)",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                      onClick={() => setProductCategoryFilter(cat.id)}
-                    >
-                      <span
+                  {pickerTab === "product" ? (
+                    <>
+                      <p
                         style={{
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                          flex: 1,
+                          fontSize: "0.6875rem",
+                          fontWeight: 700,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.08em",
+                          color: "var(--color-text-muted)",
+                          padding: "0 4px",
+                          marginBottom: "6px",
                         }}
                       >
-                        {cat.label}
-                      </span>
-                      <span
+                        Kategóriák
+                      </p>
+                      <button
                         style={{
-                          fontSize: "0.7rem",
-                          background: "var(--color-border-default)",
-                          padding: "1px 6px",
-                          borderRadius: "999px",
-                          color: "var(--color-text-secondary)",
-                          flexShrink: 0,
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "6px 10px",
+                          borderRadius: "6px",
+                          border: "none",
+                          cursor: "pointer",
+                          fontSize: "0.8125rem",
+                          fontWeight: productCategoryFilter === "__all__" ? 600 : 400,
+                          background:
+                            productCategoryFilter === "__all__"
+                              ? "var(--color-accent-badge-bg)"
+                              : "transparent",
+                          color:
+                            productCategoryFilter === "__all__"
+                              ? "var(--color-accent-primary)"
+                              : "var(--color-text-muted)",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                        onClick={() => setProductCategoryFilter("__all__")}
+                      >
+                        <span>Összes</span>
+                        <span
+                          style={{
+                            fontSize: "0.7rem",
+                            background: "var(--color-border-default)",
+                            padding: "1px 6px",
+                            borderRadius: "999px",
+                            color: "var(--color-text-secondary)",
+                          }}
+                        >
+                          {priceList.length}
+                        </span>
+                      </button>
+                      {productCategories.map((cat) => (
+                        <button
+                          key={cat.id}
+                          style={{
+                            width: "100%",
+                            textAlign: "left",
+                            padding: "6px 10px",
+                            borderRadius: "6px",
+                            border: "none",
+                            cursor: "pointer",
+                            fontSize: "0.8125rem",
+                            fontWeight: productCategoryFilter === cat.id ? 600 : 400,
+                            background:
+                              productCategoryFilter === cat.id
+                                ? "var(--color-accent-badge-bg)"
+                                : "transparent",
+                            color:
+                              productCategoryFilter === cat.id
+                                ? "var(--color-accent-primary)"
+                                : "var(--color-text-muted)",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
+                          onClick={() => setProductCategoryFilter(cat.id)}
+                        >
+                          <span
+                            style={{
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              flex: 1,
+                            }}
+                          >
+                            {cat.label}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: "0.7rem",
+                              background: "var(--color-border-default)",
+                              padding: "1px 6px",
+                              borderRadius: "999px",
+                              color: "var(--color-text-secondary)",
+                              flexShrink: 0,
+                            }}
+                          >
+                            {cat.count}
+                          </span>
+                        </button>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      <p
+                        style={{
+                          fontSize: "0.6875rem",
+                          fontWeight: 700,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.08em",
+                          color: "var(--color-text-muted)",
+                          padding: "0 4px",
+                          marginBottom: "6px",
                         }}
                       >
-                        {cat.count}
-                      </span>
-                    </button>
-                  ))}
+                        Szolgáltatások
+                      </p>
+                      <button
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "6px 10px",
+                          borderRadius: "6px",
+                          border: "none",
+                          cursor: "pointer",
+                          fontSize: "0.8125rem",
+                          fontWeight: serviceCategoryFilter === "__all__" ? 600 : 400,
+                          background:
+                            serviceCategoryFilter === "__all__"
+                              ? "var(--color-accent-badge-bg)"
+                              : "transparent",
+                          color:
+                            serviceCategoryFilter === "__all__"
+                              ? "var(--color-accent-primary)"
+                              : "var(--color-text-muted)",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                        onClick={() => setServiceCategoryFilter("__all__")}
+                      >
+                        <span>Összes</span>
+                        <span
+                          style={{
+                            fontSize: "0.7rem",
+                            background: "var(--color-border-default)",
+                            padding: "1px 6px",
+                            borderRadius: "999px",
+                            color: "var(--color-text-secondary)",
+                          }}
+                        >
+                          {servicePriceList.length}
+                        </span>
+                      </button>
+                      {serviceCategories.map((cat: any) => {
+                        const catSubs = serviceSubcategories.filter(
+                          (sc: any) => sc.category_id === cat._id,
+                        );
+                        const catServicesCount = servicePriceList.filter(
+                          (s: any) => s.category_id === cat._id,
+                        ).length;
+                        const isCatSelected = serviceCategoryFilter === `cat:${cat._id}`;
+                        return (
+                          <div
+                            key={cat._id}
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "2px",
+                            }}
+                          >
+                            <button
+                              style={{
+                                width: "100%",
+                                textAlign: "left",
+                                padding: "6px 8px",
+                                borderRadius: "6px",
+                                border: "none",
+                                cursor: "pointer",
+                                fontSize: "0.8125rem",
+                                fontWeight: isCatSelected ? 700 : 600,
+                                background: isCatSelected
+                                  ? "var(--color-accent-badge-bg)"
+                                  : "transparent",
+                                color: isCatSelected
+                                  ? "var(--color-accent-primary)"
+                                  : "var(--color-text-primary)",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                marginTop: "4px",
+                              }}
+                              onClick={() => setServiceCategoryFilter(`cat:${cat._id}`)}
+                            >
+                              <span
+                                style={{
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                  flex: 1,
+                                }}
+                              >
+                                {cat.name}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "0.7rem",
+                                  background: "var(--color-border-default)",
+                                  padding: "1px 6px",
+                                  borderRadius: "999px",
+                                  color: "var(--color-text-secondary)",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {catServicesCount}
+                              </span>
+                            </button>
+                            {catSubs.map((sub: any) => {
+                              const subServicesCount = servicePriceList.filter(
+                                (s: any) => s.subcategory_id === sub._id,
+                              ).length;
+                              const isSubSelected =
+                                serviceCategoryFilter === `sub:${sub._id}`;
+                              return (
+                                <button
+                                  key={sub._id}
+                                  style={{
+                                    width: "calc(100% - 10px)",
+                                    marginLeft: "10px",
+                                    textAlign: "left",
+                                    padding: "4px 6px",
+                                    borderRadius: "4px",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    fontSize: "0.75rem",
+                                    fontWeight: isSubSelected ? 600 : 400,
+                                    background: isSubSelected
+                                      ? "var(--color-accent-badge-bg)"
+                                      : "transparent",
+                                    color: isSubSelected
+                                      ? "var(--color-accent-primary)"
+                                      : "var(--color-text-muted)",
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                  }}
+                                  onClick={() =>
+                                    setServiceCategoryFilter(`sub:${sub._id}`)
+                                  }
+                                >
+                                  <span
+                                    style={{
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                      flex: 1,
+                                    }}
+                                  >
+                                    • {sub.name}
+                                  </span>
+                                  <span
+                                    style={{
+                                      fontSize: "0.65rem",
+                                      background: "var(--color-border-subtle)",
+                                      padding: "1px 5px",
+                                      borderRadius: "999px",
+                                      color: "var(--color-text-muted)",
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    {subServicesCount}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
                 </div>
 
                 {/* Product cards */}
@@ -1200,8 +1457,10 @@ export default function NewOfferPage() {
                             <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>
                               {item.name}
                             </span>
-                            <Badge variant={categoryVariant[item.category]}>
-                              {categoryLabel[item.category]}
+                            <Badge
+                              variant={(categoryVariant as any)[item.category] || "info"}
+                            >
+                              {getItemCategoryName(item.category)}
                             </Badge>
                             {inCart && (
                               <span
@@ -1341,65 +1600,94 @@ export default function NewOfferPage() {
                               {inCart ? <CheckCircle2 size={16} /> : <Plus size={16} />}
                             </div>
 
-                            {/* Név + leírás */}
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "8px",
-                                  marginBottom: "3px",
-                                }}
-                              >
-                                <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>
-                                  {item.name}
-                                </span>
-                                <Badge variant="warning">Szolgáltatás</Badge>
-                                {inCart && (
-                                  <span
-                                    style={{
-                                      fontSize: "0.7rem",
-                                      fontWeight: 700,
-                                      color: "#22c55e",
-                                    }}
-                                  >
-                                    Kosárban
-                                  </span>
-                                )}
-                              </div>
-                              <div
-                                style={{
-                                  fontSize: "0.72rem",
-                                  color: "var(--color-text-muted, #555)",
-                                  display: "flex",
-                                  gap: "8px",
-                                }}
-                              >
-                                <span
-                                  style={{
-                                    fontFamily: "monospace",
-                                    color: "var(--color-text-secondary, #a0a0a0)",
-                                  }}
-                                >
-                                  {item.sku}
-                                </span>
-                              </div>
-                            </div>
+                            {(() => {
+                              const subCat = serviceSubcategories.find(
+                                (sc: any) => sc._id === item.subcategory_id,
+                              );
+                              const mainCat = serviceCategories.find(
+                                (c: any) => c._id === item.category_id,
+                              );
+                              const badgeText = subCat
+                                ? subCat.name
+                                : mainCat
+                                  ? mainCat.name
+                                  : "Szolgáltatás";
+                              const displayPrice =
+                                serviceCalculatedPrices[item._id] ??
+                                item.internal_base_price ??
+                                0;
+                              return (
+                                <>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "8px",
+                                        marginBottom: "3px",
+                                      }}
+                                    >
+                                      <span
+                                        style={{ fontWeight: 600, fontSize: "0.875rem" }}
+                                      >
+                                        {item.name}
+                                      </span>
+                                      <Badge variant="info">{badgeText}</Badge>
+                                      {inCart && (
+                                        <span
+                                          style={{
+                                            fontSize: "0.7rem",
+                                            fontWeight: 700,
+                                            color: "#22c55e",
+                                          }}
+                                        >
+                                          Kosárban
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div
+                                      style={{
+                                        fontSize: "0.72rem",
+                                        color: "var(--color-text-muted, #555)",
+                                        display: "flex",
+                                        gap: "8px",
+                                      }}
+                                    >
+                                      <span
+                                        style={{
+                                          fontFamily: "monospace",
+                                          color: "var(--color-text-secondary, #a0a0a0)",
+                                        }}
+                                      >
+                                        Kód: {item.sku || "—"}
+                                      </span>
+                                    </div>
+                                  </div>
 
-                            {/* Ár */}
-                            <div style={{ textAlign: "right", flexShrink: 0 }}>
-                              <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>
-                                Auto-kalkulált
-                              </div>
-                              <div
-                                style={{
-                                  fontSize: "0.7rem",
-                                  color: "var(--color-text-muted, #555)",
-                                }}
-                              >
-                                / {item.unit || "óra"} · nettó
-                              </div>
-                            </div>
+                                  {/* Ár */}
+                                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                                    <div
+                                      style={{
+                                        fontWeight: 700,
+                                        fontSize: "0.95rem",
+                                        color: "var(--color-accent-primary, #e53935)",
+                                      }}
+                                    >
+                                      {fmt(displayPrice)}
+                                    </div>
+                                    <div
+                                      style={{
+                                        fontSize: "0.7rem",
+                                        color: "var(--color-text-muted, #555)",
+                                      }}
+                                    >
+                                      / {item.unit || "db"} ·{" "}
+                                      {header.contact_id ? "partner ár" : "alapár"}
+                                    </div>
+                                  </div>
+                                </>
+                              );
+                            })()}
                           </button>
                         );
                       })}
