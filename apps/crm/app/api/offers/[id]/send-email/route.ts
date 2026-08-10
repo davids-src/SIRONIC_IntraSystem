@@ -72,9 +72,9 @@ export async function POST(
         lang: "hu",
       });
 
-      // Update offer status if it was draft
+      // Update offer status if it was draft or ready (not yet sent)
       let updatedOffer = offer;
-      if (offer.status === "draft") {
+      if (offer.status === "draft" || offer.status === "ready") {
         updatedOffer =
           (await OfferModel.findOneAndUpdate(
             { _id: id },

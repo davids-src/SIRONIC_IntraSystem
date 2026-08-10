@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
-import type { Contact, PriceListItem } from "@crm/types";
+import type { Contact, PriceListItem, Offer } from "@crm/types";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 
 function mapPriceListItem(p: PriceListItem): PriceItem {
@@ -425,7 +425,7 @@ export default function NewOfferPage() {
 
   const contactLabel = contacts.find((c) => c._id === header.contact_id)?.name ?? "";
 
-  const buildPayload = (status: "draft" | "sent") => {
+  const buildPayload = (status: Offer["status"]) => {
     const days = Number.parseInt(header.valid_days, 10) || 30;
     const valid_until = new Date();
     valid_until.setDate(valid_until.getDate() + days);
@@ -450,7 +450,7 @@ export default function NewOfferPage() {
     };
   };
 
-  const saveOffer = async (status: "draft" | "sent") => {
+  const saveOffer = async (status: Offer["status"]) => {
     if (!header.contact_id || !header.title.trim() || cart.length === 0) return;
     setSaving(true);
     setLoadErr(null);
@@ -2270,7 +2270,7 @@ export default function NewOfferPage() {
             <Button
               variant="primary"
               disabled={saving}
-              onClick={() => void saveOffer("draft")}
+              onClick={() => void saveOffer("ready")}
             >
               <FileText size={16} style={{ marginRight: "6px" }} />
               {saving ? "Mentés…" : "Ajánlat mentése"}

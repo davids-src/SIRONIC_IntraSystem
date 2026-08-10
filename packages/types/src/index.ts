@@ -77,7 +77,7 @@ export interface PortalUser {
   updated_at: Date;
 }
 
-export type OfferStatus = "draft" | "sent" | "accepted" | "rejected";
+export type OfferStatus = "draft" | "ready" | "sent" | "accepted" | "rejected";
 
 /** Lefagyasztott ár snapshot – létrehozáskor rögzítve, nem változik */
 export interface PriceSnapshot {
@@ -396,11 +396,7 @@ export type ProjectStatus = "open" | "on_hold" | "closed";
 export type ProjectPhaseStatus = "pending" | "in_progress" | "completed";
 export type StagingLinkApprovalStatus = "pending" | "approved" | "changes_requested";
 export type ChecklistItemCategory =
-  | "content"
-  | "assets"
-  | "documents"
-  | "technical"
-  | "other";
+  "content" | "assets" | "documents" | "technical" | "other";
 
 export interface ProjectPhase {
   name: string;
@@ -495,11 +491,7 @@ export type ClientCategory = "individual" | "smb" | "enterprise";
 export type PricingContractType = "occasional" | "6month" | "1year" | "2year";
 export type SubcontractorPresenceType = "daily_presence" | "project_based" | "both";
 export type SubcontractorWorkType =
-  | "it"
-  | "security_tech"
-  | "fire_protection"
-  | "electrical"
-  | "pm";
+  "it" | "security_tech" | "fire_protection" | "electrical" | "pm";
 // ──────────────────────────────────────────────────────────────────────────────
 
 export interface Contact {
@@ -612,11 +604,7 @@ export interface ContractTemplate {
 export type ContractType = "generated" | "uploaded";
 
 export type ContractStatus =
-  | "draft"
-  | "sent"
-  | "signed_digital"
-  | "signed_paper"
-  | "cancelled";
+  "draft" | "sent" | "signed_digital" | "signed_paper" | "cancelled";
 
 export type ContractSigningType = "digital" | "paper" | "none";
 
@@ -684,6 +672,10 @@ export interface PurchaseOrder {
   tenantId: string;
   order_number: string; // PO-YYYY-0001
   supplier_id: string;
+  /** Projekt, amelyhez ez a megrendelőlap tartozik (opcionális) */
+  project_id: string | null;
+  /** Árajánlat, amelyből a bevásárlólistán keresztül generálódott (opcionális) */
+  offer_id: string | null;
   status: PurchaseOrderStatus;
   expected_delivery_date: Date | null;
   total_amount: number;
@@ -737,11 +729,7 @@ export interface WarehouseLocation {
 
 export type StockTransactionType = "in" | "out" | "adjustment" | "transfer";
 export type StockTransactionRef =
-  | "worklog"
-  | "offer"
-  | "invoice"
-  | "purchase_order"
-  | "manual";
+  "worklog" | "offer" | "invoice" | "purchase_order" | "manual";
 
 /** Raktármozgás napló bejegyzés */
 export interface StockTransaction {
@@ -931,11 +919,7 @@ export interface WeeklyPlan {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type ToolStatus =
-  | "in_warehouse"
-  | "checked_out"
-  | "maintenance"
-  | "lost"
-  | "retired";
+  "in_warehouse" | "checked_out" | "maintenance" | "lost" | "retired";
 export type ToolCondition = "new" | "good" | "fair" | "poor";
 
 export interface Tool {
@@ -1010,12 +994,7 @@ export interface WorklogChecklistItem {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type ExpenseType =
-  | "fuel"
-  | "parking"
-  | "toll"
-  | "accommodation"
-  | "material"
-  | "other";
+  "fuel" | "parking" | "toll" | "accommodation" | "material" | "other";
 
 export interface ProjectExpense {
   _id: string;

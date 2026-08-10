@@ -11,16 +11,18 @@ import { parseOffer } from "@/lib/entity-parsers";
 
 const statusVariant = {
   draft: "default",
+  ready: "warning",
   sent: "info",
   accepted: "success",
   rejected: "error",
 } as const;
-const statusLabel: Record<Offer["status"], string> = {
+const statusLabel = {
   draft: "Piszkozat",
-  sent: "Döntésre vár",
+  ready: "Elkészült",
+  sent: "Elküldve",
   accepted: "Elfogadva",
   rejected: "Elutasítva",
-};
+} as const;
 
 export default function PartnerOffersPage() {
   const router = useRouter();

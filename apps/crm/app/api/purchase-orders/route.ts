@@ -14,6 +14,8 @@ const lineSchema = z.object({
 
 const createSchema = z.object({
   supplier_id: z.string().min(1),
+  project_id: z.string().nullable().optional(),
+  offer_id: z.string().nullable().optional(),
   status: z.enum(["draft", "sent", "fulfilled", "cancelled"]).optional(),
   expected_delivery_date: z.string().nullable().optional(),
   currency: z.string().default("HUF"),
@@ -31,6 +33,10 @@ export async function GET(req: Request) {
       const filter: Record<string, unknown> = { tenantId: actor.tenantId };
       if (!includeArchived) {
         filter.is_archived = { $ne: true };
+      }
+      const projectId = searchParams.get("project_id")?.trim();
+      if (projectId) {
+        filter.project_id = projectId;
       }
       const rows = await PurchaseOrderModel.find(filter).sort({ created_at: -1 }).lean();
       return NextResponse.json(serializeForJson(rows));
@@ -64,6 +70,8 @@ export async function POST(req: Request) {
         tenantId: actor.tenantId,
         order_number,
         supplier_id: b.supplier_id,
+        project_id: b.project_id ?? null,
+        offer_id: b.offer_id ?? null,
         status: b.status ?? "draft",
         expected_delivery_date: b.expected_delivery_date
           ? new Date(b.expected_delivery_date)

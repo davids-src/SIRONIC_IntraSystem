@@ -9,13 +9,22 @@ import {
   PdfPreviewModal,
   generatePdfFromElement,
 } from "@crm/ui";
-import { Download, Edit, ChevronLeft, Send, Eye } from "lucide-react";
+import {
+  Download,
+  Edit,
+  ChevronLeft,
+  Send,
+  Eye,
+  ShoppingCart,
+  CheckCircle,
+} from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
-import type { Contact, Offer, CompanyDetails, Settings } from "@crm/types";
+import type { Contact, Offer, CompanyDetails, Settings, Project } from "@crm/types";
 
 const statusVariant = {
   draft: "default",
+  ready: "warning",
   sent: "info",
   accepted: "success",
   rejected: "error",
@@ -23,6 +32,7 @@ const statusVariant = {
 
 const statusLabel = {
   draft: "Piszkozat",
+  ready: "Elkészült",
   sent: "Elküldve",
   accepted: "Elfogadva",
   rejected: "Elutasítva",
@@ -45,6 +55,12 @@ export default function OfferDetailsPage() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSuccess, setEmailSuccess] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  // Import modal
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
 
   const handleSendEmail = async () => {
     if (!confirm("Szeretnél e-mail értesítést küldeni a partnernek erről az ajánlatról?"))
@@ -93,6 +109,12 @@ export default function OfferDetailsPage() {
             setContact(await cRes.json());
           }
         }
+        // Projektek betöltése az import modalhoz
+        const pRes = await fetch("/api/projects", { signal: ac.signal });
+        if (pRes.ok) {
+          const pData = await pRes.json();
+          setProjects(pData.filter((p: any) => p.status !== "closed"));
+        }
       } catch (err) {
         if (!ac.signal.aborted) setLoadErr((err as Error).message);
       }
@@ -111,6 +133,29 @@ export default function OfferDetailsPage() {
     } catch (e) {
       console.error("PDF generálási hiba:", e);
       alert("Hiba történt a PDF generálása során.");
+    }
+  };
+
+  const handleImport = async () => {
+    if (!selectedProjectId) return;
+    setImporting(true);
+    try {
+      const res = await fetch(`/api/offers/${id}/import-to-shopping-list`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project_id: selectedProjectId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Import sikertelen.");
+      setShowImportModal(false);
+      setImportSuccess(
+        `Sikeresen importálva ${data.imported_count} tétel a projekt bevásárlólistájára.`,
+      );
+      setTimeout(() => setImportSuccess(null), 6000);
+    } catch (e) {
+      alert((e as Error).message);
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -142,6 +187,15 @@ export default function OfferDetailsPage() {
             <Button variant="ghost" onClick={() => router.push("/offers")}>
               <ChevronLeft size={16} /> Vissza
             </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setSelectedProjectId("");
+                setShowImportModal(true);
+              }}
+            >
+              <ShoppingCart size={16} className="mr-2" /> Importálás bevásárlólistába
+            </Button>
             <Button variant="secondary" onClick={() => router.push(`/offers/${id}/edit`)}>
               <Edit size={16} className="mr-2" /> Szerkesztés
             </Button>
@@ -166,6 +220,20 @@ export default function OfferDetailsPage() {
       {emailSuccess && (
         <div className="bg-green-950/30 text-green-400 p-4 rounded-lg border border-green-900/50">
           Az e-mail sikeresen elküldve a partnernek ({contact?.email}).
+        </div>
+      )}
+
+      {importSuccess && (
+        <div className="bg-green-950/30 text-green-400 p-4 rounded-lg border border-green-900/50 flex items-center gap-2">
+          <CheckCircle size={16} />
+          {importSuccess}
+          <button
+            className="ml-auto text-green-400/60 hover:text-green-400"
+            style={{ background: "none", border: "none", cursor: "pointer" }}
+            onClick={() => setImportSuccess(null)}
+          >
+            ×
+          </button>
         </div>
       )}
 
@@ -513,6 +581,103 @@ export default function OfferDetailsPage() {
           </div>
         </UnifiedPdfTemplate>
       </PdfPreviewModal>
+
+      {/* Import bevásárlólistába modal */}
+      {showImportModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            background: "rgba(0,0,0,0.65)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => setShowImportModal(false)}
+        >
+          <div
+            className="rounded-xl border p-6"
+            style={{
+              background: "var(--color-bg-card)",
+              borderColor: "var(--color-border-subtle)",
+              width: "100%",
+              maxWidth: "480px",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <ShoppingCart size={20} style={{ color: "var(--color-accent-primary)" }} />
+              <h2 style={{ margin: 0, color: "#fff", fontSize: "1.1rem" }}>
+                Importálás bevásárlólistába
+              </h2>
+            </div>
+            <p
+              style={{
+                fontSize: "14px",
+                color: "var(--color-text-muted)",
+                marginBottom: "20px",
+              }}
+            >
+              Válassz projektet, amelyhez az árajánlat termék-tételeit importálni
+              szeretnéd. A meglévő bevásárlólista felülíródik.
+            </p>
+
+            <div style={{ marginBottom: "20px" }}>
+              <label
+                style={{
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  color: "var(--color-text-muted)",
+                  display: "block",
+                  marginBottom: "8px",
+                }}
+              >
+                Projekt kiválasztása
+              </label>
+              <select
+                value={selectedProjectId}
+                onChange={(e) => setSelectedProjectId(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--color-border-default)",
+                  background: "var(--color-bg-input, #0a0a0a)",
+                  color: "var(--color-text-primary)",
+                  fontSize: "14px",
+                }}
+              >
+                <option value="">-- Válassz projektet --</option>
+                {projects.map((p) => (
+                  <option key={p._id} value={p._id}>
+                    {p.project_number} – {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+              <Button variant="ghost" onClick={() => setShowImportModal(false)}>
+                Mégse
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => void handleImport()}
+                disabled={!selectedProjectId || importing}
+              >
+                <ShoppingCart size={15} style={{ marginRight: "6px" }} />
+                {importing ? "Importálás..." : "Importálás"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -14,8 +14,9 @@ const offerSchema = defineSchema(
     currency: { type: String, required: true },
     status: {
       type: String,
-      enum: ["draft", "sent", "accepted", "rejected"],
+      enum: ["draft", "ready", "sent", "accepted", "rejected"],
       required: true,
+      default: "ready",
     },
     valid_until: { type: Date, default: null },
     created_by: { type: String, required: true },

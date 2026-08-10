@@ -31,12 +31,14 @@ function parseOffer(raw: unknown, contactName: string): OfferRow {
 
 const statusVariant = {
   draft: "default",
+  ready: "warning",
   sent: "info",
   accepted: "success",
   rejected: "error",
 } as const;
 const statusLabel = {
   draft: "Piszkozat",
+  ready: "Elkészült",
   sent: "Elküldve",
   accepted: "Elfogadva",
   rejected: "Elutasítva",

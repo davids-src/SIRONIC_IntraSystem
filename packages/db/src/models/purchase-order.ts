@@ -19,6 +19,8 @@ const purchaseOrderSchema = defineSchema(
     tenantId: { type: String, required: true, index: true },
     order_number: { type: String, required: true },
     supplier_id: { type: String, required: true, index: true },
+    project_id: { type: String, default: null, index: true },
+    offer_id: { type: String, default: null },
     status: {
       type: String,
       enum: ["draft", "sent", "fulfilled", "cancelled"],

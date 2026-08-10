@@ -16,6 +16,7 @@ import type { Contact, Offer, CompanyDetails, Settings } from "@crm/types";
 
 const statusVariant = {
   draft: "default",
+  ready: "warning",
   sent: "info",
   accepted: "success",
   rejected: "error",
@@ -23,7 +24,8 @@ const statusVariant = {
 
 const statusLabel = {
   draft: "Piszkozat",
-  sent: "Döntésre vár",
+  ready: "Elkészült",
+  sent: "Elküldve",
   accepted: "Elfogadva",
   rejected: "Elutasítva",
 } as const;

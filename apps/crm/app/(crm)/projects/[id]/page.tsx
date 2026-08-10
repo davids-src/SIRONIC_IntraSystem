@@ -26,6 +26,7 @@ import {
   CalendarDays,
   Trash2,
   Printer,
+  ShoppingCart,
 } from "lucide-react";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 
@@ -91,6 +92,7 @@ export default function ProjectDetailPage({
   const [stockItemDoc, setStockItemDoc] = useState<any | null>(null);
   const [loadingStockInfo, setLoadingStockInfo] = useState(false);
   const [reservingStock, setReservingStock] = useState(false);
+  const [generatingPOs, setGeneratingPOs] = useState(false);
 
   const reload = useCallback(async () => {
     try {
@@ -415,13 +417,38 @@ export default function ProjectDetailPage({
         throw new Error("Hiba történt a lezárás során");
       }
       alert(
-        "A projekt sikeresen lezárva! A záró dokumentumok listáját elküldtük a partnernek.",
+        "A projekt sikeresen lezárva! A záró dokumentumok listáját elküldjük a partnernek.",
       );
       void reload();
     } catch (err) {
       alert("Hiba a lezárás során. Kérjük, próbálja újra.");
     } finally {
       setClosing(false);
+    }
+  };
+
+  const handleGeneratePurchaseOrders = async () => {
+    if (
+      !window.confirm(
+        "Megrendelőket generálsz a bevásárlólista tételei alapján, szállítónként csoportosítva. Folytatod?",
+      )
+    )
+      return;
+    setGeneratingPOs(true);
+    try {
+      const res = await fetch(`/api/projects/${id}/generate-purchase-orders`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Hiba történt.");
+      alert(
+        `${data.generated_count} megrendelőlap sikeresen létrehozva! Átnavigálunk a megrendelőkhöz.`,
+      );
+      router.push(`/purchase-orders?project_id=${id}`);
+    } catch (e) {
+      alert((e as Error).message);
+    } finally {
+      setGeneratingPOs(false);
     }
   };
 
@@ -941,6 +968,16 @@ export default function ProjectDetailPage({
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={() => void handleGeneratePurchaseOrders()}
+                    disabled={
+                      generatingPOs || (project.required_items ?? []).length === 0
+                    }
+                  >
+                    <ShoppingCart size={15} className="mr-1.5" />
+                    {generatingPOs ? "Generálás..." : "Megrendelők generálása"}
+                  </Button>
                   <Button
                     variant="secondary"
                     onClick={() => setShowCommissionModal(true)}

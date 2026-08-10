@@ -1,9 +1,17 @@
 "use client";
 
 import { PageHeader, Card, Badge, Button, Input } from "@crm/ui";
-import { Plus, ShoppingCart, FileDown, Archive, RotateCcw } from "lucide-react";
+import {
+  Plus,
+  ShoppingCart,
+  FileDown,
+  Archive,
+  RotateCcw,
+  FolderKanban,
+  X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { PurchaseOrder, Supplier } from "@crm/types";
 
 const statusVariant: Record<
@@ -31,6 +39,8 @@ const fmt = (n: number) =>
 
 export default function PurchaseOrdersPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const projectFilter = searchParams.get("project_id") ?? null;
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [suppliers, setSuppliers] = useState<Record<string, Supplier>>({});
   const [loading, setLoading] = useState(true);
@@ -41,10 +51,9 @@ export default function PurchaseOrdersPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [oRes, sRes] = await Promise.all([
-        fetch(`/api/purchase-orders?include_archived=${includeArchived}`),
-        fetch("/api/suppliers"),
-      ]);
+      let poUrl = `/api/purchase-orders?include_archived=${includeArchived}`;
+      if (projectFilter) poUrl += `&project_id=${encodeURIComponent(projectFilter)}`;
+      const [oRes, sRes] = await Promise.all([fetch(poUrl), fetch("/api/suppliers")]);
       const oData: PurchaseOrder[] = await oRes.json();
       const sData: Supplier[] = await sRes.json();
       setOrders(oData);
@@ -58,7 +67,7 @@ export default function PurchaseOrdersPage() {
 
   useEffect(() => {
     loadData();
-  }, [includeArchived]);
+  }, [includeArchived, projectFilter]);
 
   const handleArchive = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,6 +141,35 @@ export default function PurchaseOrdersPage() {
           </div>
         }
       />
+
+      {/* Projekt szűrő banner */}
+      {projectFilter && (
+        <div
+          className="flex items-center gap-3 p-3 rounded-lg border"
+          style={{
+            background: "rgba(99,102,241,0.08)",
+            borderColor: "rgba(99,102,241,0.3)",
+          }}
+        >
+          <FolderKanban size={16} style={{ color: "#818cf8", flexShrink: 0 }} />
+          <span className="text-sm" style={{ color: "#818cf8" }}>
+            Projekt-specifikus nézet – csak az ehhez a projekthez tartozó megrendelők
+            látszanak
+          </span>
+          <button
+            onClick={() => router.push("/purchase-orders")}
+            className="ml-auto flex items-center gap-1 text-xs"
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "#818cf8",
+            }}
+          >
+            <X size={13} /> Szűrő törlése
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <div className="p-8 text-center text-gray-400">Betöltés...</div>
