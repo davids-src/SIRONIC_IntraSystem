@@ -52,6 +52,7 @@ export default function EditContractPage({
 
   // Step 2a – from template
   const [templateId, setTemplateId] = useState("");
+  const [contractNumber, setContractNumber] = useState("");
   const [contractName, setContractName] = useState("");
   const [contactId, setContactId] = useState("");
   const [category, setCategory] = useState("");
@@ -64,6 +65,7 @@ export default function EditContractPage({
 
   // Step 2b – upload
   const [uploadName, setUploadName] = useState("");
+  const [uploadContractNumber, setUploadContractNumber] = useState("");
   const [uploadContactId, setUploadContactId] = useState("");
   const [uploadCategory, setUploadCategory] = useState("");
   const [uploadSigningType, setUploadSigningType] = useState<
@@ -87,6 +89,7 @@ export default function EditContractPage({
         }
 
         if (doc.type === "generated") {
+          setContractNumber(doc.contract_number);
           setTemplateId(doc.template_id || "");
           setContractName(doc.name);
           setContactId(doc.contact_id);
@@ -102,6 +105,7 @@ export default function EditContractPage({
           setPortalVisible(doc.portal_visible);
           setVariablesFilled(doc.variables_filled || {});
         } else {
+          setUploadContractNumber(doc.contract_number);
           setUploadName(doc.name);
           setUploadContactId(doc.contact_id);
           setUploadCategory(doc.category);
@@ -162,6 +166,7 @@ export default function EditContractPage({
           contact_id: contactId,
           category,
           name: contractName,
+          contract_number: contractNumber || undefined,
           template_id: templateId,
           variables_filled: variablesFilled,
           signing_type: signingType,
@@ -181,6 +186,7 @@ export default function EditContractPage({
           contact_id: uploadContactId,
           category: uploadCategory,
           name: uploadName,
+          contract_number: uploadContractNumber || undefined,
           signing_type: uploadSigningType,
         };
       }
@@ -257,6 +263,12 @@ export default function EditContractPage({
                 value={contractName}
                 onChange={(e) => setContractName(e.target.value)}
                 placeholder="Szerződés neve"
+              />
+              <Input
+                label="Szerződésszám"
+                value={contractNumber}
+                onChange={(e) => setContractNumber(e.target.value)}
+                placeholder="Üresen hagyva automatikus: SZ-..."
               />
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="edit-contract-contact">Kontakt *</Label>
@@ -438,6 +450,12 @@ export default function EditContractPage({
                 value={uploadName}
                 onChange={(e) => setUploadName(e.target.value)}
                 placeholder="Szerződés neve"
+              />
+              <Input
+                label="Szerződésszám"
+                value={uploadContractNumber}
+                onChange={(e) => setUploadContractNumber(e.target.value)}
+                placeholder="Üresen hagyva automatikus: SZ-..."
               />
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="upload-contact">Kontakt *</Label>

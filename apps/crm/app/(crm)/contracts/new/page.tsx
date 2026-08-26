@@ -17,7 +17,7 @@ import {
   InputControl,
 } from "@crm/ui";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { FileText, Upload, ArrowLeft, ArrowRight, Check } from "lucide-react";
 import type { Contact, ContractTemplate } from "@crm/types";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
@@ -47,6 +47,7 @@ export default function NewContractPage() {
 
   // Step 2a – from template
   const [templateId, setTemplateId] = useState("");
+  const [contractNumber, setContractNumber] = useState("");
   const [contractName, setContractName] = useState("");
   const [contactId, setContactId] = useState("");
   const [category, setCategory] = useState("");
@@ -59,11 +60,20 @@ export default function NewContractPage() {
 
   // Step 2b – upload
   const [uploadName, setUploadName] = useState("");
+  const [uploadContractNumber, setUploadContractNumber] = useState("");
   const [uploadContactId, setUploadContactId] = useState("");
   const [uploadCategory, setUploadCategory] = useState("");
   const [uploadSigningType, setUploadSigningType] = useState<
     "paper" | "digital" | "none"
   >("paper");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setSelectedFile(e.target.files[0] || null);
+    }
+  };
 
   useEffect(() => {
     Promise.all([
@@ -114,6 +124,7 @@ export default function NewContractPage() {
           type: "generated",
           category,
           name: contractName,
+          contract_number: contractNumber || undefined,
           template_id: templateId,
           status,
           variables_filled: variablesFilled,
@@ -136,6 +147,7 @@ export default function NewContractPage() {
           type: "uploaded",
           category: uploadCategory,
           name: uploadName,
+          contract_number: uploadContractNumber || undefined,
           status: "draft",
           pdf_url: "/uploads/dummy_contract.pdf",
           signing_type: uploadSigningType,
@@ -422,6 +434,12 @@ export default function NewContractPage() {
                 onChange={(e) => setContractName(e.target.value)}
                 placeholder="Szerződés neve"
               />
+              <Input
+                label="Szerződésszám"
+                value={contractNumber}
+                onChange={(e) => setContractNumber(e.target.value)}
+                placeholder="Üresen hagyva automatikus: SZ-..."
+              />
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="new-contract-contact">Kontakt *</Label>
                 <Select
@@ -611,6 +629,12 @@ export default function NewContractPage() {
                 onChange={(e) => setUploadName(e.target.value)}
                 placeholder="Szerződés neve"
               />
+              <Input
+                label="Szerződésszám"
+                value={uploadContractNumber}
+                onChange={(e) => setUploadContractNumber(e.target.value)}
+                placeholder="Üresen hagyva automatikus: SZ-..."
+              />
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="upload-contact">Kontakt *</Label>
                 <Select
@@ -698,10 +722,23 @@ export default function NewContractPage() {
               onMouseLeave={(e) =>
                 (e.currentTarget.style.borderColor = "var(--border-subtle, #2a2a2a)")
               }
+              onClick={() => fileInputRef.current?.click()}
             >
+              <input
+                type="file"
+                ref={fileInputRef}
+                style={{ display: "none" }}
+                accept=".pdf"
+                onChange={handleFileChange}
+              />
               <Upload
                 size={40}
-                style={{ color: "var(--text-muted, #888)", marginBottom: "12px" }}
+                style={{
+                  color: selectedFile
+                    ? "var(--accent-primary, #e53935)"
+                    : "var(--text-muted, #888)",
+                  marginBottom: "12px",
+                }}
               />
               <p
                 style={{
@@ -710,7 +747,7 @@ export default function NewContractPage() {
                   margin: "0 0 4px 0",
                 }}
               >
-                Simulated Upload Box (Az elmentett bizonylat dummy PDF-et fog kapni)
+                {selectedFile ? selectedFile.name : "Fájl kiválasztása (Kattints ide)"}
               </p>
               <p
                 style={{
@@ -719,7 +756,9 @@ export default function NewContractPage() {
                   margin: 0,
                 }}
               >
-                PDF formátum támogatott
+                {selectedFile
+                  ? "Fájl sikeresen kiválasztva (A mentés továbbra is dummy PDF-et ad a teszt során)"
+                  : "Csak PDF formátum támogatott"}
               </p>
             </div>
           </Card>

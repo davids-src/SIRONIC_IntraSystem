@@ -32,7 +32,6 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
     const patch: Record<string, unknown> = await req.json();
     delete patch._id;
     delete patch.tenantId;
-    delete patch.contract_number;
     return await withDb(async () => {
       const doc = await ContractModel.findOneAndUpdate(
         { _id: id, tenantId: actor.tenantId },

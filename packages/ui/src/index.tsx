@@ -73,6 +73,9 @@ export type {
 export { PdfPreviewModal } from "./components/PdfPreviewModal";
 export type { PdfPreviewModalProps } from "./components/PdfPreviewModal";
 
+export { PdfViewerModal } from "./components/PdfViewerModal";
+export type { PdfViewerModalProps } from "./components/PdfViewerModal";
+
 export { generatePdfFromElement } from "./lib/pdf-generator";
 
 // Tokens

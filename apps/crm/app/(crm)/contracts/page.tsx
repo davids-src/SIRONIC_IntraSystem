@@ -13,10 +13,11 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  PdfViewerModal,
 } from "@crm/ui";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { FileSignature, Download, Eye, XCircle, Plus } from "lucide-react";
+import { FileSignature, Download, Eye, XCircle, Plus, FileText } from "lucide-react";
 import type { Contact, Contract, ContractStatus } from "@crm/types";
 
 type ContractRow = Contract & { contact_name: string };
@@ -83,6 +84,8 @@ export default function ContractsListPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [rows, setRows] = useState<ContractRow[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
+  const [previewTitle, setPreviewTitle] = useState("");
 
   useEffect(() => {
     const ac = new AbortController();
@@ -393,20 +396,39 @@ export default function ContractsListPage() {
                           <Eye size={16} />
                         </button>
                         {contract.pdf_url && (
-                          <button
-                            title="PDF letöltése"
-                            onClick={() => window.open(contract.pdf_url!, "_blank")}
-                            style={{
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
-                              color: "var(--text-muted, #888)",
-                              padding: "4px",
-                              borderRadius: "4px",
-                            }}
-                          >
-                            <Download size={16} />
-                          </button>
+                          <>
+                            <button
+                              title="PDF Előnézet"
+                              onClick={() => {
+                                setPreviewPdfUrl(contract.pdf_url!);
+                                setPreviewTitle(contract.name);
+                              }}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                color: "var(--text-muted, #888)",
+                                padding: "4px",
+                                borderRadius: "4px",
+                              }}
+                            >
+                              <FileText size={16} />
+                            </button>
+                            <button
+                              title="PDF letöltése"
+                              onClick={() => window.open(contract.pdf_url!, "_blank")}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                color: "var(--text-muted, #888)",
+                                padding: "4px",
+                                borderRadius: "4px",
+                              }}
+                            >
+                              <Download size={16} />
+                            </button>
+                          </>
                         )}
                         {contract.status !== "cancelled" && (
                           <button
@@ -432,6 +454,13 @@ export default function ContractsListPage() {
           </table>
         </div>
       </Card>
+
+      <PdfViewerModal
+        open={!!previewPdfUrl}
+        onClose={() => setPreviewPdfUrl(null)}
+        pdfUrl={previewPdfUrl || ""}
+        title={previewTitle}
+      />
     </div>
   );
 }

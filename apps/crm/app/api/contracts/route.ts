@@ -8,6 +8,7 @@ const createSchema = z.object({
   project_id: z.string().nullable().optional(),
   ticket_id: z.string().nullable().optional(),
   template_id: z.string().nullable().optional(),
+  contract_number: z.string().optional(),
   type: z.enum(["generated", "uploaded"]),
   category: z.string().min(1),
   name: z.string().min(1),
@@ -63,8 +64,11 @@ export async function POST(req: Request) {
     }
     const b = parsed.data;
     return await withDb(async () => {
-      const n = await nextCounterValue(actor.tenantId, "contract");
-      const contract_number = formatNumber("SZ", n);
+      let contract_number = b.contract_number?.trim();
+      if (!contract_number) {
+        const n = await nextCounterValue(actor.tenantId, "contract");
+        contract_number = formatNumber("SZ", n);
+      }
       const doc = await ContractModel.create({
         tenantId: actor.tenantId,
         contract_number,
