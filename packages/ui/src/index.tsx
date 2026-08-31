@@ -78,5 +78,8 @@ export type { PdfViewerModalProps } from "./components/PdfViewerModal";
 
 export { generatePdfFromElement } from "./lib/pdf-generator";
 
+export { PreflightDialog } from "./components/PreflightDialog";
+export type { PreflightDialogProps } from "./components/PreflightDialog";
+
 // Tokens
 export { colors, radius, spacing } from "./tokens";

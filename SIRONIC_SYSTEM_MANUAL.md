@@ -27,9 +27,17 @@ A jogosultság 3 dimenziós:
 - **Akció:** pl. `view`, `write`, `manage`
 - **Hatókör (Scope):** `global` (CRM szint, mindenhez is), `contact` (csak a saját partneradatok), `resource` (csak a saját maga által létrehozott entitás).
 
-### 1.3. Tranzakciók a Mongoose-ban (`withDb`)
+### 1.3. Tranzakciók és Preflight Check Rendszer
 
-Összetett adatbázis műveletek (pl. szállítólevél kiadása készletcsökkentéssel, sorszám generálása) MongoDB **ACID tranzakciókon** (Session) keresztül történnek. A kód egy `await withDb(async (session) => { ... })` wrapperben fut, biztosítva, hogy részleges meghibásodás (pl. API hiba vagy készlethiány) esetén a teljes művelet visszaguruljon (rollback), elkerülve az inkonzisztens állapotokat.
+Összetett adatbázis műveletek (pl. szállítólevél kiadása készletcsökkentéssel, munkalap véglegesítése) MongoDB **ACID tranzakciókon** (`withDbTransaction`) keresztül történnek, biztosítva az atomicitást: ha a készletlevonás vagy sorszámgenerálás sikertelen, a teljes művelet rollback-elődik.
+
+**Bizonylat Kiállítás Előtti Ellenőrzés (Preflight Check):**
+A rendszer minden bizonylat státuszváltása vagy véglegesítése előtt egy univerzális **Preflight Check** műveletet hajt végre (`GET /api/<bizonylat>/<id>/preflight`), ami:
+
+1. Ellenőrzi a fizikai és szabad raktárkészletet (`quantity_in_stock`, `quantity_allocated`).
+2. Kiszűri az esetleges duplikációkat (ugyanazon partner/projekt aznapi bizonylatai).
+3. Egy interaktív `PreflightDialog` felugró ablakban átláthatóvá teszi a készletváltozást és a kapcsolódó dokumentumokat.
+4. Biztosítja a manuális korrekciót: a felhasználó véglegesítés előtt belejavíthat a szállítólevél tételeibe és mennyiségeibe, vagy kikapcsolhatja az automatikus szállítólevél-generálást.
 
 ---
 

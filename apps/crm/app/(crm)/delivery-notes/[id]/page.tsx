@@ -9,6 +9,7 @@ import {
   UnifiedPdfTemplate,
   PdfPreviewModal,
   generatePdfFromElement,
+  PreflightDialog,
 } from "@crm/ui";
 import {
   ChevronLeft,
@@ -27,7 +28,7 @@ import {
   Edit,
 } from "lucide-react";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
-import type { Contact, Settings } from "@crm/types";
+import type { Contact, Settings, PreflightResult } from "@crm/types";
 
 interface DeliveryNoteLine {
   price_list_item_id: string;
@@ -97,6 +98,9 @@ export default function DeliveryNoteDetailPage({
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSuccess, setEmailSuccess] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [preflightResult, setPreflightResult] = useState<PreflightResult | null>(null);
+  const [showPreflight, setShowPreflight] = useState(false);
+  const [preflightLoading, setPreflightLoading] = useState(false);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -117,12 +121,50 @@ export default function DeliveryNoteDetailPage({
     return () => ac.abort();
   }, [id]);
 
+  const startIssue = async () => {
+    if (!note) return;
+    setPreflightLoading(true);
+    setShowPreflight(true);
+    setError(null);
+    try {
+      const result = await apiJson<PreflightResult>(
+        `/api/delivery-notes/${id}/preflight`,
+      );
+      setPreflightResult(result);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Preflight ellenőrzés sikertelen.");
+      setShowPreflight(false);
+    } finally {
+      setPreflightLoading(false);
+    }
+  };
+
+  const confirmIssue = async () => {
+    if (!note) return;
+    setActing(true);
+    setError(null);
+    try {
+      const updated = await apiJsonBody<DeliveryNoteDoc>(
+        `/api/delivery-notes/${id}`,
+        "PATCH",
+        { status: "issued", _prevStatus: note.status },
+      );
+      setNote(updated);
+      setShowPreflight(false);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Státuszváltás sikertelen.");
+    } finally {
+      setActing(false);
+    }
+  };
+
   const changeStatus = async (status: "issued" | "cancelled") => {
     if (!note) return;
-    const msg =
-      status === "issued"
-        ? "Biztosan ki akarod adni a szállítólevelet? A készlet levonásra kerül."
-        : "Biztosan sztornózni akarod? A készlet visszakerül.";
+    if (status === "issued") {
+      return startIssue();
+    }
+    // Stornó – confirm dialog elegendő
+    const msg = "Biztosan sztornózni akarod? A készlet visszakerül.";
     if (!confirm(msg)) return;
     setActing(true);
     setError(null);
@@ -477,6 +519,17 @@ export default function DeliveryNoteDetailPage({
           )}
         </UnifiedPdfTemplate>
       </PdfPreviewModal>
+
+      {/* Preflight Ellenőrzés Dialógus */}
+      <PreflightDialog
+        open={showPreflight}
+        onClose={() => setShowPreflight(false)}
+        result={preflightResult}
+        loading={preflightLoading}
+        onConfirm={() => void confirmIssue()}
+        confirmLabel="Kiadás & Készletlevonás"
+        confirming={acting}
+      />
     </div>
   );
 }

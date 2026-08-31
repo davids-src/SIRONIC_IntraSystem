@@ -1,4 +1,5 @@
 export { connectDb } from "./connection";
+export { withDbTransaction } from "./transaction";
 export { nextCounterValue, formatNumber, type CounterName } from "./counter";
 export { serializeForJson } from "./json";
 export {

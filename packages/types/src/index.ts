@@ -729,7 +729,13 @@ export interface WarehouseLocation {
 
 export type StockTransactionType = "in" | "out" | "adjustment" | "transfer";
 export type StockTransactionRef =
-  "worklog" | "offer" | "invoice" | "purchase_order" | "manual";
+  | "worklog"
+  | "offer"
+  | "invoice"
+  | "purchase_order"
+  | "manual"
+  | "delivery_note"
+  | "inventory_taking";
 
 /** Raktármozgás napló bejegyzés */
 export interface StockTransaction {
@@ -1251,4 +1257,83 @@ export interface CalculatedServicePrice {
   final_price: number;
   pricing_type: ServicePricingType;
   is_custom: boolean;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PREFLIGHT CHECK RENDSZER (Bizonylat kiállítás előtti ellenőrzés)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type PreflightSeverity = "info" | "warning" | "error";
+
+/** Egyedi ellenőrzési üzenet */
+export interface PreflightMessage {
+  severity: PreflightSeverity;
+  code: string;
+  message: string;
+  /** Opcionális tételhivatkozás (pl. price_list_item_id) */
+  item_ref?: string | null;
+}
+
+/** Egy tétel készlethatás előnézete */
+export interface StockImpactLine {
+  price_list_item_id: string;
+  name: string;
+  unit: string;
+  /** Kért mennyiség a bizonylaton */
+  requested_quantity: number;
+  /** Aktuális fizikai készlet */
+  current_stock: number;
+  /** Lefoglalt készlet */
+  allocated_stock: number;
+  /** Szabad (elérhető) készlet = current - allocated */
+  available_stock: number;
+  /** Készlet levonás után maradó mennyiség */
+  stock_after: number;
+  /** Igaz, ha a levonás 0 alá vinné a készletet */
+  insufficient: boolean;
+}
+
+/** Automatikusan generálandó szállítólevél tételeinek előnézete */
+export interface DeliveryNotePreviewLine {
+  price_list_item_id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  /** Felhasználó szerkesztette-e a mennyiséget */
+  modified?: boolean;
+}
+
+/** Kapcsolódó, már létező bizonylat */
+export interface RelatedDocument {
+  _id: string;
+  type:
+    | "delivery_note"
+    | "worklog"
+    | "completion_certificate"
+    | "offer"
+    | "purchase_order"
+    | "contract";
+  number: string;
+  status: string;
+  created_at: string;
+}
+
+/** Bizonylat kiállítás előtti átfogó ellenőrzés eredménye */
+export interface PreflightResult {
+  /** Összes ellenőrzés átment-e (nincs "error" szintű probléma) */
+  canProceed: boolean;
+  /** Ellenőrzési üzenetek (info / warning / error) */
+  messages: PreflightMessage[];
+  /** Készlethatás részletezés (üres tömb ha nem releváns) */
+  stockImpact: StockImpactLine[];
+  /** Ha szállítólevél generálódik automatikusan */
+  deliveryNotePreview: DeliveryNotePreviewLine[] | null;
+  /** Megadja, hogy a szállítólevél generálás szükséges-e (checkbox állapot) */
+  shouldGenerateDeliveryNote: boolean;
+  /** Kapcsolódó, már létező bizonylatok */
+  relatedDocuments: RelatedDocument[];
+  /** A bizonylat típusa, amihez a preflight tartozik */
+  documentType: string;
+  /** A forrás dokumentum azonosítója */
+  documentId: string;
 }

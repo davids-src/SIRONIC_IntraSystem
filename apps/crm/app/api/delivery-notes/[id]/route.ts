@@ -73,39 +73,55 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
         return NextResponse.json({ error: "Not found" }, { status: 404 });
       }
       const docAny = doc as any;
-      // draft -> issued: levon a raktárból
+      // draft -> issued: készletellenőrzés és levonás
       if (
         nextStatus === "issued" &&
         (prevStatus ?? (existing as any).status) === "draft"
       ) {
         for (const line of docAny.lines ?? []) {
-          try {
-            const item = await PriceListItemModel.findOne({
-              _id: line.price_list_item_id,
-              tenantId: actor.tenantId,
-            }).lean();
-            if (item && (item as any).type !== "product") {
-              continue;
-            }
-
-            await StockItemModel.findOneAndUpdate(
-              { tenantId: actor.tenantId, price_list_item_id: line.price_list_item_id },
-              { $inc: { quantity_in_stock: -line.quantity } },
-              { upsert: true },
-            );
-            await StockTransactionModel.create({
-              tenantId: actor.tenantId,
-              price_list_item_id: line.price_list_item_id,
-              type: "out",
-              quantity: line.quantity,
-              reference_type: "manual",
-              reference_id: String(docAny._id),
-              notes: `Szállítólevél kiadva: ${docAny.delivery_number}`,
-              created_by: actor.actorId ?? "system",
-            });
-          } catch {
-            /* non-fatal */
+          const item = await PriceListItemModel.findOne({
+            _id: line.price_list_item_id,
+            tenantId: actor.tenantId,
+          }).lean();
+          if (item && (item as any).type !== "product") {
+            continue;
           }
+
+          // Készletellenőrzés
+          const stockItem = (await StockItemModel.findOne({
+            tenantId: actor.tenantId,
+            price_list_item_id: line.price_list_item_id,
+          }).lean()) as any;
+
+          if (stockItem && stockItem.quantity_in_stock < line.quantity) {
+            // Rollback: státusz visszaállítása draft-ra
+            await DeliveryNoteModel.findOneAndUpdate(
+              { _id: id, tenantId: actor.tenantId },
+              { $set: { status: "draft" } },
+            );
+            return NextResponse.json(
+              {
+                error: `Nincs elég készlet: "${line.name}" – kért: ${line.quantity}, elérhető: ${stockItem.quantity_in_stock}`,
+              },
+              { status: 400 },
+            );
+          }
+
+          await StockItemModel.findOneAndUpdate(
+            { tenantId: actor.tenantId, price_list_item_id: line.price_list_item_id },
+            { $inc: { quantity_in_stock: -line.quantity } },
+            { upsert: true },
+          );
+          await StockTransactionModel.create({
+            tenantId: actor.tenantId,
+            price_list_item_id: line.price_list_item_id,
+            type: "out",
+            quantity: line.quantity,
+            reference_type: "delivery_note",
+            reference_id: String(docAny._id),
+            notes: `Szállítólevél kiadva: ${docAny.delivery_number}`,
+            created_by: actor.actorId ?? "system",
+          });
         }
       }
       // issued -> cancelled: visszavételez
@@ -133,7 +149,7 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
               price_list_item_id: line.price_list_item_id,
               type: "in",
               quantity: line.quantity,
-              reference_type: "manual",
+              reference_type: "delivery_note",
               reference_id: String(docAny._id),
               notes: `Szállítólevél stornózva: ${docAny.delivery_number}`,
               created_by: actor.actorId ?? "system",

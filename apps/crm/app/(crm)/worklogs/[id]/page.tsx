@@ -17,6 +17,7 @@ import {
   UnifiedPdfTemplate,
   PdfPreviewModal,
   generatePdfFromElement,
+  PreflightDialog,
 } from "@crm/ui";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, use, Suspense, useEffect, useCallback, useRef } from "react";
@@ -31,6 +32,8 @@ import type {
   StockItemWithProduct,
   ChecklistTemplate,
   InventoryItem,
+  PreflightResult,
+  DeliveryNotePreviewLine,
 } from "@crm/types";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 import {
@@ -103,6 +106,9 @@ function WorklogFormContent({ id }: { id: string }) {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSuccess, setEmailSuccess] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [preflightResult, setPreflightResult] = useState<PreflightResult | null>(null);
+  const [showPreflight, setShowPreflight] = useState(false);
+  const [preflightLoading, setPreflightLoading] = useState(false);
 
   const [contactId, setContactId] = useState("");
   const [projectId, setProjectId] = useState("");
@@ -337,15 +343,41 @@ function WorklogFormContent({ id }: { id: string }) {
     }
   };
 
-  const finalize = async () => {
+  const startFinalize = async () => {
+    if (isNew || disabled) return;
+    setPreflightLoading(true);
+    setShowPreflight(true);
+    setLoadErr(null);
+    try {
+      // First save draft changes
+      await apiJsonBody(`/api/worklogs/${id}`, "PATCH", buildPayload());
+      // Run preflight check
+      const result = await apiJson<PreflightResult>(`/api/worklogs/${id}/preflight`);
+      setPreflightResult(result);
+    } catch (err) {
+      setLoadErr(
+        err instanceof ApiError ? err.message : "Preflight ellenőrzés sikertelen.",
+      );
+      setShowPreflight(false);
+    } finally {
+      setPreflightLoading(false);
+    }
+  };
+
+  const confirmFinalize = async (overrides?: {
+    deliveryLines?: DeliveryNotePreviewLine[];
+    generateDeliveryNote?: boolean;
+  }) => {
     if (isNew || disabled) return;
     setSaving(true);
     setLoadErr(null);
     try {
-      await apiJsonBody(`/api/worklogs/${id}`, "PATCH", buildPayload());
-      const raw = await apiJsonBody<unknown>(`/api/worklogs/${id}/finalize`, "POST", {});
+      const raw = await apiJsonBody<unknown>(
+        `/api/worklogs/${id}/finalize`,
+        "POST",
+        overrides || {},
+      );
       const w = parseWorklog(raw);
-      // Reload all fields from server response so contact and other data stay visible
       setStatus(w.status);
       setWorklogNumber(w.worklog_number);
       setContactId(w.contact_id ?? "");
@@ -361,6 +393,7 @@ function WorklogFormContent({ id }: { id: string }) {
       setClientName(w.client_name ?? "");
       setItems(w.items.length ? w.items : [emptyItem()]);
       setChecklistItems((w as any).checklist_items || []);
+      setShowPreflight(false);
     } catch (err) {
       setLoadErr(err instanceof ApiError ? err.message : "Véglegesítés sikertelen.");
     } finally {
@@ -544,7 +577,11 @@ function WorklogFormContent({ id }: { id: string }) {
             </>
           )}
           {status === "draft" && !isNew && (
-            <Button variant="primary" disabled={saving} onClick={() => void finalize()}>
+            <Button
+              variant="primary"
+              disabled={saving}
+              onClick={() => void startFinalize()}
+            >
               <CheckCircle2 size={15} style={{ marginRight: "6px" }} />
               Véglegesítés
             </Button>
@@ -1887,6 +1924,17 @@ function WorklogFormContent({ id }: { id: string }) {
           </div>
         </UnifiedPdfTemplate>
       </PdfPreviewModal>
+
+      {/* Preflight Ellenőrzés Dialógus */}
+      <PreflightDialog
+        open={showPreflight}
+        onClose={() => setShowPreflight(false)}
+        result={preflightResult}
+        loading={preflightLoading}
+        onConfirm={(overrides) => void confirmFinalize(overrides)}
+        confirmLabel="Véglegesítés & Szállítólevél Generálás"
+        confirming={saving}
+      />
     </div>
   );
 }

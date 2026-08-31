@@ -5,7 +5,7 @@ import { ts } from "./timestamps";
 const deliveryNoteLineSchema = {
   price_list_item_id: { type: String, required: true },
   name: { type: String, required: true },
-  quantity: { type: Number, required: true, min: 0.001 },
+  quantity: { type: Number, required: true, min: 0 },
   unit: { type: String, required: true },
 };
 

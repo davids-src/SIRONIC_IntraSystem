@@ -20,7 +20,15 @@ const stockTransactionSchema = defineSchema(
     to_warehouse_location: { type: String, default: null },
     reference_type: {
       type: String,
-      enum: ["worklog", "offer", "invoice", "purchase_order", "manual"],
+      enum: [
+        "worklog",
+        "offer",
+        "invoice",
+        "purchase_order",
+        "manual",
+        "delivery_note",
+        "inventory_taking",
+      ],
       required: true,
     },
     reference_id: { type: String, default: null },

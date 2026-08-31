@@ -95,37 +95,50 @@ export async function POST(req: Request) {
         created_by: actor.actorId ?? "system",
       });
 
-      // Ha azonnal kiadott (issued) státuszban hozzuk létre, levonjuk a raktárból
+      // Ha azonnal kiadott (issued) státuszban hozzuk létre, ellenőrizzük és levonjuk a raktárból
       if (b.status === "issued") {
         for (const line of b.lines) {
-          try {
-            const item = await PriceListItemModel.findOne({
-              _id: line.price_list_item_id,
-              tenantId: actor.tenantId,
-            }).lean();
-            if (item && (item as any).type !== "product") {
-              continue; // Only deduct stock for product type items
-            }
-
-            await StockItemModel.findOneAndUpdate(
-              { tenantId: actor.tenantId, price_list_item_id: line.price_list_item_id },
-              { $inc: { quantity_in_stock: -line.quantity } },
-              { upsert: true },
-            );
-
-            await StockTransactionModel.create({
-              tenantId: actor.tenantId,
-              price_list_item_id: line.price_list_item_id,
-              type: "out",
-              quantity: line.quantity,
-              reference_type: "manual",
-              reference_id: String(doc._id),
-              notes: `Szállítólevél: ${delivery_number}`,
-              created_by: actor.actorId ?? "system",
-            });
-          } catch (err) {
-            console.error("Hiba a készlet levonásakor:", err);
+          const item = await PriceListItemModel.findOne({
+            _id: line.price_list_item_id,
+            tenantId: actor.tenantId,
+          }).lean();
+          if (item && (item as any).type !== "product") {
+            continue; // Only deduct stock for product type items
           }
+
+          // Készletellenőrzés
+          const stockItem = (await StockItemModel.findOne({
+            tenantId: actor.tenantId,
+            price_list_item_id: line.price_list_item_id,
+          }).lean()) as any;
+
+          if (stockItem && stockItem.quantity_in_stock < line.quantity) {
+            // Rollback: a már létrehozott dokumentumot töröljük
+            await DeliveryNoteModel.deleteOne({ _id: doc._id });
+            return NextResponse.json(
+              {
+                error: `Nincs elég készlet: "${line.name}" – kért: ${line.quantity}, elérhető: ${stockItem.quantity_in_stock}`,
+              },
+              { status: 400 },
+            );
+          }
+
+          await StockItemModel.findOneAndUpdate(
+            { tenantId: actor.tenantId, price_list_item_id: line.price_list_item_id },
+            { $inc: { quantity_in_stock: -line.quantity } },
+            { upsert: true },
+          );
+
+          await StockTransactionModel.create({
+            tenantId: actor.tenantId,
+            price_list_item_id: line.price_list_item_id,
+            type: "out",
+            quantity: line.quantity,
+            reference_type: "delivery_note",
+            reference_id: String(doc._id),
+            notes: `Szállítólevél: ${delivery_number}`,
+            created_by: actor.actorId ?? "system",
+          });
         }
       }
 

@@ -282,8 +282,8 @@ export default function NewDeliveryNotePage() {
               <div className="col-span-2">
                 <Input
                   type="number"
-                  min="0.001"
-                  step="1"
+                  min="0"
+                  step="any"
                   label="Mennyiség"
                   value={line.quantity}
                   onChange={(e) =>

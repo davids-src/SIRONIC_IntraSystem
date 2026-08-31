@@ -33,6 +33,17 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
     delete patch._id;
     delete patch.tenantId;
     delete patch.worklog_number;
+
+    // Guard: véglegesítés kizárólag a /finalize végponton keresztül lehetséges
+    if (patch.status === "finalized") {
+      return NextResponse.json(
+        {
+          error:
+            "A véglegesítés kizárólag a /finalize végponton keresztül lehetséges, hogy a készlet- és szállítólevél-kezelés helyesen fusson le.",
+        },
+        { status: 400 },
+      );
+    }
     return await withDb(async () => {
       if (patch.status === "finalized") {
         const currentDoc = await WorklogModel.findOne({
