@@ -43,6 +43,10 @@ const offerLineSchema = defineSchema(
     discount_percent: { type: Number, default: 0 },
     /** Árképzési snapshot – csak service tételeknél, lefagyasztott */
     price_snapshot: { type: priceSnapshotSchema, default: null },
+    /** Csomagos / Összevont tétel fejléce-e? */
+    is_group_parent: { type: Boolean, default: false },
+    /** Csoport (csomag) azonosítója. A szülő és a gyerekek is megkapják, ami összeköti őket. */
+    group_id: { type: String, default: null },
   },
   { _id: false },
 );

@@ -1,63 +1,159 @@
+// SIROTECH Árazási Mátrix V6 → MongoDB frissítő script
+// Futtatás: node --experimental-vm-modules update-pricelist-v6.mjs
+// Szükséges: MONGODB_URI a .env fájlban (apps/crm/.env)
+
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import xlsx from "xlsx";
-import {
-  connectDb,
-  TenantModel,
-  CrmUserModel,
-  ServiceCategoryModel,
-  ServiceSubCategoryModel,
-  ServicePriceListItemModel,
-  nextCounterValue,
-  formatNumber,
-} from "@crm/db";
+import mongoose from "mongoose";
 
-// Read env variables manually to avoid dotenv dependency
-const envPath = path.resolve(".env");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Script futhat bármely könyvtárból – az env és excel mindig a workspace root-ban van
+// Ha NODE_WORKSPACE_ROOT env van beállítva, azt használja; egyébként felfelé keresi a package.json-t
+function findWorkspaceRoot(startDir) {
+  let dir = startDir;
+  for (let i = 0; i < 10; i++) {
+    const pkgPath = path.join(dir, "package.json");
+    if (fs.existsSync(pkgPath)) {
+      try {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+        // A root package.json-nak van "workspaces" vagy "pnpm-workspace.yaml"
+        if (fs.existsSync(path.join(dir, "pnpm-workspace.yaml"))) return dir;
+      } catch {}
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return startDir;
+}
+const WORKSPACE_ROOT = process.env.NODE_WORKSPACE_ROOT || findWorkspaceRoot(__dirname);
+
+// ---- ENV betöltése ----
+const envPath = path.resolve(WORKSPACE_ROOT, "apps/crm/.env");
 console.log("Loading environment from:", envPath);
 try {
   const envContent = fs.readFileSync(envPath, "utf8");
   envContent.split("\n").forEach((line) => {
-    const parts = line.split("=");
-    if (parts.length >= 2 && parts[0]) {
-      const key = parts[0].trim();
-      const value = parts.slice(1).join("=").trim();
-      process.env[key] = value;
-    }
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) return;
+    const eqIdx = trimmed.indexOf("=");
+    if (eqIdx < 0) return;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const value = trimmed.slice(eqIdx + 1).trim();
+    if (key && !process.env[key]) process.env[key] = value;
   });
-} catch (e: any) {
+} catch (e) {
   console.error("Error reading env:", e.message);
 }
 
-if (!process.env.MONGODB_URI) {
-  console.error("Error: MONGODB_URI is not set in environment variables.");
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  console.error("Error: MONGODB_URI is not set!");
   process.exit(1);
 }
 
+// ---- Mongoose sémák (inline, hogy ne kelljen workspace resolution) ----
+const counterSchema = new mongoose.Schema(
+  {
+    tenantId: { type: String, required: true },
+    name: { type: String, required: true },
+    value: { type: Number, required: true, default: 0 },
+  },
+  { versionKey: false }
+);
+counterSchema.index({ tenantId: 1, name: 1 }, { unique: true });
+const CounterModel =
+  mongoose.models.Counter ||
+  mongoose.model("Counter", counterSchema, "counters");
+
+const serviceCategorySchema = new mongoose.Schema(
+  {
+    tenantId: String,
+    name: String,
+    icon: String,
+    sku_prefix: String,
+    color: String,
+    sort_order: Number,
+    is_active: Boolean,
+  },
+  { timestamps: true }
+);
+const ServiceCategoryModel =
+  mongoose.models.ServiceCategory ||
+  mongoose.model("ServiceCategory", serviceCategorySchema);
+
+const serviceSubCategorySchema = new mongoose.Schema(
+  {
+    tenantId: String,
+    category_id: mongoose.Schema.Types.ObjectId,
+    name: String,
+    sort_order: Number,
+    is_active: Boolean,
+  },
+  { timestamps: true }
+);
+const ServiceSubCategoryModel =
+  mongoose.models.ServiceSubCategory ||
+  mongoose.model("ServiceSubCategory", serviceSubCategorySchema);
+
+const servicePriceListItemSchema = new mongoose.Schema(
+  {
+    tenantId: String,
+    category_id: mongoose.Schema.Types.ObjectId,
+    subcategory_id: mongoose.Schema.Types.ObjectId,
+    sku: String,
+    name: String,
+    unit: String,
+    internal_base_price: Number,
+    pricing_type: { type: String, enum: ["fixed", "custom"] },
+    is_active: Boolean,
+    is_archived: Boolean,
+    sort_order: Number,
+    description: String,
+  },
+  { timestamps: true }
+);
+const ServicePriceListItemModel =
+  mongoose.models.ServicePriceListItem ||
+  mongoose.model("ServicePriceListItem", servicePriceListItemSchema);
+
+const tenantSchema = new mongoose.Schema({ name: String }, { timestamps: true });
+const TenantModel =
+  mongoose.models.Tenant || mongoose.model("Tenant", tenantSchema);
+
+const crmUserSchema = new mongoose.Schema(
+  { tenantId: mongoose.Schema.Types.ObjectId, email: String },
+  { timestamps: true }
+);
+const CrmUserModel =
+  mongoose.models.CrmUser || mongoose.model("CrmUser", crmUserSchema);
+
+// ---- Segédfüggvények ----
+async function nextCounterValue(tenantId, name) {
+  const doc = await CounterModel.findOneAndUpdate(
+    { tenantId, name },
+    { $inc: { value: 1 } },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  ).lean();
+  return doc?.value ?? 1;
+}
+
+function formatNumber(prefix, n) {
+  return `${prefix}-${String(n).padStart(6, "0")}`;
+}
+
 // ============================================================
-// V6 EXCEL STRUKTÚRA:
-//   col[0] = A = Szekciófejléc (ha nem üres)
+// V6 EXCEL STRUKTÚRA (📋 ÁRAZÁSI MÁTRIX sheet):
+//   col[0] = A = Szekciófejléc
 //   col[1] = B = Tétel neve
 //   col[2] = C = Egység
 //   col[3] = D = Belső alap ár (Ft) → internal_base_price
+// Sorok 1-indexelve (az Excel sor sorszáma)
 // ============================================================
 
-interface SubCategoryMapping {
-  name: string;
-  startRow: number; // 1-indexed row number
-  endRow: number; // 1-indexed row number
-}
-
-interface CategoryMapping {
-  name: string;
-  sku_prefix: string;
-  color: string;
-  subcategories: SubCategoryMapping[];
-}
-
-// Category map based on V6 Excel structure (📋 ÁRAZÁSI MÁTRIX sheet)
-// Row numbers are 1-indexed, matching the actual Excel row numbers
-const CATEGORY_MAP: CategoryMapping[] = [
+const CATEGORY_MAP = [
   {
     name: "IT Rendszerüzemeltetés",
     sku_prefix: "IT",
@@ -160,9 +256,7 @@ const CATEGORY_MAP: CategoryMapping[] = [
   },
 ];
 
-function findCategoryAndSubCategory(
-  rowNum: number,
-): { category: CategoryMapping; subcategory: SubCategoryMapping } | null {
+function findCategoryAndSubCategory(rowNum) {
   for (const cat of CATEGORY_MAP) {
     for (const sub of cat.subcategories) {
       if (rowNum >= sub.startRow && rowNum <= sub.endRow) {
@@ -173,66 +267,64 @@ function findCategoryAndSubCategory(
   return null;
 }
 
+// ---- FŐPROGRAM ----
 async function main() {
-  const excelPath = path.resolve("../../SIROTECH_Arazasi_Matrix_V6.xlsx");
+  const excelPath = path.resolve(WORKSPACE_ROOT, "SIROTECH_Arazasi_Matrix_V6.xlsx");
   console.log("Excel elérési útja:", excelPath);
   if (!fs.existsSync(excelPath)) {
-    console.error("Hiba: Az Excel fájl nem található a megadott helyen.");
+    console.error("Hiba: Az Excel fájl nem található:", excelPath);
     process.exit(1);
   }
 
   const workbook = xlsx.readFile(excelPath);
-  // Use the pricing matrix sheet
   const sheetName = "📋 ÁRAZÁSI MÁTRIX";
-  const worksheet: any = workbook.Sheets[sheetName];
+  const worksheet = workbook.Sheets[sheetName];
 
   if (!worksheet) {
-    console.error(`Hiba: A '${sheetName}' munkalap nem található az Excel fájlban.`);
+    console.error(`Hiba: A '${sheetName}' munkalap nem található!`);
     console.error("Elérhető lapok:", workbook.SheetNames);
     process.exit(1);
   }
 
-  console.log("Kapcsolódás az adatbázishoz...");
-  const mongooseInstance = await connectDb();
+  console.log("Kapcsolódás az adatbázishoz:", MONGODB_URI);
+  await mongoose.connect(MONGODB_URI);
   console.log("Adatbázis kapcsolat létrejött!");
 
-  // Find tenant
-  const user: any = await CrmUserModel.findOne().lean();
+  // Tenant keresése
+  const user = await CrmUserModel.findOne().lean();
   let tenantId = "";
   let tenantName = "";
 
   if (user && user.tenantId) {
     tenantId = String(user.tenantId);
-    const tenantDoc: any = await TenantModel.findById(tenantId).lean();
+    const tenantDoc = await TenantModel.findById(tenantId).lean();
     tenantName = tenantDoc ? tenantDoc.name : "Ismeretlen bérlő";
   } else {
-    const tenant: any = await TenantModel.findOne().lean();
+    const tenant = await TenantModel.findOne().lean();
     if (!tenant) {
-      console.error("Hiba: Nem található bérlő (Tenant) az adatbázisban.");
-      await mongooseInstance.disconnect();
+      console.error("Hiba: Nem található bérlő (Tenant) az adatbázisban!");
+      await mongoose.disconnect();
       process.exit(1);
     }
     tenantId = String(tenant._id);
     tenantName = tenant.name;
   }
 
-  console.log(`Cél bérlő: ${tenantName} (${tenantId})`);
+  console.log(`\nCél bérlő: ${tenantName} (${tenantId})`);
 
-  // Create/update categories and subcategories
-  const catDbMap = new Map<string, string>();
-  const subCatDbMap = new Map<string, string>();
+  // Kategóriák és alkategóriák létrehozása/ellenőrzése
+  const catDbMap = new Map();
+  const subCatDbMap = new Map();
 
+  console.log("\n--- Kategóriák szinkronizálása ---");
   for (const cat of CATEGORY_MAP) {
-    let catDoc: any = await ServiceCategoryModel.findOne({ name: cat.name, tenantId });
+    let catDoc = await ServiceCategoryModel.findOne({ name: cat.name, tenantId });
     if (!catDoc) {
-      catDoc = await ServiceCategoryModel.findOne({
-        sku_prefix: cat.sku_prefix,
-        tenantId,
-      });
+      catDoc = await ServiceCategoryModel.findOne({ sku_prefix: cat.sku_prefix, tenantId });
     }
 
     if (!catDoc) {
-      console.log(`Új fő kategória létrehozása: "${cat.name}" (SKU: ${cat.sku_prefix})`);
+      console.log(`  [ÚJ] Kategória: "${cat.name}" (SKU: ${cat.sku_prefix})`);
       catDoc = await ServiceCategoryModel.create({
         tenantId,
         name: cat.name,
@@ -243,29 +335,26 @@ async function main() {
         is_active: true,
       });
     } else {
-      console.log(`Létező fő kategória: "${catDoc.name}" (SKU: ${catDoc.sku_prefix})`);
-      // Update color and name if changed
       let changed = false;
-      if (catDoc.name !== cat.name) {
-        catDoc.name = cat.name;
-        changed = true;
+      if (catDoc.name !== cat.name) { catDoc.name = cat.name; changed = true; }
+      if (catDoc.color !== cat.color) { catDoc.color = cat.color; changed = true; }
+      if (changed) {
+        await catDoc.save();
+        console.log(`  [FRISSÍTVE] Kategória: "${cat.name}"`);
+      } else {
+        console.log(`  [OK] Kategória: "${cat.name}"`);
       }
-      if (catDoc.color !== cat.color) {
-        catDoc.color = cat.color;
-        changed = true;
-      }
-      if (changed) await catDoc.save();
     }
     catDbMap.set(cat.name, String(catDoc._id));
 
     for (const sub of cat.subcategories) {
-      let subDoc: any = await ServiceSubCategoryModel.findOne({
+      let subDoc = await ServiceSubCategoryModel.findOne({
         name: sub.name,
         category_id: catDoc._id,
         tenantId,
       });
       if (!subDoc) {
-        console.log(`  Új alkategória létrehozása: "${sub.name}"`);
+        console.log(`    [ÚJ] Alkategória: "${sub.name}"`);
         subDoc = await ServiceSubCategoryModel.create({
           tenantId,
           category_id: catDoc._id,
@@ -273,17 +362,18 @@ async function main() {
           sort_order: 0,
           is_active: true,
         });
-      } else {
-        console.log(`  Létező alkategória: "${sub.name}"`);
       }
       subCatDbMap.set(sub.name, String(subDoc._id));
     }
   }
 
+  // Tételek feldolgozása
+  console.log("\n--- Árlistatételek feldolgozása ---");
   const range = xlsx.utils.decode_range(worksheet["!ref"] || "A1:K270");
 
   let importedCount = 0;
   let updatedCount = 0;
+  let priceChangedCount = 0;
   let skippedCount = 0;
 
   for (let r = range.s.r; r <= range.e.r; r++) {
@@ -293,28 +383,29 @@ async function main() {
       continue;
     }
 
-    // V6 structure: col[1] = name (B), col[2] = unit (C), col[3] = internal_base_price (D)
-    const cellB = worksheet[xlsx.utils.encode_cell({ r, c: 1 })]; // B = name
-    const cellC = worksheet[xlsx.utils.encode_cell({ r, c: 2 })]; // C = unit
-    const cellD = worksheet[xlsx.utils.encode_cell({ r, c: 3 })]; // D = internal_base_price
+    // V6: col[1]=B=Tétel neve, col[2]=C=Egység, col[3]=D=Belső alap ár
+    const cellB = worksheet[xlsx.utils.encode_cell({ r, c: 1 })];
+    const cellC = worksheet[xlsx.utils.encode_cell({ r, c: 2 })];
+    const cellD = worksheet[xlsx.utils.encode_cell({ r, c: 3 })];
 
     if (!cellB || cellB.v === undefined || cellB.v === null) {
       skippedCount++;
       continue;
     }
 
-    const rawName = String(cellB.v);
-    const name = rawName.trim();
-    if (!name || name.startsWith("Szorzók") || name.startsWith("→")) {
+    const name = String(cellB.v).trim();
+    if (!name || name.startsWith("Szorzók") || name === "→") {
       skippedCount++;
       continue;
     }
 
     const unit =
-      cellC && cellC.v !== undefined && cellC.v !== null ? String(cellC.v).trim() : "db";
+      cellC && cellC.v !== undefined && cellC.v !== null
+        ? String(cellC.v).trim()
+        : "db";
 
     let price = 0;
-    let pricing_type: "fixed" | "custom" = "fixed";
+    let pricing_type = "fixed";
 
     if (cellD && cellD.v !== undefined && cellD.v !== null) {
       const v = cellD.v;
@@ -340,18 +431,17 @@ async function main() {
       pricing_type = "custom";
     }
 
-    const categoryId = catDbMap.get(mapping.category.name)!;
-    const subCategoryId = subCatDbMap.get(mapping.subcategory.name)!;
+    const categoryId = catDbMap.get(mapping.category.name);
+    const subCategoryId = subCatDbMap.get(mapping.subcategory.name);
 
-    // Check if item exists (by name + category)
-    let item: any = await ServicePriceListItemModel.findOne({
+    // Meglévő elem keresése
+    let item = await ServicePriceListItemModel.findOne({
       tenantId,
       name,
       category_id: categoryId,
     });
 
     if (item) {
-      // Update existing item
       const oldPrice = item.internal_base_price;
       item.unit = unit;
       item.internal_base_price = price;
@@ -360,12 +450,10 @@ async function main() {
       await item.save();
       updatedCount++;
       if (oldPrice !== price) {
-        console.log(
-          `Frissítve [${item.sku}]: "${name}" ${oldPrice} → ${price} Ft / ${unit}`,
-        );
+        priceChangedCount++;
+        console.log(`  [ÁR ↑] [${item.sku}] "${name}": ${oldPrice} → ${price} Ft / ${unit}`);
       }
     } else {
-      // Create new item
       const skuPrefix = mapping.category.sku_prefix;
       const counterKey = `service_sku_${skuPrefix}`;
       const n = await nextCounterValue(tenantId, counterKey);
@@ -381,23 +469,29 @@ async function main() {
         internal_base_price: price,
         pricing_type,
         is_active: true,
+        is_archived: false,
         sort_order: 0,
         description: null,
       });
       importedCount++;
-      console.log(`Importálva: [${sku}] "${name}" - ${price} Ft / ${unit}`);
+      console.log(`  [ÚJ] [${sku}] "${name}" – ${price} Ft / ${unit}`);
     }
   }
 
-  console.log(`\nFrissítés sikeresen befejeződött!`);
-  console.log(`- Létrehozva: ${importedCount} új szolgáltatás`);
-  console.log(`- Frissítve: ${updatedCount} meglévő szolgáltatás`);
-  console.log(`- Kihagyva: ${skippedCount} sor (fejléc/üres)`);
+  console.log("\n=== ÖSSZEFOGLALÓ ===");
+  console.log(`Cél bérlő:          ${tenantName}`);
+  console.log(`Létrehozva (ÚJ):    ${importedCount} tétel`);
+  console.log(`Frissítve:          ${updatedCount} tétel`);
+  console.log(`  ebből ár változott: ${priceChangedCount}`);
+  console.log(`Kihagyva (fejléc):  ${skippedCount} sor`);
+  console.log("====================\n");
 
-  await mongooseInstance.disconnect();
+  await mongoose.disconnect();
+  console.log("Kész! Adatbázis kapcsolat lezárva.");
 }
 
 main().catch(async (err) => {
-  console.error("Végzetes hiba az importálás során:", err);
+  console.error("Végzetes hiba:", err);
+  await mongoose.disconnect().catch(() => {});
   process.exit(1);
 });

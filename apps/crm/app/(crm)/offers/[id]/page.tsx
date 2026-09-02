@@ -162,20 +162,20 @@ export default function OfferDetailsPage() {
   if (loadErr) return <div className="p-8 text-red-500">{loadErr}</div>;
   if (!offer) return <div className="p-8">Betöltés...</div>;
 
-  const totalNet = offer.lines.reduce(
-    (sum, l) =>
-      sum + l.net_unit_price * (1 - (l.discount_percent ?? 0) / 100) * l.quantity,
-    0,
-  );
-  const totalVat = offer.lines.reduce(
-    (sum, l) =>
+  const totalNet = offer.lines.reduce((sum, l) => {
+    if ((l as any).group_id && !(l as any).is_group_parent) return sum;
+    return sum + l.net_unit_price * (1 - (l.discount_percent ?? 0) / 100) * l.quantity;
+  }, 0);
+  const totalVat = offer.lines.reduce((sum, l) => {
+    if ((l as any).group_id && !(l as any).is_group_parent) return sum;
+    return (
       sum +
       l.net_unit_price *
         (1 - (l.discount_percent ?? 0) / 100) *
         l.quantity *
-        (l.tax_rate / 100),
-    0,
-  );
+        (l.tax_rate / 100)
+    );
+  }, 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -248,8 +248,19 @@ export default function OfferDetailsPage() {
 
           <div className="flex flex-col gap-4">
             {offer.lines.map((l, i) => {
+              if ((l as any).group_id && !(l as any).is_group_parent) return null;
+
               const discountedPrice =
                 l.net_unit_price * (1 - (l.discount_percent ?? 0) / 100);
+              const isParent = (l as any).is_group_parent;
+              const children = isParent
+                ? offer.lines.filter(
+                    (cl) =>
+                      (cl as any).group_id === (l as any).group_id &&
+                      !(cl as any).is_group_parent,
+                  )
+                : [];
+
               return (
                 <div
                   key={i}
@@ -265,12 +276,22 @@ export default function OfferDetailsPage() {
                         <Badge variant="success">-{l.discount_percent}%</Badge>
                       ) : null}
                     </div>
-                    <div className="text-xs text-gray-400 mt-1">
-                      {l.quantity} {l.unit} x {fmt(l.net_unit_price)}
-                      {l.discount_percent
-                        ? ` (Kedvezményes: ${fmt(discountedPrice)} / ${l.unit})`
-                        : ""}
-                    </div>
+                    {isParent && children.length > 0 && (
+                      <div className="text-xs text-gray-400 mt-1 italic">
+                        Tartalmazza:{" "}
+                        {children
+                          .map((cl) => `${cl.quantity} ${cl.unit} ${cl.description}`)
+                          .join(", ")}
+                      </div>
+                    )}
+                    {!isParent && (
+                      <div className="text-xs text-gray-400 mt-1">
+                        {l.quantity} {l.unit} x {fmt(l.net_unit_price)}
+                        {l.discount_percent
+                          ? ` (Kedvezményes: ${fmt(discountedPrice)} / ${l.unit})`
+                          : ""}
+                      </div>
+                    )}
                   </div>
                   <div className="font-bold text-sm">
                     {fmt(l.quantity * discountedPrice)}

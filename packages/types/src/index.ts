@@ -102,6 +102,10 @@ export interface OfferLine {
   discount_percent?: number;
   /** Árképzési snapshot – csak service tételeknél */
   price_snapshot?: PriceSnapshot | null;
+  /** Csomagos / Összevont tétel fejléce-e? */
+  is_group_parent?: boolean;
+  /** Csoport (csomag) azonosítója. A szülő és a gyerekek is megkapják, ami összeköti őket. */
+  group_id?: string | null;
 }
 
 export interface Offer {

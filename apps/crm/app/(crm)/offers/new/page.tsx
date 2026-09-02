@@ -27,7 +27,7 @@ import {
   Send,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import type { Contact, PriceListItem, Offer } from "@crm/types";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 
@@ -70,6 +70,8 @@ interface CartItem {
   custom_price: number | null; // ha felül akarják bírálni az egységárat
   discount_percent: number; // tételenkénti kedvezmény % (0-100)
   price_snapshot?: any | null;
+  is_group_parent?: boolean;
+  group_id?: string | null;
 }
 
 // -------------------------------------------------------
@@ -230,6 +232,48 @@ export default function NewOfferPage() {
   // -------------------------------------------------------
   // Cart helpers
   // -------------------------------------------------------
+  const bundleTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+    cart.forEach((c) => {
+      if (c.group_id && !c.is_group_parent) {
+        const childNet =
+          (c.custom_price ?? c.item.unit_price) * (1 - c.discount_percent / 100);
+        totals[c.group_id] = (totals[c.group_id] || 0) + childNet * c.qty;
+      }
+    });
+    return totals;
+  }, [cart]);
+
+  const handleAddBundle = () => {
+    const bundleName = window.prompt(
+      "Add meg a csomag/összevont tétel nevét (pl. Kamera telepítés):",
+    );
+    if (!bundleName) return;
+    const bundleId = Math.random().toString(36).substring(2, 9);
+    const mockItem: PriceItem = {
+      _id: `bundle-${bundleId}`,
+      code: "CSOMAG",
+      name: bundleName,
+      category: "service",
+      unit: "db",
+      unit_price: 0,
+      tax_percent: 27,
+      description: "Összevont tétel",
+      preferred_supplier: null,
+    };
+    setCart((prev) => [
+      ...prev,
+      {
+        item: mockItem,
+        qty: 1,
+        custom_price: null,
+        discount_percent: 0,
+        is_group_parent: true,
+        group_id: bundleId,
+      },
+    ]);
+  };
+
   const addItem = (item: PriceItem) => {
     setCart((prev) => {
       const existing = prev.find((c) => c.item._id === item._id);
@@ -414,12 +458,20 @@ export default function NewOfferPage() {
     cart.some((c) => c.item._id === id || c.item.service_price_list_item_id === id);
 
   const totalNet = cart.reduce((sum, c) => {
-    const base = (c.custom_price ?? c.item.unit_price) * (1 - c.discount_percent / 100);
-    return sum + base * c.qty;
+    if (c.group_id && !c.is_group_parent) return sum;
+    const base = c.is_group_parent
+      ? (c.custom_price ?? (bundleTotals[c.group_id || ""] || 0))
+      : (c.custom_price ?? c.item.unit_price);
+    return sum + base * (1 - c.discount_percent / 100) * c.qty;
   }, 0);
   const totalVat = cart.reduce((sum, c) => {
-    const base = (c.custom_price ?? c.item.unit_price) * (1 - c.discount_percent / 100);
-    return sum + base * c.qty * (c.item.tax_percent / 100);
+    if (c.group_id && !c.is_group_parent) return sum;
+    const base = c.is_group_parent
+      ? (c.custom_price ?? (bundleTotals[c.group_id || ""] || 0))
+      : (c.custom_price ?? c.item.unit_price);
+    return (
+      sum + base * (1 - c.discount_percent / 100) * c.qty * (c.item.tax_percent / 100)
+    );
   }, 0);
   const totalGross = totalNet + totalVat;
 
@@ -429,17 +481,29 @@ export default function NewOfferPage() {
     const days = Number.parseInt(header.valid_days, 10) || 30;
     const valid_until = new Date();
     valid_until.setDate(valid_until.getDate() + days);
-    const lines = cart.map((c) => ({
-      price_list_item_id: c.item.service_price_list_item_id ? null : c.item._id,
-      service_price_list_item_id: c.item.service_price_list_item_id ?? null,
-      description: c.item.name,
-      quantity: c.qty,
-      unit: c.item.unit,
-      net_unit_price: c.custom_price ?? c.item.unit_price,
-      tax_rate: c.item.tax_percent,
-      discount_percent: c.discount_percent,
-      price_snapshot: c.price_snapshot ?? null,
-    }));
+    const lines = cart.map((c) => {
+      let finalUnitPrice = c.custom_price ?? c.item.unit_price;
+      if (c.is_group_parent && c.group_id) {
+        finalUnitPrice = c.custom_price ?? (bundleTotals[c.group_id] || 0);
+      }
+      return {
+        price_list_item_id: c.item.service_price_list_item_id
+          ? null
+          : c.item._id.startsWith("bundle-")
+            ? null
+            : c.item._id,
+        service_price_list_item_id: c.item.service_price_list_item_id ?? null,
+        description: c.item.name,
+        quantity: c.qty,
+        unit: c.item.unit,
+        net_unit_price: finalUnitPrice,
+        tax_rate: c.item.tax_percent,
+        discount_percent: c.discount_percent,
+        price_snapshot: c.price_snapshot ?? null,
+        is_group_parent: c.is_group_parent || false,
+        group_id: c.group_id || null,
+      };
+    });
     return {
       title: header.title.trim(),
       contact_id: header.contact_id,
@@ -508,14 +572,38 @@ export default function NewOfferPage() {
     }))
     .filter((g) => g.items.length > 0);
 
+  const displayCart = useMemo(() => {
+    const parents = cart.filter((c) => c.is_group_parent);
+    const children = cart.filter((c) => !c.is_group_parent && c.group_id);
+    const orphans = cart.filter((c) => !c.is_group_parent && !c.group_id);
+
+    let result = [];
+    parents.forEach((p) => {
+      result.push(p);
+      result.push(...children.filter((c) => c.group_id === p.group_id));
+    });
+    result.push(...orphans);
+    return result;
+  }, [cart]);
+
   const renderCartItem = (c: CartItem) => (
     <div
       key={c.item._id}
       style={{
         padding: "12px 14px",
-        background: "var(--color-bg-secondary, #111)",
+        background: c.is_group_parent
+          ? "var(--color-bg-card, #1a1a1a)"
+          : "var(--color-bg-secondary, #111)",
+        borderLeft: c.is_group_parent
+          ? "4px solid var(--color-accent-primary)"
+          : c.group_id
+            ? "4px solid var(--color-border-default)"
+            : "1px solid var(--color-border-subtle)",
+        marginLeft: !c.is_group_parent && c.group_id ? "20px" : "0",
         borderRadius: "8px",
-        border: "1px solid var(--color-border-subtle, #1a1a1a)",
+        borderTop: "1px solid var(--color-border-subtle, #1a1a1a)",
+        borderRight: "1px solid var(--color-border-subtle, #1a1a1a)",
+        borderBottom: "1px solid var(--color-border-subtle, #1a1a1a)",
       }}
     >
       <div
@@ -543,17 +631,25 @@ export default function NewOfferPage() {
               marginTop: "2px",
             }}
           >
-            {fmt(c.custom_price ?? c.item.unit_price)} / {c.item.unit}
-            {c.discount_percent > 0 && (
-              <span
-                style={{
-                  marginLeft: "6px",
-                  color: "var(--color-status-success, #22c55e)",
-                  fontWeight: 700,
-                }}
-              >
-                (-{c.discount_percent}%)
-              </span>
+            {c.is_group_parent ? (
+              <div style={{ color: "var(--color-accent-primary)" }}>
+                Alapár (számított): {fmt(bundleTotals[c.group_id || ""] || 0)}
+              </div>
+            ) : (
+              <>
+                {fmt(c.custom_price ?? c.item.unit_price)} / {c.item.unit}
+                {c.discount_percent > 0 && (
+                  <span
+                    style={{
+                      marginLeft: "6px",
+                      color: "var(--color-status-success, #22c55e)",
+                      fontWeight: 700,
+                    }}
+                  >
+                    (-{c.discount_percent}%)
+                  </span>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -582,14 +678,15 @@ export default function NewOfferPage() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <button
-            onClick={() => updateQty(c.item._id, -1)}
+            onClick={() => !c.is_group_parent && updateQty(c.item._id, -1)}
+            disabled={c.is_group_parent}
             style={{
               width: "26px",
               height: "26px",
               borderRadius: "6px",
               background: "var(--color-bg-card, #1a1a1a)",
               border: "1px solid var(--color-border-default, #222)",
-              cursor: "pointer",
+              cursor: c.is_group_parent ? "not-allowed" : "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -602,7 +699,9 @@ export default function NewOfferPage() {
             type="number"
             min={1}
             value={c.qty}
+            disabled={c.is_group_parent}
             onChange={(e) => {
+              if (c.is_group_parent) return;
               const val = Math.max(1, parseInt(e.target.value) || 1);
               setCart((prev) =>
                 prev.map((ci) => (ci.item._id === c.item._id ? { ...ci, qty: val } : ci)),
@@ -621,14 +720,15 @@ export default function NewOfferPage() {
             }}
           />
           <button
-            onClick={() => updateQty(c.item._id, 1)}
+            onClick={() => !c.is_group_parent && updateQty(c.item._id, 1)}
+            disabled={c.is_group_parent}
             style={{
               width: "26px",
               height: "26px",
               borderRadius: "6px",
               background: "var(--color-bg-card, #1a1a1a)",
               border: "1px solid var(--color-border-default, #222)",
-              cursor: "pointer",
+              cursor: c.is_group_parent ? "not-allowed" : "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -655,6 +755,48 @@ export default function NewOfferPage() {
           )}
         </span>
       </div>
+
+      {/* Bundle assignment */}
+      {!c.is_group_parent && cart.some((ci) => ci.is_group_parent) && (
+        <div
+          style={{
+            marginTop: "10px",
+            fontSize: "0.75rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <span style={{ color: "var(--color-text-muted)" }}>Csomagba:</span>
+          <select
+            value={c.group_id || ""}
+            onChange={(e) => {
+              const val = e.target.value;
+              setCart((prev) =>
+                prev.map((ci) =>
+                  ci.item._id === c.item._id ? { ...ci, group_id: val || null } : ci,
+                ),
+              );
+            }}
+            style={{
+              padding: "2px 6px",
+              borderRadius: "4px",
+              background: "var(--color-bg-input)",
+              border: "1px solid var(--color-border-subtle)",
+              color: "inherit",
+            }}
+          >
+            <option value="">-- Nincs csomagban --</option>
+            {cart
+              .filter((ci) => ci.is_group_parent)
+              .map((b) => (
+                <option key={b.group_id} value={b.group_id || ""}>
+                  {b.item.name}
+                </option>
+              ))}
+          </select>
+        </div>
+      )}
 
       {/* Discount input */}
       <div

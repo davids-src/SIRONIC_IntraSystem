@@ -37,5 +37,8 @@
     "*.{ts,tsx,js,jsx,json,md,yml,yaml}": [
       "prettier --write"
     ]
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5"
   }
 }

@@ -27,7 +27,7 @@ import {
   Send,
 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
-import { useEffect, useState, use, useCallback } from "react";
+import { useEffect, useState, useMemo, use, useCallback } from "react";
 import type { Contact, PriceListItem, Offer } from "@crm/types";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 
@@ -67,6 +67,8 @@ interface CartItem {
   custom_price: number | null;
   discount_percent: number;
   price_snapshot?: any | null;
+  is_group_parent?: boolean;
+  group_id?: string | null;
 }
 
 const categoryVariant = {
@@ -240,6 +242,8 @@ export default function EditOfferPage({ params }: { params: Promise<{ id: string
             custom_price: line.net_unit_price,
             discount_percent: line.discount_percent ?? 0,
             price_snapshot: line.price_snapshot,
+            is_group_parent: (line as any).is_group_parent || false,
+            group_id: (line as any).group_id || null,
           };
         });
         setCart(mappedCart);
@@ -253,13 +257,22 @@ export default function EditOfferPage({ params }: { params: Promise<{ id: string
   }, [id, router]);
 
   const totalNet = cart.reduce((sum, c) => {
-    const base = (c.custom_price ?? c.item.unit_price) * (1 - c.discount_percent / 100);
-    return sum + base * c.qty;
+    if (c.group_id && !c.is_group_parent) return sum;
+    const base = c.is_group_parent
+      ? (c.custom_price ?? (bundleTotals[c.group_id || ""] || 0))
+      : (c.custom_price ?? c.item.unit_price);
+    return sum + base * (1 - c.discount_percent / 100) * c.qty;
   }, 0);
   const totalVat = cart.reduce((sum, c) => {
-    const base = (c.custom_price ?? c.item.unit_price) * (1 - c.discount_percent / 100);
-    return sum + base * c.qty * (c.item.tax_percent / 100);
+    if (c.group_id && !c.is_group_parent) return sum;
+    const base = c.is_group_parent
+      ? (c.custom_price ?? (bundleTotals[c.group_id || ""] || 0))
+      : (c.custom_price ?? c.item.unit_price);
+    return (
+      sum + base * (1 - c.discount_percent / 100) * c.qty * (c.item.tax_percent / 100)
+    );
   }, 0);
+
   const totalGross = totalNet + totalVat;
 
   const contactLabel = contacts.find((c) => c._id === header.contact_id)?.name ?? "";
@@ -268,17 +281,29 @@ export default function EditOfferPage({ params }: { params: Promise<{ id: string
     const days = Number.parseInt(header.valid_days, 10) || 30;
     const valid_until = new Date();
     valid_until.setDate(valid_until.getDate() + days);
-    const lines = cart.map((c) => ({
-      price_list_item_id: c.item.service_price_list_item_id ? null : c.item._id,
-      service_price_list_item_id: c.item.service_price_list_item_id ?? null,
-      description: c.item.name,
-      quantity: c.qty,
-      unit: c.item.unit,
-      net_unit_price: c.custom_price ?? c.item.unit_price,
-      tax_rate: c.item.tax_percent,
-      discount_percent: c.discount_percent,
-      price_snapshot: c.price_snapshot ?? null,
-    }));
+    const lines = cart.map((c) => {
+      let finalUnitPrice = c.custom_price ?? c.item.unit_price;
+      if (c.is_group_parent && c.group_id) {
+        finalUnitPrice = c.custom_price ?? (bundleTotals[c.group_id] || 0);
+      }
+      return {
+        price_list_item_id: c.item.service_price_list_item_id
+          ? null
+          : c.item._id.startsWith("bundle-")
+            ? null
+            : c.item._id,
+        service_price_list_item_id: c.item.service_price_list_item_id ?? null,
+        description: c.item.name,
+        quantity: c.qty,
+        unit: c.item.unit,
+        net_unit_price: finalUnitPrice,
+        tax_rate: c.item.tax_percent,
+        discount_percent: c.discount_percent,
+        price_snapshot: c.price_snapshot ?? null,
+        is_group_parent: c.is_group_parent || false,
+        group_id: c.group_id || null,
+      };
+    });
     return {
       title: header.title.trim(),
       contact_id: header.contact_id,
@@ -303,6 +328,48 @@ export default function EditOfferPage({ params }: { params: Promise<{ id: string
     } finally {
       setSaving(false);
     }
+  };
+
+  const bundleTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+    cart.forEach((c) => {
+      if (c.group_id && !c.is_group_parent) {
+        const childNet =
+          (c.custom_price ?? c.item.unit_price) * (1 - c.discount_percent / 100);
+        totals[c.group_id] = (totals[c.group_id] || 0) + childNet * c.qty;
+      }
+    });
+    return totals;
+  }, [cart]);
+
+  const handleAddBundle = () => {
+    const bundleName = window.prompt(
+      "Add meg a csomag/összevont tétel nevét (pl. Kamera telepítés):",
+    );
+    if (!bundleName) return;
+    const bundleId = Math.random().toString(36).substring(2, 9);
+    const mockItem: PriceItem = {
+      _id: `bundle-${bundleId}`,
+      code: "CSOMAG",
+      name: bundleName,
+      category: "service",
+      unit: "db",
+      unit_price: 0,
+      tax_percent: 27,
+      description: "Összevont tétel",
+      preferred_supplier: null,
+    };
+    setCart((prev) => [
+      ...prev,
+      {
+        item: mockItem,
+        qty: 1,
+        custom_price: null,
+        discount_percent: 0,
+        is_group_parent: true,
+        group_id: bundleId,
+      },
+    ]);
   };
 
   const addToCart = (item: PriceItem) => {
@@ -1085,7 +1152,10 @@ export default function EditOfferPage({ params }: { params: Promise<{ id: string
                             <button
                               type="button"
                               className="text-gray-400 hover:text-white"
-                              onClick={() => updateQty(c.item._id, -1)}
+                              onClick={() =>
+                                !c.is_group_parent && updateQty(c.item._id, -1)
+                              }
+                              disabled={c.is_group_parent}
                             >
                               <Minus size={12} />
                             </button>
@@ -1106,7 +1176,10 @@ export default function EditOfferPage({ params }: { params: Promise<{ id: string
                             <button
                               type="button"
                               className="text-gray-400 hover:text-white"
-                              onClick={() => updateQty(c.item._id, 1)}
+                              onClick={() =>
+                                !c.is_group_parent && updateQty(c.item._id, 1)
+                              }
+                              disabled={c.is_group_parent}
                             >
                               <Plus size={12} />
                             </button>
