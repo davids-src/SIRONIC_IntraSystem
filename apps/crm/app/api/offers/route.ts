@@ -22,6 +22,8 @@ const offerLineSchema = z.object({
   tax_rate: z.number(),
   discount_percent: z.number().min(0).max(100).optional().default(0),
   price_snapshot: priceSnapshotZodSchema.nullable().optional(),
+  is_group_parent: z.boolean().optional(),
+  group_id: z.string().nullable().optional(),
 });
 
 const createSchema = z.object({
@@ -99,6 +101,8 @@ export async function POST(req: Request) {
       tax_rate: l.tax_rate,
       discount_percent: l.discount_percent ?? 0,
       price_snapshot: l.price_snapshot ?? null,
+      is_group_parent: l.is_group_parent ?? false,
+      group_id: l.group_id ?? null,
     }));
     const totalFromLines = lines.length > 0 ? grossTotalFromLines(lines) : null;
     const total_amount =

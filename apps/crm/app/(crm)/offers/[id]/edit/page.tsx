@@ -100,6 +100,7 @@ export default function EditOfferPage({ params }: { params: Promise<{ id: string
   const [step, setStep] = useState(0);
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [selectedForBundle, setSelectedForBundle] = useState<string[]>([]);
   const [priceList, setPriceList] = useState<PriceItem[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
@@ -342,7 +343,8 @@ export default function EditOfferPage({ params }: { params: Promise<{ id: string
     return totals;
   }, [cart]);
 
-  const handleAddBundle = () => {
+  const handleCreateBundleFromSelection = () => {
+    if (selectedForBundle.length === 0) return;
     const bundleName = window.prompt(
       "Add meg a csomag/összevont tétel nevét (pl. Kamera telepítés):",
     );
@@ -359,17 +361,37 @@ export default function EditOfferPage({ params }: { params: Promise<{ id: string
       description: "Összevont tétel",
       preferred_supplier: null,
     };
-    setCart((prev) => [
-      ...prev,
-      {
+
+    setCart((prev) => {
+      const newParent: CartItem = {
         item: mockItem,
         qty: 1,
         custom_price: null,
         discount_percent: 0,
         is_group_parent: true,
         group_id: bundleId,
-      },
-    ]);
+      };
+
+      return [
+        ...prev.map((c) =>
+          selectedForBundle.includes(c.item._id) ? { ...c, group_id: bundleId } : c,
+        ),
+        newParent,
+      ];
+    });
+    setSelectedForBundle([]);
+  };
+
+  const handleUnbundle = (bundleId: string) => {
+    if (!window.confirm("Biztosan felbontod ezt a csomagot?")) return;
+    setCart((prev) => {
+      const withoutParent = prev.filter(
+        (c) => !(c.is_group_parent && c.group_id === bundleId),
+      );
+      return withoutParent.map((c) =>
+        c.group_id === bundleId ? { ...c, group_id: null } : c,
+      );
+    });
   };
 
   const addToCart = (item: PriceItem) => {
@@ -1121,105 +1143,194 @@ export default function EditOfferPage({ params }: { params: Promise<{ id: string
                   Nincsenek tételek az ajánlatban.
                 </div>
               ) : (
-                <div className="space-y-4 max-h-[380px] overflow-y-auto pr-1">
-                  {cart.map((c) => {
-                    const price = c.custom_price ?? c.item.unit_price;
-                    const discountedPrice = price * (1 - c.discount_percent / 100);
-                    return (
-                      <div
-                        key={c.item._id}
-                        className="border-b border-[#222] pb-3 last:border-b-0"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div className="min-w-0 flex-1 pr-2">
-                            <span className="font-semibold text-xs text-white block truncate">
-                              {c.item.name}
-                            </span>
-                            <span className="text-[10px] text-gray-400 block mt-0.5">
-                              {c.qty} {c.item.unit} x {fmt(price)}
-                            </span>
-                          </div>
-                          <button
-                            onClick={() => removeFromCart(c.item._id)}
-                            className="text-gray-500 hover:text-red-500 p-1"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
+                <>
+                  <div className="flex justify-between items-center mb-2">
+                    <Button
+                      variant="secondary"
+                      disabled={selectedForBundle.length === 0}
+                      onClick={handleCreateBundleFromSelection}
+                      size="sm"
+                    >
+                      <Plus size={14} className="mr-1" />
+                      Kijelöltekből csomag ({selectedForBundle.length})
+                    </Button>
+                  </div>
+                  <div className="space-y-4 max-h-[380px] overflow-y-auto pr-1">
+                    {cart.map((c) => {
+                      const isParent = c.is_group_parent;
+                      const isChild = !isParent && c.group_id;
+                      if (isChild) return null;
+                      const canBeBundled = !isParent && !c.group_id;
+                      const isSelected = selectedForBundle.includes(c.item._id);
+                      const children = isParent
+                        ? cart.filter(
+                            (cl) => cl.group_id === c.group_id && !cl.is_group_parent,
+                          )
+                        : [];
 
-                        <div className="grid grid-cols-3 gap-2 mt-2">
-                          <div className="flex items-center gap-1.5 bg-[#111] border border-[#222] px-2 py-1 rounded">
+                      const price =
+                        c.custom_price ??
+                        (isParent
+                          ? bundleTotals[c.group_id || ""] || 0
+                          : c.item.unit_price);
+                      const discountedPrice = price * (1 - c.discount_percent / 100);
+                      return (
+                        <div
+                          key={c.item._id}
+                          className="border-b border-[#222] pb-3 last:border-b-0"
+                          style={{
+                            background: isParent ? "rgba(255,255,255,0.05)" : "inherit",
+                            padding: isParent ? "8px" : "0",
+                            borderRadius: "4px",
+                          }}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="min-w-0 flex-1 pr-2 flex gap-2">
+                              {canBeBundled && (
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={(e) => {
+                                    if (e.target.checked)
+                                      setSelectedForBundle((prev) => [
+                                        ...prev,
+                                        c.item._id,
+                                      ]);
+                                    else
+                                      setSelectedForBundle((prev) =>
+                                        prev.filter((id) => id !== c.item._id),
+                                      );
+                                  }}
+                                  className="mt-1"
+                                  style={{ cursor: "pointer" }}
+                                />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <span
+                                  className="font-semibold text-xs text-white block truncate"
+                                  style={{ fontWeight: isParent ? "bold" : "normal" }}
+                                >
+                                  {c.item.name}
+                                  {isParent && (
+                                    <button
+                                      onClick={() => handleUnbundle(c.group_id || "")}
+                                      style={{
+                                        marginLeft: "8px",
+                                        color: "var(--color-accent-primary)",
+                                        background: "none",
+                                        border: "none",
+                                        cursor: "pointer",
+                                        fontSize: "10px",
+                                        textDecoration: "underline",
+                                      }}
+                                    >
+                                      (Bontás)
+                                    </button>
+                                  )}
+                                </span>
+                                {isParent && children.length > 0 && (
+                                  <div
+                                    style={{
+                                      fontWeight: 400,
+                                      color: "#3b82f6",
+                                      fontSize: "10px",
+                                      marginTop: "2px",
+                                      whiteSpace: "normal",
+                                    }}
+                                    className="break-words"
+                                  >
+                                    {children.map((cl) => cl.item.name).join(", ")}
+                                  </div>
+                                )}
+                                <span className="text-[10px] text-gray-400 block mt-0.5">
+                                  {c.qty} {c.item.unit} x {fmt(price)}
+                                </span>
+                              </div>
+                            </div>
                             <button
-                              type="button"
-                              className="text-gray-400 hover:text-white"
-                              onClick={() =>
-                                !c.is_group_parent && updateQty(c.item._id, -1)
-                              }
-                              disabled={c.is_group_parent}
+                              onClick={() => removeFromCart(c.item._id)}
+                              className="text-gray-500 hover:text-red-500 p-1"
                             >
-                              <Minus size={12} />
-                            </button>
-                            <input
-                              type="number"
-                              min="1"
-                              className="w-10 bg-transparent text-xs font-bold text-white text-center focus:outline-none focus:ring-1 focus:ring-red-500 rounded"
-                              value={c.qty}
-                              onChange={(e) => {
-                                const val = Math.max(1, parseInt(e.target.value) || 1);
-                                setCart((prev) =>
-                                  prev.map((x) =>
-                                    x.item._id === c.item._id ? { ...x, qty: val } : x,
-                                  ),
-                                );
-                              }}
-                            />
-                            <button
-                              type="button"
-                              className="text-gray-400 hover:text-white"
-                              onClick={() =>
-                                !c.is_group_parent && updateQty(c.item._id, 1)
-                              }
-                              disabled={c.is_group_parent}
-                            >
-                              <Plus size={12} />
+                              <Trash2 size={12} />
                             </button>
                           </div>
 
-                          <div className="flex flex-col justify-center">
-                            <input
-                              type="number"
-                              className="w-full bg-[#111] text-xs text-right px-2 py-1 rounded border border-[#222] text-white focus:outline-none focus:border-red-600"
-                              placeholder="Egyedi ár..."
-                              value={c.custom_price ?? ""}
-                              onChange={(e) =>
-                                updateCustomPrice(c.item._id, e.target.value)
-                              }
-                            />
+                          <div className="grid grid-cols-3 gap-2 mt-2">
+                            <div className="flex items-center gap-1.5 bg-[#111] border border-[#222] px-2 py-1 rounded">
+                              <button
+                                type="button"
+                                className="text-gray-400 hover:text-white"
+                                onClick={() =>
+                                  !c.is_group_parent && updateQty(c.item._id, -1)
+                                }
+                                disabled={c.is_group_parent}
+                              >
+                                <Minus size={12} />
+                              </button>
+                              <input
+                                type="number"
+                                min="1"
+                                className="w-10 bg-transparent text-xs font-bold text-white text-center focus:outline-none focus:ring-1 focus:ring-red-500 rounded"
+                                value={c.qty}
+                                onChange={(e) => {
+                                  const val = Math.max(1, parseInt(e.target.value) || 1);
+                                  setCart((prev) =>
+                                    prev.map((x) =>
+                                      x.item._id === c.item._id ? { ...x, qty: val } : x,
+                                    ),
+                                  );
+                                }}
+                              />
+                              <button
+                                type="button"
+                                className="text-gray-400 hover:text-white"
+                                onClick={() =>
+                                  !c.is_group_parent && updateQty(c.item._id, 1)
+                                }
+                                disabled={c.is_group_parent}
+                              >
+                                <Plus size={12} />
+                              </button>
+                            </div>
+
+                            <div className="flex flex-col justify-center">
+                              <input
+                                type="number"
+                                className="w-full bg-[#111] text-xs text-right px-2 py-1 rounded border border-[#222] text-white focus:outline-none focus:border-red-600"
+                                placeholder="Egyedi ár..."
+                                value={c.custom_price ?? ""}
+                                onChange={(e) =>
+                                  updateCustomPrice(c.item._id, e.target.value)
+                                }
+                              />
+                            </div>
+
+                            <div className="flex items-center gap-1 bg-[#111] rounded border border-[#222] px-1 py-0.5">
+                              <input
+                                type="number"
+                                className="w-8 bg-transparent text-xs text-center border-none focus:outline-none text-white font-bold"
+                                value={c.discount_percent || ""}
+                                placeholder="0"
+                                min="0"
+                                max="100"
+                                onChange={(e) =>
+                                  updateDiscount(c.item._id, e.target.value)
+                                }
+                              />
+                              <span className="text-[10px] text-gray-400 font-bold">
+                                % kedv.
+                              </span>
+                            </div>
                           </div>
 
-                          <div className="flex items-center gap-1 bg-[#111] rounded border border-[#222] px-1 py-0.5">
-                            <input
-                              type="number"
-                              className="w-8 bg-transparent text-xs text-center border-none focus:outline-none text-white font-bold"
-                              value={c.discount_percent || ""}
-                              placeholder="0"
-                              min="0"
-                              max="100"
-                              onChange={(e) => updateDiscount(c.item._id, e.target.value)}
-                            />
-                            <span className="text-[10px] text-gray-400 font-bold">
-                              % kedv.
-                            </span>
+                          <div className="text-right text-xs font-bold text-red-500 mt-1">
+                            Összesen: {fmt(discountedPrice * c.qty)}
                           </div>
                         </div>
-
-                        <div className="text-right text-xs font-bold text-red-500 mt-1">
-                          Összesen: {fmt(discountedPrice * c.qty)}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                </>
               )}
 
               <div className="border-t border-[#222] pt-4 mt-2 space-y-2 text-sm">

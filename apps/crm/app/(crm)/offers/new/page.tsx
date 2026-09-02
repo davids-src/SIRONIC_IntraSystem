@@ -109,6 +109,7 @@ export default function NewOfferPage() {
   const [step, setStep] = useState(0);
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [selectedForBundle, setSelectedForBundle] = useState<string[]>([]);
   const [priceList, setPriceList] = useState<PriceItem[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loadErr, setLoadErr] = useState<string | null>(null);
@@ -244,7 +245,8 @@ export default function NewOfferPage() {
     return totals;
   }, [cart]);
 
-  const handleAddBundle = () => {
+  const handleCreateBundleFromSelection = () => {
+    if (selectedForBundle.length === 0) return;
     const bundleName = window.prompt(
       "Add meg a csomag/összevont tétel nevét (pl. Kamera telepítés):",
     );
@@ -261,17 +263,37 @@ export default function NewOfferPage() {
       description: "Összevont tétel",
       preferred_supplier: null,
     };
-    setCart((prev) => [
-      ...prev,
-      {
+
+    setCart((prev) => {
+      const newParent: CartItem = {
         item: mockItem,
         qty: 1,
         custom_price: null,
         discount_percent: 0,
         is_group_parent: true,
         group_id: bundleId,
-      },
-    ]);
+      };
+
+      return [
+        ...prev.map((c) =>
+          selectedForBundle.includes(c.item._id) ? { ...c, group_id: bundleId } : c,
+        ),
+        newParent,
+      ];
+    });
+    setSelectedForBundle([]);
+  };
+
+  const handleUnbundle = (bundleId: string) => {
+    if (!window.confirm("Biztosan felbontod ezt a csomagot?")) return;
+    setCart((prev) => {
+      const withoutParent = prev.filter(
+        (c) => !(c.is_group_parent && c.group_id === bundleId),
+      );
+      return withoutParent.map((c) =>
+        c.group_id === bundleId ? { ...c, group_id: null } : c,
+      );
+    });
   };
 
   const addItem = (item: PriceItem) => {
@@ -755,48 +777,6 @@ export default function NewOfferPage() {
           )}
         </span>
       </div>
-
-      {/* Bundle assignment */}
-      {!c.is_group_parent && cart.some((ci) => ci.is_group_parent) && (
-        <div
-          style={{
-            marginTop: "10px",
-            fontSize: "0.75rem",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-          }}
-        >
-          <span style={{ color: "var(--color-text-muted)" }}>Csomagba:</span>
-          <select
-            value={c.group_id || ""}
-            onChange={(e) => {
-              const val = e.target.value;
-              setCart((prev) =>
-                prev.map((ci) =>
-                  ci.item._id === c.item._id ? { ...ci, group_id: val || null } : ci,
-                ),
-              );
-            }}
-            style={{
-              padding: "2px 6px",
-              borderRadius: "4px",
-              background: "var(--color-bg-input)",
-              border: "1px solid var(--color-border-subtle)",
-              color: "inherit",
-            }}
-          >
-            <option value="">-- Nincs csomagban --</option>
-            {cart
-              .filter((ci) => ci.is_group_parent)
-              .map((b) => (
-                <option key={b.group_id} value={b.group_id || ""}>
-                  {b.item.name}
-                </option>
-              ))}
-          </select>
-        </div>
-      )}
 
       {/* Discount input */}
       <div
@@ -2278,10 +2258,21 @@ export default function NewOfferPage() {
               ))}
             </div>
 
+            <div className="flex justify-between items-center mb-4 mt-2 px-8">
+              <Button
+                variant="secondary"
+                disabled={selectedForBundle.length === 0}
+                onClick={handleCreateBundleFromSelection}
+              >
+                <Plus size={16} className="mr-2" />
+                Kijelöltekből csomag létrehozása ({selectedForBundle.length})
+              </Button>
+            </div>
             <div className="overflow-x-auto border border-t-0 border-[var(--color-border-subtle)] rounded-b-lg mt-[-24px]">
               <table className="w-full text-left border-collapse min-w-[500px]">
                 <thead>
                   <tr className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-subtle)]">
+                    <th className="px-4 py-3 w-[40px]"></th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
                       Megnevezés
                     </th>
@@ -2297,33 +2288,110 @@ export default function NewOfferPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--color-border-subtle)] text-sm">
-                  {cart.map((c) => (
-                    <tr
-                      key={c.item._id}
-                      className="bg-[var(--color-bg-card)] hover:bg-[var(--color-bg-card-hover)] transition-colors"
-                    >
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-[var(--color-text-primary)]">
-                          {c.item.name}
-                        </div>
-                        <div className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                          {c.item.code}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        {c.qty}{" "}
-                        <span className="text-[var(--color-text-muted)] text-xs">
-                          {c.item.unit}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right text-[var(--color-text-secondary)]">
-                        {fmt(c.custom_price ?? c.item.unit_price)}
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold text-[var(--color-text-primary)]">
-                        {fmt((c.custom_price ?? c.item.unit_price) * c.qty)}
-                      </td>
-                    </tr>
-                  ))}
+                  {displayCart.map((c) => {
+                    const isParent = c.is_group_parent;
+                    const isChild = !isParent && c.group_id;
+                    if (isChild) return null;
+
+                    const canBeBundled = !isParent && !c.group_id;
+                    const isSelected = selectedForBundle.includes(c.item._id);
+                    const children = isParent
+                      ? displayCart.filter(
+                          (cl) => cl.group_id === c.group_id && !cl.is_group_parent,
+                        )
+                      : [];
+
+                    return (
+                      <tr
+                        key={c.item._id}
+                        className="bg-[var(--color-bg-card)] hover:bg-[var(--color-bg-card-hover)] transition-colors"
+                        style={{
+                          background: isParent ? "var(--color-bg-secondary)" : "inherit",
+                        }}
+                      >
+                        <td className="px-4 py-3 align-top">
+                          {canBeBundled && (
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedForBundle((prev) => [...prev, c.item._id]);
+                                } else {
+                                  setSelectedForBundle((prev) =>
+                                    prev.filter((id) => id !== c.item._id),
+                                  );
+                                }
+                              }}
+                              style={{ cursor: "pointer", marginTop: "4px" }}
+                            />
+                          )}
+                        </td>
+                        <td className="px-4 py-3 align-top">
+                          <div
+                            className="font-medium text-[var(--color-text-primary)] flex items-center"
+                            style={{ fontWeight: isParent ? "bold" : "normal" }}
+                          >
+                            {c.item.name}
+                            {isParent && (
+                              <button
+                                onClick={() => handleUnbundle(c.group_id || "")}
+                                style={{
+                                  marginLeft: "8px",
+                                  color: "var(--color-accent-primary)",
+                                  background: "none",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  fontSize: "0.75rem",
+                                  textDecoration: "underline",
+                                }}
+                              >
+                                (Bontás)
+                              </button>
+                            )}
+                          </div>
+                          <div className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                            {c.item.code}
+                          </div>
+                          {isParent && children.length > 0 && (
+                            <div
+                              style={{
+                                fontWeight: 400,
+                                color: "#3b82f6",
+                                fontSize: "0.75rem",
+                                marginTop: "4px",
+                              }}
+                              className="break-words"
+                            >
+                              {children.map((cl) => cl.item.name).join(", ")}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {c.qty}{" "}
+                          <span className="text-[var(--color-text-muted)] text-xs">
+                            {c.item.unit}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right text-[var(--color-text-secondary)]">
+                          {fmt(
+                            isParent
+                              ? bundleTotals[c.group_id || ""] || 0
+                              : (c.custom_price ?? c.item.unit_price),
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold text-[var(--color-text-primary)]">
+                          {fmt(
+                            (isParent
+                              ? bundleTotals[c.group_id || ""] || 0
+                              : (c.custom_price ?? c.item.unit_price)) *
+                              c.qty *
+                              (1 - c.discount_percent / 100),
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

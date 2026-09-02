@@ -277,11 +277,8 @@ export default function OfferDetailsPage() {
                       ) : null}
                     </div>
                     {isParent && children.length > 0 && (
-                      <div className="text-xs text-gray-400 mt-1 italic">
-                        Tartalmazza:{" "}
-                        {children
-                          .map((cl) => `${cl.quantity} ${cl.unit} ${cl.description}`)
-                          .join(", ")}
+                      <div className="text-xs text-[var(--color-accent-primary)] mt-1 break-words">
+                        {children.map((cl) => cl.description).join(", ")}
                       </div>
                     )}
                     {!isParent && (
@@ -531,6 +528,15 @@ export default function OfferDetailsPage() {
             </thead>
             <tbody>
               {offer.lines.map((l, i) => {
+                if ((l as any).group_id && !(l as any).is_group_parent) return null;
+                const isParent = (l as any).is_group_parent;
+                const children = isParent
+                  ? offer.lines.filter(
+                      (cl) =>
+                        (cl as any).group_id === (l as any).group_id &&
+                        !(cl as any).is_group_parent,
+                    )
+                  : [];
                 const discountedPrice =
                   l.net_unit_price * (1 - (l.discount_percent ?? 0) / 100);
                 return (
@@ -548,14 +554,32 @@ export default function OfferDetailsPage() {
                           (-{l.discount_percent}%)
                         </span>
                       ) : null}
+                      {isParent && children.length > 0 && (
+                        <div
+                          style={{
+                            fontWeight: 400,
+                            color: "#3b82f6",
+                            fontSize: "11px",
+                            marginTop: "4px",
+                          }}
+                        >
+                          {children.map((cl) => cl.description).join(", ")}
+                        </div>
+                      )}
                     </td>
-                    <td style={{ textAlign: "right", padding: "8px" }}>
+                    <td
+                      style={{ textAlign: "right", padding: "8px", verticalAlign: "top" }}
+                    >
                       {l.quantity} {l.unit}
                     </td>
-                    <td style={{ textAlign: "right", padding: "8px" }}>
+                    <td
+                      style={{ textAlign: "right", padding: "8px", verticalAlign: "top" }}
+                    >
                       {fmt(discountedPrice)}
                     </td>
-                    <td style={{ textAlign: "right", padding: "8px" }}>
+                    <td
+                      style={{ textAlign: "right", padding: "8px", verticalAlign: "top" }}
+                    >
                       {fmt(l.quantity * discountedPrice)}
                     </td>
                   </tr>
