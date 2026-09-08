@@ -9,11 +9,16 @@
     "build": "tsc --project tsconfig.json",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "lint": "echo \"No lint configured for @crm/modules\"",
-    "test": "echo \"No tests for @crm/modules\""
+    "test": "jest --config jest.config.mjs --passWithNoTests"
   },
   "dependencies": {
+    "@crm/db": "workspace:*",
+    "@crm/integrations": "workspace:*",
     "@crm/lib": "workspace:*",
     "@crm/rbac": "workspace:*",
     "@crm/types": "workspace:*"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^10.1.4"
   }
 }

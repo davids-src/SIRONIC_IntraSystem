@@ -30,6 +30,7 @@ import {
   Activity,
   Map,
   Settings2,
+  Rocket,
 } from "lucide-react";
 
 const crmNavItems: NavItem[] = [
@@ -50,6 +51,12 @@ const crmNavItems: NavItem[] = [
     label: "Projektek",
     href: "/projects",
     icon: <FolderKanban size={16} />,
+  },
+  {
+    key: "deployments",
+    label: "Deploymentek",
+    href: "/deployments",
+    icon: <Rocket size={16} />,
   },
   {
     key: "floorplans",

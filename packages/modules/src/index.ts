@@ -19,3 +19,6 @@ export function authorizeOrThrow(actor: ActorContext, permission: PermissionChec
 export { mapContactToMultiplierKey } from "./pricing/mapContactToMultiplierKey";
 export { calculateServicePrice } from "./pricing/calculateServicePrice";
 export { checkAndSeedServiceCategories } from "./pricing/checkAndSeedServiceCategories";
+
+// Deployments orchestrator exports (docs/deployments/04-orchestrator.md)
+export * from "./deployments";

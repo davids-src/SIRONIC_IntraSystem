@@ -42,4 +42,12 @@ export {
   ServiceCategoryModel,
   ServiceSubCategoryModel,
   ServicePriceListItemModel,
+  // Deployments program
+  DeploymentModel,
+  DeploymentEventModel,
+  DeploymentPackageModel,
+  DeploymentPaymentModel,
+  StackTemplateModel,
+  IntegrationConnectionModel,
+  PartnerDeploymentAccessModel,
 } from "./models";

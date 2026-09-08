@@ -9,8 +9,12 @@ import {
   Mail,
   ChevronRight,
   FileSignature,
+  Plug,
+  Container,
+  Package,
 } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import type { Settings, CompanyDetails } from "@crm/types";
 import { apiJsonBody } from "@/lib/api-client";
@@ -78,6 +82,78 @@ const configurableLists: Array<{
     operations: ["add", "rename", "delete"],
   },
 ];
+
+function SettingsLinkCard({
+  href,
+  icon,
+  title,
+  subtitle,
+}: {
+  href: string;
+  icon: ReactNode;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <Link href={href} style={{ display: "block", textDecoration: "none" }}>
+      <Card
+        className="p-5"
+        style={{ cursor: "pointer", transition: "box-shadow 0.2s" }}
+        onMouseEnter={(e) =>
+          (e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(0, 0, 0, 0.1)")
+        }
+        onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "none")}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "8px",
+                backgroundColor: "var(--accent-badge-bg, #3b0a0a)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--accent-primary, #e53935)",
+              }}
+            >
+              {icon}
+            </div>
+            <div>
+              <h2
+                style={{
+                  fontSize: "1rem",
+                  fontWeight: 700,
+                  color: "var(--text-primary)",
+                  margin: 0,
+                }}
+              >
+                {title}
+              </h2>
+              <p
+                style={{
+                  fontSize: "0.875rem",
+                  color: "var(--text-muted)",
+                  margin: "2px 0 0 0",
+                }}
+              >
+                {subtitle}
+              </p>
+            </div>
+          </div>
+          <ChevronRight size={20} style={{ color: "var(--text-muted)" }} />
+        </div>
+      </Card>
+    </Link>
+  );
+}
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Partial<Settings>>({});
@@ -569,6 +645,25 @@ export default function SettingsPage() {
           </div>
         </Card>
       </Link>
+
+      <SettingsLinkCard
+        href="/settings/integrations"
+        icon={<Plug size={20} />}
+        title="Integrációk"
+        subtitle="Cloudflare, Nginx Proxy Manager, Portainer, GitHub kapcsolatok"
+      />
+      <SettingsLinkCard
+        href="/settings/stack-templates"
+        icon={<Container size={20} />}
+        title="Stack sablonok"
+        subtitle="Docker Compose sablonok a deployment stackekhez"
+      />
+      <SettingsLinkCard
+        href="/settings/deployment-packages"
+        icon={<Package size={20} />}
+        title="Deployment csomagok"
+        subtitle="Billable csomagok (erőforrás, ár, ciklus) a deploymentekhez"
+      />
 
       <div
         style={{

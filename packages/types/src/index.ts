@@ -13,7 +13,9 @@ export type PermissionAction =
   | "manage_phases"
   | "manage_checklist"
   | "add_staging_link"
-  | "close";
+  | "close"
+  | "provision"
+  | "adopt";
 
 export type PermissionModule =
   | "dashboard"
@@ -42,7 +44,12 @@ export type PermissionModule =
   // Pricing Engine modulok
   | "service_price_list"
   | "service_categories"
-  | "pricing_settings";
+  | "pricing_settings"
+  // Deployments program (docs/deployments/)
+  | "deployment"
+  | "deployment_billing"
+  | "integration"
+  | "partner_team";
 
 /** CRM app login roles only (subset of RoleKey). */
 export type CrmRoleKey = "crm.admin" | "crm.staff";
@@ -197,6 +204,224 @@ export interface ActorContext {
 
 export interface PermissionCheck extends Permission {
   resourceTenantId?: string;
+}
+
+// Deployments program (docs/deployments/02-data-model.md §2)
+
+export type DeploymentStatus =
+  "draft" | "provisioning" | "live" | "degraded" | "suspended" | "archived";
+
+export type DeploymentStepKey =
+  | "cloudflare_zone"
+  | "ns_delegation"
+  | "dns_records"
+  | "ssl_certificate"
+  | "proxy_host"
+  | "image_build"
+  | "stack_create"
+  | "stack_deploy";
+
+export type DeploymentStepStatus =
+  "pending" | "running" | "done" | "failed" | "skipped" | "adopted" | "manual_required";
+
+export type BillingCycle = "monthly" | "quarterly" | "yearly";
+
+export type IntegrationProvider = "cloudflare" | "npm" | "portainer" | "github";
+
+export type DeploymentPaymentStatus = "due" | "paid" | "overdue" | "waived" | "cancelled";
+
+export type PartnerDeploymentAccessLevel = "view" | "manage";
+
+export interface DeploymentStep {
+  key: DeploymentStepKey;
+  status: DeploymentStepStatus;
+  external_id: string | null;
+  message: string | null;
+  last_error: string | null;
+  started_at: Date | null;
+  finished_at: Date | null;
+  meta: Record<string, unknown> | null;
+}
+
+export interface DeploymentExternalIds {
+  cloudflare_zone_id: string | null;
+  cloudflare_dns_record_ids: string[];
+  npm_certificate_id: number | null;
+  npm_proxy_host_id: number | null;
+  portainer_stack_id: number | null;
+  portainer_endpoint_id: number | null;
+  portainer_webhook_id: string | null;
+  github_last_run_id: number | null;
+  image_digest: string | null;
+}
+
+export interface Deployment {
+  _id: string;
+  tenantId: string;
+  contact_id: string;
+  /** Auto-generated: DEP-000001 */
+  deployment_number: string;
+  name: string;
+  domain: string;
+  www_redirect: boolean;
+  status: DeploymentStatus;
+  notes: string | null;
+  dns: {
+    record_type: "A" | "CNAME";
+    target: string | null;
+    proxied: boolean;
+  };
+  proxy: {
+    forward_host: string | null;
+    forward_port: number | null;
+    forward_scheme: "http" | "https";
+    websocket_support: boolean;
+  };
+  image: {
+    repository: string | null;
+    tag: string | null;
+    workflow_id: string | null;
+    workflow_ref: string | null;
+  };
+  stack: {
+    stack_name: string | null;
+    template_id: string | null;
+    env: Array<{ name: string; value: string }>;
+  };
+  package_id: string | null;
+  billing_cycle: BillingCycle | null;
+  price_override_huf: number | null;
+  next_billing_at: Date | null;
+  last_paid_at: Date | null;
+  billing_notes: string | null;
+  steps: DeploymentStep[];
+  external_ids: DeploymentExternalIds;
+  source: "created" | "imported";
+  migrated_from_domain_hosting_id: string | null;
+  created_by: string;
+  archived_at: Date | null;
+  archive_reason: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type DeploymentEventKind =
+  | "step_plan"
+  | "step_execute_start"
+  | "step_execute_ok"
+  | "step_execute_fail"
+  | "step_adopt"
+  | "step_skip"
+  | "step_verify"
+  | "redeploy"
+  | "billing"
+  | "import"
+  | "note";
+
+export interface DeploymentEvent {
+  _id: string;
+  tenantId: string;
+  deployment_id: string;
+  step_key: DeploymentStepKey | null;
+  kind: DeploymentEventKind;
+  actor_id: string | null;
+  actor_type: "crm_user" | "portal_user" | "system" | "webhook";
+  message: string;
+  detail: unknown;
+  duration_ms: number | null;
+  created_at: Date;
+}
+
+export interface DeploymentPackage {
+  _id: string;
+  tenantId: string;
+  code: string;
+  name: string;
+  description: string | null;
+  price_huf: number;
+  default_cycle: BillingCycle;
+  resources: {
+    vcpu: number | null;
+    ram_mb: number | null;
+    disk_gb: number | null;
+    bandwidth_gb: number | null;
+    custom: Record<string, unknown> | null;
+  };
+  is_active: boolean;
+  sort_order: number;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface DeploymentPayment {
+  _id: string;
+  tenantId: string;
+  deployment_id: string;
+  contact_id: string;
+  package_id: string | null;
+  period_start: Date;
+  period_end: Date;
+  amount_huf: number;
+  currency: string;
+  cycle: BillingCycle;
+  status: DeploymentPaymentStatus;
+  paid_at: Date | null;
+  invoice_id: string | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface StackTemplatePlaceholder {
+  key: string;
+  label: string;
+  required: boolean;
+  default_value: string | null;
+  secret: boolean;
+}
+
+export interface StackTemplate {
+  _id: string;
+  tenantId: string;
+  name: string;
+  description: string | null;
+  is_default: boolean;
+  compose_yaml: string;
+  placeholders: StackTemplatePlaceholder[];
+  required_networks: string[];
+  created_by: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface IntegrationConnection {
+  _id: string;
+  tenantId: string;
+  provider: IntegrationProvider;
+  label: string;
+  base_url: string;
+  encrypted_credentials: string;
+  meta: Record<string, unknown>;
+  is_active: boolean;
+  last_healthcheck_at: Date | null;
+  last_healthcheck_ok: boolean | null;
+  last_healthcheck_message: string | null;
+  created_by: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface PartnerDeploymentAccess {
+  _id: string;
+  tenantId: string;
+  contact_id: string;
+  portal_user_id: string;
+  deployment_id: string;
+  access_level: PartnerDeploymentAccessLevel;
+  created_by: string | null;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export type PriceListItemType = "service" | "product" | "labor" | "package";

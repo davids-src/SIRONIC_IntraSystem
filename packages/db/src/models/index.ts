@@ -33,3 +33,11 @@ export { PricingSettingsModel } from "./pricing-settings";
 export { ServiceCategoryModel } from "./service-category";
 export { ServiceSubCategoryModel } from "./service-subcategory";
 export { ServicePriceListItemModel } from "./service-price-list-item";
+// Deployments program (docs/deployments/)
+export { DeploymentModel } from "./deployment";
+export { DeploymentEventModel } from "./deployment-event";
+export { DeploymentPackageModel } from "./deployment-package";
+export { DeploymentPaymentModel } from "./deployment-payment";
+export { StackTemplateModel } from "./stack-template";
+export { IntegrationConnectionModel } from "./integration-connection";
+export { PartnerDeploymentAccessModel } from "./partner-deployment-access";
