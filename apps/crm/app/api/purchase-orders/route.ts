@@ -26,7 +26,7 @@ const createSchema = z.object({
 export async function GET(req: Request) {
   try {
     const { actor } = await requireCrmAuth();
-    guard(actor, { module: "settings", action: "view", scope: "global" });
+    guard(actor, { module: "purchase_order", action: "view", scope: "global" });
     const { searchParams } = new URL(req.url);
     const includeArchived = searchParams.get("include_archived") === "true";
     return await withDb(async () => {
@@ -49,7 +49,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const { actor } = await requireCrmAuth();
-    guard(actor, { module: "settings", action: "write", scope: "global" });
+    guard(actor, { module: "purchase_order", action: "write", scope: "global" });
     const json: unknown = await req.json();
     const parsed = createSchema.safeParse(json);
     if (!parsed.success) {

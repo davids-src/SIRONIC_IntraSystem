@@ -2,7 +2,13 @@ import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { TicketModel, serializeForJson } from "@crm/db";
-import { guard, handleApiError, requirePortalActor, withDb } from "@/lib/api-helpers";
+import {
+  guard,
+  handleApiError,
+  requirePortalActor,
+  stripInternalComments,
+  withDb,
+} from "@/lib/api-helpers";
 
 const bodySchema = z.object({
   message: z.string().min(1),
@@ -39,7 +45,7 @@ export async function POST(req: Request, ctx: RouteCtx) {
       if (!doc) {
         return NextResponse.json({ error: "Not found" }, { status: 404 });
       }
-      return NextResponse.json(serializeForJson(doc));
+      return NextResponse.json(serializeForJson(stripInternalComments(doc as any)));
     });
   } catch (e) {
     return handleApiError(e);

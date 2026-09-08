@@ -45,3 +45,12 @@ Or run a single app:
 - `pnpm typecheck`
 - `pnpm test`
 - `pnpm build`
+
+## Platform expansion docs
+
+Execution-ready specifications (deployments orchestration, central auth, Next template contract):
+
+- **[`docs/README.md`](./docs/README.md)** — index
+- [`docs/00-program-overview.md`](./docs/00-program-overview.md) — vision, phases, decisions
+
+These are documentation-only until implementation phases begin. Product manual (HU): [`SIRONIC_SYSTEM_MANUAL.md`](./SIRONIC_SYSTEM_MANUAL.md) §4.13.

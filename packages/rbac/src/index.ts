@@ -14,6 +14,7 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     { module: "portal_permissions", action: "manage", scope: "global" },
     { module: "project", action: "admin", scope: "global" },
     { module: "settings", action: "admin", scope: "global" },
+    { module: "purchase_order", action: "admin", scope: "global" },
     { module: "delivery_note", action: "admin", scope: "global" },
     { module: "secret", action: "admin", scope: "global" },
     { module: "warranty", action: "admin", scope: "global" },
@@ -26,6 +27,11 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     { module: "service_price_list", action: "admin", scope: "global" },
     { module: "service_categories", action: "admin", scope: "global" },
     { module: "pricing_settings", action: "admin", scope: "global" },
+    // Deployments program
+    { module: "deployment", action: "admin", scope: "global" },
+    { module: "deployment_billing", action: "admin", scope: "global" },
+    { module: "integration", action: "admin", scope: "global" },
+    { module: "partner_team", action: "admin", scope: "global" },
   ],
   "crm.staff": [
     { module: "dashboard", action: "view", scope: "global" },
@@ -54,6 +60,7 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     { module: "warranty", action: "write", scope: "global" },
     { module: "warranty", action: "generate_pdf", scope: "global" },
     { module: "settings", action: "view", scope: "global" },
+    { module: "purchase_order", action: "write", scope: "global" },
     { module: "weekly_plan", action: "write", scope: "global" },
     { module: "checklist", action: "write", scope: "global" },
     { module: "project_expense", action: "write", scope: "global" },
@@ -62,6 +69,13 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     // Pricing Engine – staff csak olvashat, belső árakat NEM lát (API szinten szűrve)
     { module: "service_price_list", action: "view", scope: "global" },
     { module: "service_categories", action: "view", scope: "global" },
+    // Deployments program
+    { module: "deployment", action: "write", scope: "global" },
+    { module: "deployment", action: "provision", scope: "global" },
+    { module: "deployment", action: "adopt", scope: "global" },
+    { module: "deployment_billing", action: "write", scope: "global" },
+    { module: "integration", action: "view", scope: "global" },
+    { module: "partner_team", action: "view", scope: "global" },
   ],
 
   "partner.admin": [
@@ -79,6 +93,10 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     { module: "project", action: "manage_checklist", scope: "contact" },
     { module: "project", action: "sign", scope: "contact" }, // reusing 'sign' for approval
     { module: "warranty", action: "view", scope: "contact" },
+    // Deployments program (P3 portal work not built yet; grants reserved for it)
+    { module: "deployment", action: "view", scope: "contact" },
+    { module: "deployment_billing", action: "view", scope: "contact" },
+    { module: "partner_team", action: "manage", scope: "contact" },
   ],
   "partner.viewer": [
     { module: "dashboard", action: "view", scope: "contact" },
@@ -90,6 +108,9 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     { module: "contract", action: "view", scope: "contact" },
     { module: "project", action: "view", scope: "contact" },
     { module: "warranty", action: "view", scope: "contact" },
+    // Deployments program (P3 portal work not built yet; grants reserved for it)
+    { module: "deployment", action: "view", scope: "contact" },
+    { module: "deployment_billing", action: "view", scope: "contact" },
   ],
 };
 
@@ -107,6 +128,8 @@ const actionWeight: Record<Permission["action"], number> = {
   manage_checklist: 10,
   add_staging_link: 10,
   close: 10,
+  provision: 10,
+  adopt: 10,
 };
 
 function matchesScope(

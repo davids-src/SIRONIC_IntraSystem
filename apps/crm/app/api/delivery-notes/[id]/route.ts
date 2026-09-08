@@ -36,7 +36,6 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
     const { actor } = await requireCrmAuth();
     guard(actor, { module: "delivery_note", action: "write", scope: "global" });
     const patch: Record<string, unknown> = await req.json();
-    const prevStatus = patch._prevStatus as string | undefined;
     const nextStatus = patch.status as string | undefined;
     delete patch._id;
     delete patch.tenantId;
@@ -74,11 +73,18 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
       }
       const docAny = doc as any;
       // draft -> issued: készletellenőrzés és levonás
-      if (
-        nextStatus === "issued" &&
-        (prevStatus ?? (existing as any).status) === "draft"
-      ) {
-        for (const line of docAny.lines ?? []) {
+      // A státuszváltás forrása mindig a DB-ben ténylegesen tárolt előző
+      // állapot (existing.status), SOHA a kliens által küldött érték – egy
+      // meghamisított/replay-elt kérés így nem tud dupla készletlevonást
+      // vagy levonás nélküli "issued" állapotot előidézni.
+      if (nextStatus === "issued" && (existing as any).status === "draft") {
+        const lines = docAny.lines ?? [];
+
+        // 1. fázis: minden sor ellenőrzése, mielőtt bármelyiket levonnánk –
+        // így egy köztes sikertelen ellenőrzés nem hagy részlegesen levont készletet.
+        const productLines: typeof lines = [];
+        const neededByItem = new Map<string, number>();
+        for (const line of lines) {
           const item = await PriceListItemModel.findOne({
             _id: line.price_list_item_id,
             tenantId: actor.tenantId,
@@ -86,49 +92,66 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
           if (item && (item as any).type !== "product") {
             continue;
           }
+          productLines.push(line);
+          neededByItem.set(
+            line.price_list_item_id,
+            (neededByItem.get(line.price_list_item_id) ?? 0) + line.quantity,
+          );
+        }
 
-          // Készletellenőrzés
+        for (const [priceListItemId, needed] of neededByItem) {
           const stockItem = (await StockItemModel.findOne({
             tenantId: actor.tenantId,
-            price_list_item_id: line.price_list_item_id,
+            price_list_item_id: priceListItemId,
           }).lean()) as any;
 
-          if (stockItem && stockItem.quantity_in_stock < line.quantity) {
-            // Rollback: státusz visszaállítása draft-ra
+          if (stockItem && stockItem.quantity_in_stock < needed) {
+            // Rollback: státusz visszaállítása draft-ra – még semmit nem vontunk le
             await DeliveryNoteModel.findOneAndUpdate(
               { _id: id, tenantId: actor.tenantId },
               { $set: { status: "draft" } },
             );
+            const line = productLines.find(
+              (l: any) => l.price_list_item_id === priceListItemId,
+            );
             return NextResponse.json(
               {
-                error: `Nincs elég készlet: "${line.name}" – kért: ${line.quantity}, elérhető: ${stockItem.quantity_in_stock}`,
+                error: `Nincs elég készlet: "${line?.name ?? priceListItemId}" – kért: ${needed}, elérhető: ${stockItem.quantity_in_stock}`,
               },
               { status: 400 },
             );
           }
+        }
 
-          await StockItemModel.findOneAndUpdate(
-            { tenantId: actor.tenantId, price_list_item_id: line.price_list_item_id },
-            { $inc: { quantity_in_stock: -line.quantity } },
-            { upsert: true },
+        // 2. fázis: minden sor rendben – tényleges levonás
+        try {
+          for (const line of productLines) {
+            await StockItemModel.findOneAndUpdate(
+              { tenantId: actor.tenantId, price_list_item_id: line.price_list_item_id },
+              { $inc: { quantity_in_stock: -line.quantity } },
+              { upsert: true },
+            );
+            await StockTransactionModel.create({
+              tenantId: actor.tenantId,
+              price_list_item_id: line.price_list_item_id,
+              type: "out",
+              quantity: line.quantity,
+              reference_type: "delivery_note",
+              reference_id: String(docAny._id),
+              notes: `Szállítólevél kiadva: ${docAny.delivery_number}`,
+              created_by: actor.actorId ?? "system",
+            });
+          }
+        } catch (err) {
+          console.error(
+            `[delivery-notes] Stock deduction failed mid-way for ${docAny.delivery_number}`,
+            err,
           );
-          await StockTransactionModel.create({
-            tenantId: actor.tenantId,
-            price_list_item_id: line.price_list_item_id,
-            type: "out",
-            quantity: line.quantity,
-            reference_type: "delivery_note",
-            reference_id: String(docAny._id),
-            notes: `Szállítólevél kiadva: ${docAny.delivery_number}`,
-            created_by: actor.actorId ?? "system",
-          });
+          throw err;
         }
       }
       // issued -> cancelled: visszavételez
-      if (
-        nextStatus === "cancelled" &&
-        (prevStatus ?? (existing as any).status) === "issued"
-      ) {
+      if (nextStatus === "cancelled" && (existing as any).status === "issued") {
         for (const line of docAny.lines ?? []) {
           try {
             const item = await PriceListItemModel.findOne({
@@ -154,8 +177,11 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
               notes: `Szállítólevél stornózva: ${docAny.delivery_number}`,
               created_by: actor.actorId ?? "system",
             });
-          } catch {
-            /* non-fatal */
+          } catch (err) {
+            console.error(
+              `[delivery-notes] Stock reversal failed for line ${line.price_list_item_id} on ${docAny.delivery_number}`,
+              err,
+            );
           }
         }
       }

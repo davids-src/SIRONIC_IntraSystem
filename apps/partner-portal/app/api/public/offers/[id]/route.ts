@@ -22,7 +22,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       }
 
       const [contact, settings] = await Promise.all([
-        ContactModel.findById((offer as any).contact_id).lean(),
+        ContactModel.findOne({
+          _id: (offer as any).contact_id,
+          tenantId: (offer as any).tenantId,
+        }).lean(),
         SettingsModel.findOne({ tenantId: (offer as any).tenantId }).lean(),
       ]);
 

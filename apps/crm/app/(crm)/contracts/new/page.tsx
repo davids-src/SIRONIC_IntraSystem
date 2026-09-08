@@ -119,6 +119,24 @@ export default function NewContractPage() {
           setSaving(false);
           return;
         }
+        const generatedBody = generateHtmlBody();
+        if (status === "sent") {
+          if (!generatedBody) {
+            setError("A kiválasztott sablon nem található – nem küldhető ki.");
+            setSaving(false);
+            return;
+          }
+          const emptyVariables = templateVariables.filter(
+            (v) => !variablesFilled[v]?.trim(),
+          );
+          if (emptyVariables.length > 0) {
+            setError(
+              `Kiküldés előtt tölts ki minden sablon mezőt: ${emptyVariables.join(", ")}`,
+            );
+            setSaving(false);
+            return;
+          }
+        }
         payload = {
           contact_id: contactId,
           type: "generated",
@@ -134,11 +152,16 @@ export default function NewContractPage() {
           valid_until:
             indefinite || !validUntil ? null : new Date(validUntil).toISOString(),
           // Generate actual HTML body replacing variables
-          body: generateHtmlBody(),
+          body: generatedBody,
         };
       } else {
         if (!uploadContactId || !uploadName || !uploadCategory) {
           setError("Kérlek tölts ki minden kötelező mezőt!");
+          setSaving(false);
+          return;
+        }
+        if (!selectedFile) {
+          setError("Kérlek válassz ki egy PDF fájlt!");
           setSaving(false);
           return;
         }
@@ -149,13 +172,30 @@ export default function NewContractPage() {
           name: uploadName,
           contract_number: uploadContractNumber || undefined,
           status: "draft",
-          pdf_url: "/uploads/dummy_contract.pdf",
           signing_type: uploadSigningType,
           portal_visible: true,
         };
       }
 
       const res = await apiJsonBody<{ _id: string }>("/api/contracts", "POST", payload);
+
+      if (contractType === "uploaded" && selectedFile) {
+        const fd = new FormData();
+        fd.append("file", selectedFile);
+        const uploadRes = await fetch(`/api/contracts/${res._id}/pdf`, {
+          method: "POST",
+          body: fd,
+        });
+        if (!uploadRes.ok) {
+          const body = await uploadRes.json().catch(() => ({}));
+          setError(
+            body.error || "A szerződés létrejött, de a PDF feltöltése sikertelen.",
+          );
+          setSaving(false);
+          return;
+        }
+      }
+
       router.push(`/contracts/${res._id}`);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Hiba a mentés során.");
@@ -757,7 +797,7 @@ export default function NewContractPage() {
                 }}
               >
                 {selectedFile
-                  ? "Fájl sikeresen kiválasztva (A mentés továbbra is dummy PDF-et ad a teszt során)"
+                  ? "Fájl kiválasztva – mentéskor feltöltésre kerül"
                   : "Csak PDF formátum támogatott"}
               </p>
             </div>

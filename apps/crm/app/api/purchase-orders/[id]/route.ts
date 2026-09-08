@@ -38,7 +38,7 @@ export async function GET(
 ) {
   try {
     const { actor } = await requireCrmAuth();
-    guard(actor, { module: "settings", action: "view", scope: "global" });
+    guard(actor, { module: "purchase_order", action: "view", scope: "global" });
     const { id } = await params;
     return await withDb(async () => {
       const doc = await PurchaseOrderModel.findOne({
@@ -59,7 +59,7 @@ export async function PATCH(
 ) {
   try {
     const { actor } = await requireCrmAuth();
-    guard(actor, { module: "settings", action: "write", scope: "global" });
+    guard(actor, { module: "purchase_order", action: "write", scope: "global" });
     const { id } = await params;
     const json: unknown = await req.json();
     const parsed = updateSchema.safeParse(json);
@@ -242,7 +242,7 @@ export async function DELETE(
 ) {
   try {
     const { actor } = await requireCrmAuth();
-    guard(actor, { module: "settings", action: "admin", scope: "global" });
+    guard(actor, { module: "purchase_order", action: "admin", scope: "global" });
     const { id } = await params;
     const url = new URL(req.url);
     const reason = url.searchParams.get("reason") || "Törölve";

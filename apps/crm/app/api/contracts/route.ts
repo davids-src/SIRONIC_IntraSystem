@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { ContractModel, formatNumber, nextCounterValue, serializeForJson } from "@crm/db";
 import { guard, handleApiError, requireCrmAuth, withDb } from "@/lib/api-helpers";
+import { sanitizeDocumentHtml } from "@/lib/sanitize";
 
 const createSchema = z.object({
   contact_id: z.string().min(1),
@@ -81,7 +82,7 @@ export async function POST(req: Request) {
         category: b.category,
         name: b.name,
         status: b.status ?? "draft",
-        body: b.body ?? null,
+        body: b.body ? sanitizeDocumentHtml(b.body) : null,
         variables_filled: b.variables_filled ?? null,
         pdf_url: b.pdf_url ?? null,
         portal_visible: b.portal_visible ?? false,

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createHash } from "crypto";
 import { CrmUserModel } from "@crm/db";
 import { withDb, handleApiError } from "@/lib/api-helpers";
 import bcrypt from "bcryptjs";
@@ -18,8 +19,9 @@ export async function POST(req: Request) {
     }
 
     return await withDb(async () => {
+      const tokenHash = createHash("sha256").update(token).digest("hex");
       const user = await CrmUserModel.findOne({
-        invite_token: token,
+        invite_token: tokenHash,
         invite_token_expires: { $gt: new Date() },
       });
 

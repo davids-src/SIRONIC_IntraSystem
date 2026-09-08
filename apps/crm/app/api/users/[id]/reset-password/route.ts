@@ -24,7 +24,7 @@ export async function POST(
       const token = crypto.randomBytes(32).toString("hex");
       const expires = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
 
-      user.invite_token = token;
+      user.invite_token = crypto.createHash("sha256").update(token).digest("hex");
       user.invite_token_expires = expires;
       await user.save();
 

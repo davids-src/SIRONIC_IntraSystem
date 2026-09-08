@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
+import { createHash } from "crypto";
 import { ContactModel, PortalUserModel, serializeForJson } from "@crm/db";
 import { guard, handleApiError, requireCrmAuth, withDb } from "@/lib/api-helpers";
 import { sendEmail, PortalInvite } from "@sironic/emails";
 import * as React from "react";
+
+function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
 
 export async function POST(
   _req: Request,
@@ -41,13 +46,19 @@ export async function POST(
           password_hash: "PENDING_INVITE",
           display_name: contact.name,
           roleKeys: ["partner.admin"],
-          invite_token,
+          invite_token: hashToken(invite_token),
           invite_token_expires,
         });
       } else {
         await PortalUserModel.updateOne(
           { _id: portalUser._id },
-          { $set: { invite_token, invite_token_expires, email: contact.email } },
+          {
+            $set: {
+              invite_token: hashToken(invite_token),
+              invite_token_expires,
+              email: contact.email,
+            },
+          },
         );
       }
 

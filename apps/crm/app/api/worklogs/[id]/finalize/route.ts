@@ -40,6 +40,34 @@ export async function POST(req: Request, ctx: RouteCtx) {
     }
 
     return await withDb(async () => {
+      const draft = (await WorklogModel.findOne({
+        _id: id,
+        tenantId: actor.tenantId,
+        status: "draft",
+      }).lean()) as any;
+      if (!draft) {
+        return NextResponse.json(
+          { error: "Not found or already finalized" },
+          { status: 404 },
+        );
+      }
+
+      // Kötelező checklist elemek ellenőrzése – ez volt a /finalize útvonalon
+      // korábban hiányzó, a PATCH útvonalon pedig elérhetetlen (dead code)
+      // szerver oldali kapu. Lásd SIRONIC_SYSTEM_MANUAL.md.
+      const checklist = (draft.checklist_items as any[]) || [];
+      const uncompletedRequired = checklist.filter(
+        (item: any) => item.is_required && !item.is_completed,
+      );
+      if (uncompletedRequired.length > 0) {
+        return NextResponse.json(
+          {
+            error: `Nem véglegesíthető. Kötelező checklist elemek nincsenek kész: ${uncompletedRequired.map((i: any) => i.text).join(", ")}`,
+          },
+          { status: 400 },
+        );
+      }
+
       const doc = (await WorklogModel.findOneAndUpdate(
         { _id: id, tenantId: actor.tenantId, status: "draft" },
         { $set: { status: "finalized" } },
@@ -89,11 +117,49 @@ export async function POST(req: Request, ctx: RouteCtx) {
         }
 
         if (deliveryLines && deliveryLines.length > 0) {
+          const isProjectBound = !!doc.project_id;
+
+          // Készletellenőrzés MIELŐTT bármit létrehoznánk/módosítanánk – így egy
+          // köztes elégtelen készlet nem hagy részlegesen levont készletet vagy
+          // véglegesített, de valójában sikertelen munkalapot.
+          if (isProjectBound) {
+            const neededByItem = new Map<string, number>();
+            for (const line of deliveryLines) {
+              neededByItem.set(
+                line.price_list_item_id,
+                (neededByItem.get(line.price_list_item_id) ?? 0) + line.quantity,
+              );
+            }
+            for (const [priceListItemId, needed] of neededByItem) {
+              const stockItem = (await StockItemModel.findOne({
+                tenantId: actor.tenantId,
+                price_list_item_id: priceListItemId,
+              }).lean()) as any;
+              // Hiányzó StockItem = 0 készlet, NEM "nincs mit ellenőrizni" – különben
+              // a lenti upsert:true negatív quantity_in_stock-kal hozná létre a tételt.
+              const availableQty = stockItem ? stockItem.quantity_in_stock : 0;
+              if (availableQty < needed) {
+                await WorklogModel.findOneAndUpdate(
+                  { _id: id, tenantId: actor.tenantId },
+                  { $set: { status: "draft" } },
+                );
+                const line = deliveryLines.find(
+                  (l) => l.price_list_item_id === priceListItemId,
+                );
+                return NextResponse.json(
+                  {
+                    error: `Nincs elég készlet: "${line?.name ?? priceListItemId}" – kért: ${needed}, elérhető: ${availableQty}`,
+                  },
+                  { status: 400 },
+                );
+              }
+            }
+          }
+
           // Create auto-generated delivery note
           const n = await nextCounterValue(actor.tenantId, "delivery_note");
           const delivery_number = formatNumber("SZL", n);
 
-          const isProjectBound = !!doc.project_id;
           const deliveryNoteStatus = isProjectBound ? "issued" : "draft";
 
           await DeliveryNoteModel.create({
@@ -196,8 +262,11 @@ export async function POST(req: Request, ctx: RouteCtx) {
               notes: `Munkalap: ${doc.worklog_number} – ${item.description}`,
               created_by: actor.actorId ?? "system",
             });
-          } catch {
-            // non-fatal
+          } catch (err) {
+            console.error(
+              `[worklogs] Fallback stock deduction failed for ${item.price_list_item_id} on ${doc.worklog_number}`,
+              err,
+            );
           }
         }
       }

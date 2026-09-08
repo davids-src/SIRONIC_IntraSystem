@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { OfferModel, serializeForJson } from "@crm/db";
-import { handleApiError, requireCrmAuth, withDb } from "@/lib/api-helpers";
+import { guard, handleApiError, requireCrmAuth, withDb } from "@/lib/api-helpers";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { actor } = await requireCrmAuth();
+    guard(actor, { module: "price_list", action: "view", scope: "global" });
     const { id } = await params;
 
     return await withDb(async () => {

@@ -27,7 +27,10 @@ export async function POST(
       }).lean();
       if (!offer) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-      const contact: any = await ContactModel.findById(offer.contact_id).lean();
+      const contact: any = await ContactModel.findOne({
+        _id: offer.contact_id,
+        tenantId: actor.tenantId,
+      }).lean();
       if (!contact || !contact.email) {
         return NextResponse.json(
           { error: "A partnernek nincs beállítva e-mail címe." },

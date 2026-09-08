@@ -24,9 +24,9 @@ export async function POST(req: Request) {
       headersList.get("x-forwarded-for") ?? headersList.get("x-real-ip") ?? "unknown";
 
     return await withDb(async () => {
-      const share = await SecretShareModel.findOne({ token });
+      const preCheck = (await SecretShareModel.findOne({ token }).lean()) as any;
 
-      if (!share) {
+      if (!preCheck) {
         return NextResponse.json(
           { error: "A megosztási link nem létezik vagy már felhasználásra került." },
           { status: 404 },
@@ -34,12 +34,27 @@ export async function POST(req: Request) {
       }
 
       // Ellenőrzés: lejárt-e
-      if (new Date() > new Date(share.expires_at as Date)) {
+      if (new Date() > new Date(preCheck.expires_at as Date)) {
         return NextResponse.json({ error: "A megosztási link lejárt." }, { status: 410 });
       }
 
-      // Ellenőrzés: max megtekintések
-      if ((share.view_count as number) >= (share.view_count_limit as number)) {
+      // Atomikusan foglaljuk le a megtekintést (ellenőrzés + inkrementálás egy
+      // MongoDB műveletben), hogy egyidejű kérések ne léphessék túl a
+      // view_count_limit-et (TOCTOU race elkerülése).
+      const share = await SecretShareModel.findOneAndUpdate(
+        {
+          token,
+          $expr: { $lt: ["$view_count", "$view_count_limit"] },
+        },
+        {
+          $inc: { view_count: 1 },
+          $set: { viewed_at: preCheck.viewed_at ?? new Date() },
+          $push: { ip_address_log: ip },
+        },
+        { new: true },
+      );
+
+      if (!share) {
         return NextResponse.json(
           { error: "A megosztási link elérte a maximális megtekintési korlátot." },
           { status: 410 },
@@ -84,18 +99,11 @@ export async function POST(req: Request) {
       const decrypted =
         decipher.update(cipherHex, "hex", "utf8") + decipher.final("utf8");
 
-      // Megtekintési számláló frissítése
-      await SecretShareModel.findByIdAndUpdate(share._id, {
-        $inc: { view_count: 1 },
-        $set: { viewed_at: share.viewed_at ?? new Date() },
-        $push: { ip_address_log: ip },
-      });
-
       return NextResponse.json({
         key: secret.key,
         value: decrypted,
         views_remaining:
-          (share.view_count_limit as number) - (share.view_count as number) - 1,
+          (share.view_count_limit as number) - (share.view_count as number),
       });
     });
   } catch (e) {

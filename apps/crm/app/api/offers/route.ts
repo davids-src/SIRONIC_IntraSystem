@@ -1,30 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { OfferModel, formatNumber, nextCounterValue, serializeForJson } from "@crm/db";
+import {
+  ContactModel,
+  OfferModel,
+  formatNumber,
+  nextCounterValue,
+  serializeForJson,
+} from "@crm/db";
 import { guard, handleApiError, requireCrmAuth, withDb } from "@/lib/api-helpers";
-
-const priceSnapshotZodSchema = z.object({
-  internal_base_price: z.number(),
-  client_multiplier: z.number(),
-  multiplier_key: z.string(),
-  calculated_price: z.number(),
-  urgency_multiplier: z.number().optional().default(1.0),
-  pricing_settings_captured_at: z.string().nullable().optional(),
-});
-
-const offerLineSchema = z.object({
-  price_list_item_id: z.string().nullable().optional(),
-  service_price_list_item_id: z.string().nullable().optional(),
-  description: z.string().min(1),
-  quantity: z.number().positive(),
-  unit: z.string().min(1),
-  net_unit_price: z.number(),
-  tax_rate: z.number(),
-  discount_percent: z.number().min(0).max(100).optional().default(0),
-  price_snapshot: priceSnapshotZodSchema.nullable().optional(),
-  is_group_parent: z.boolean().optional(),
-  group_id: z.string().nullable().optional(),
-});
+import { grossTotalFromLines, offerLineSchema } from "./schema";
 
 const createSchema = z.object({
   title: z.string().min(1),
@@ -36,20 +20,6 @@ const createSchema = z.object({
   lines: z.array(offerLineSchema).optional(),
   notes: z.string().nullable().optional(),
 });
-
-function grossTotalFromLines(
-  lines: {
-    quantity: number;
-    net_unit_price: number;
-    tax_rate: number;
-    discount_percent?: number;
-  }[],
-): number {
-  return lines.reduce((sum, l) => {
-    const discountedNet = l.net_unit_price * (1 - (l.discount_percent ?? 0) / 100);
-    return sum + l.quantity * discountedNet * (1 + l.tax_rate / 100);
-  }, 0);
-}
 
 export async function GET(req: Request) {
   try {
@@ -115,6 +85,14 @@ export async function POST(req: Request) {
     }
 
     return await withDb(async () => {
+      const contact = await ContactModel.findOne({
+        _id: b.contact_id,
+        tenantId: actor.tenantId,
+      }).lean();
+      if (!contact) {
+        return NextResponse.json({ error: "Contact not found" }, { status: 404 });
+      }
+
       const year = new Date().getFullYear();
       const n = await nextCounterValue(actor.tenantId, `offer_${year}`);
       const offer_number = `OFF-${year}-${String(n).padStart(4, "0")}`;

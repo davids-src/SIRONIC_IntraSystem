@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { TicketModel, serializeForJson } from "@crm/db";
-import { guard, handleApiError, requirePortalActor, withDb } from "@/lib/api-helpers";
+import {
+  guard,
+  handleApiError,
+  requirePortalActor,
+  stripInternalComments,
+  withDb,
+} from "@/lib/api-helpers";
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
@@ -18,7 +24,7 @@ export async function GET(_req: Request, ctx: RouteCtx) {
       if (!doc) {
         return NextResponse.json({ error: "Not found" }, { status: 404 });
       }
-      return NextResponse.json(serializeForJson(doc));
+      return NextResponse.json(serializeForJson(stripInternalComments(doc as any)));
     });
   } catch (e) {
     return handleApiError(e);

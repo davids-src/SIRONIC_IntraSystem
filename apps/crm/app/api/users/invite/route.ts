@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
+import { createHash } from "crypto";
 import { CrmUserModel, serializeForJson } from "@crm/db";
 import { guard, handleApiError, requireCrmAuth, withDb } from "@/lib/api-helpers";
 import { sendEmail, CrmInvite } from "@sironic/emails";
 import * as React from "react";
+
+// A tokent csak hash-elve tároljuk (mint a magic-link tokeneket), hogy egy
+// DB-olvasás kiszivárgása ne tegye lehetővé jelszó közvetlen beállítását.
+function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
 
 export async function POST(req: Request) {
   try {
@@ -35,7 +42,7 @@ export async function POST(req: Request) {
           display_name: display_name || email.split("@")[0],
           roleKeys: roleKeys || ["crm.staff"],
           password_hash: "PENDING_INVITE",
-          invite_token,
+          invite_token: hashToken(invite_token),
           invite_token_expires,
         });
       } else {
@@ -49,7 +56,7 @@ export async function POST(req: Request) {
           { _id: user._id },
           {
             $set: {
-              invite_token,
+              invite_token: hashToken(invite_token),
               invite_token_expires,
               roleKeys: roleKeys || user.roleKeys,
             },

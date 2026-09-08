@@ -72,11 +72,7 @@ export async function POST(req: Request) {
       delete (obj as any).password_hash;
       return NextResponse.json(serializeForJson(obj), { status: 201 });
     });
-  } catch (e: any) {
-    console.error("PORTAL USER POST ERROR:", e);
-    return NextResponse.json(
-      { error: e.message || "Internal server error" },
-      { status: e.status || 500 },
-    );
+  } catch (e) {
+    return handleApiError(e);
   }
 }

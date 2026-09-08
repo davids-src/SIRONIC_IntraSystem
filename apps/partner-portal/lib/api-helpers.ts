@@ -75,3 +75,17 @@ export async function withDb<T>(fn: () => Promise<T>): Promise<T> {
   await connectDb();
   return fn();
 }
+
+/**
+ * Strips staff-only internal comments (`is_internal: true`) from a ticket
+ * document before it's ever sent to a partner-portal client. Internal notes
+ * (pricing discussion, escalations, complaints about the client, etc.) must
+ * never reach the customer-facing API.
+ */
+export function stripInternalComments<T extends { comments?: unknown[] }>(doc: T): T {
+  if (!Array.isArray(doc.comments)) return doc;
+  return {
+    ...doc,
+    comments: doc.comments.filter((c) => !(c as { is_internal?: boolean }).is_internal),
+  };
+}

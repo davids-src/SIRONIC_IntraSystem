@@ -23,7 +23,14 @@ export async function GET(req: Request) {
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = headersList.get("authorization");
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  // Fail closed: ha a CRON_SECRET nincs beállítva, a végpont NEM válik
+  // szabadon hívhatóvá – ez tenant-közi adatszivárgást és jogosulatlan
+  // ticket-generálást engedne meg.
+  if (!cronSecret) {
+    console.error("[cron/maintenance] CRON_SECRET is not configured – refusing request.");
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

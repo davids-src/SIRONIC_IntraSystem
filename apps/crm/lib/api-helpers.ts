@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "../auth";
 import { toActorContext, type AuthSession } from "@crm/auth";
-import { ForbiddenError, authorizeOrThrow } from "@crm/modules";
+import { ForbiddenError, OrchestratorError, authorizeOrThrow } from "@crm/modules";
+import { IntegrationError } from "@crm/integrations";
 import { connectDb } from "@crm/db";
 import type { ActorContext, PermissionCheck, RoleKey } from "@crm/types";
 
@@ -39,6 +40,14 @@ export function handleApiError(e: unknown): NextResponse {
   }
   if (e instanceof ForbiddenError) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (e instanceof OrchestratorError) {
+    const status =
+      e.code === "DEPLOYMENT_NOT_FOUND" || e.code === "STEP_NOT_FOUND" ? 404 : 409;
+    return NextResponse.json({ error: e.message, code: e.code }, { status });
+  }
+  if (e instanceof IntegrationError) {
+    return NextResponse.json({ error: e.safeMessage, code: e.code }, { status: 502 });
   }
   console.error(e);
   return NextResponse.json({ error: "Internal server error" }, { status: 500 });

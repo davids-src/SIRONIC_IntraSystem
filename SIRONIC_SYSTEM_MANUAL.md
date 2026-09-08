@@ -371,3 +371,60 @@ Amikor egy bizonylat kikerül a Piszkozat (Draft) állapotból (pl. kiküldésre
 - **Számlák (Invoices):** Ha a számla státusza nem `draft` (pl. `sent`, `paid`, `cancelled`), a rendszer a részletes nézeten lévő szerkesztési mezőket letiltja (`disabled`), a "Mentés" akciógombot pedig elrejti.
 - **Teljesítésigazolások (Completion Certificates):** Ha a teljesítésigazolás nem új (`isNew === false`) és státusza nem `draft` (pl. `sent`, `accepted`, `rejected`), a rendszer letiltja a cím, a munka összefoglaló, a tételsorok, a munkaidőszak, az aláíró nevének és az e-mail címzettnek a szerkesztését. A manuális sor hozzáadása, az árlistából és a szolgáltatásokból történő tallózás letiltásra kerül, és a mentés gomb elrejtésre kerül.
 - **Megrendelőlapok, Szállítólevelek, Ajánlatok, Szerződések:** A részletes nézetek és a háttér API-k is letiltják a `/edit` útvonal elérését és a módosító kéréseket (`PATCH`/`PUT`), automatikusan átirányítva a felhasználót a részletező nézetre.
+
+---
+
+### 4.13. Deployment Orchestráció, Központi Auth és Site Template (Tervezett modul)
+
+> **Állapot:** Specifikáció kész a `docs/` könyvtárban. Az alkalmazáskód még nincs implementálva. Részletes angol nyelvű végrehajtási dokumentáció: [`docs/README.md`](./docs/README.md).
+
+#### Cél
+
+A partner webhelyek / stackek provisioning folyamatát (Cloudflare DNS, Nginx Proxy Manager SSL + proxy host, Portainer stack, GitHub Actions → GHCR) a CRM-be emeljük, partnerhez kötjük, díjazást számolunk, és a Partner Portálon láthatóvá tesszük. Később központi identity provider (OIDC) és külön Next.js template repo szolgálja a „ugyanazzal a belépéssel” SSO-t.
+
+#### Külső rendszerek
+
+| Rendszer                                             | Szerep                                                                                  |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| **Cloudflare**                                       | Zóna, DNS rekordok; NS delegálás manuális a regisztrátornál, ellenőrzés API-val         |
+| **Nginx Proxy Manager** (`jc21/nginx-proxy-manager`) | Let's Encrypt DNS-01 (Cloudflare), proxy host → konténer; hálózat: `nginxproxy_default` |
+| **Portainer** (standalone)                           | Compose stack létrehozás / frissítés / webhook redeploy                                 |
+| **GitHub / GHCR**                                    | Image build és tag választás                                                            |
+
+#### Pipeline lépések (egyenként skip / adopt / verify)
+
+1. `cloudflare_zone` → 2. `ns_delegation` → 3. `dns_records` → 4. `ssl_certificate` → 5. `proxy_host`  
+   párhuzamosan: 6. `image_build` → együtt: 7. `stack_create` → 8. `stack_deploy`
+
+#### Fő entitások (tervezett)
+
+- `Deployment` — partnerhez (`contact_id`) kötött site + embedded `steps[]` + `external_ids`
+- `DeploymentEvent` — audit napló minden provider híváshoz
+- `DeploymentPackage` / `DeploymentPayment` — csomagdíj (pl. 5 GB / 1 core / 1000 Ft/hó), ciklus, fizetettség
+- `StackTemplate` — base compose sablon placeholderekkel
+- `IntegrationConnection` — titkosított provider credentialek (`SECRETS_ENCRYPTION_KEY`, AES-256-GCM)
+- `PartnerDeploymentAccess` — portál user → melyik deploymentet láthatja
+
+A meglévő `DomainHostingRecord` passzív nyilvántartást a Deployment modul **beolvassa / migrálja**, nem párhuzamosan tartjuk életben hosszú távon.
+
+#### CRM / Portál felületek (tervezett)
+
+- CRM: `/deployments`, varázsló, lépés-runner, import, számlázási tábla, beállítások (integrációk, csomagok, stack sablonok)
+- Portál: `/deployments`, `/team` (partner admin meghívja a kollégákat és deployment hozzáférést ad)
+- Új `portal_permissions`: `menu_deployments`, `menu_team`
+- Új RBAC modulok: `deployment`, `deployment_billing`, `integration`, `partner_team`; akciók: `provision`, `adopt`
+
+#### Központi auth (Track 2)
+
+- `apps/auth` + `packages/auth-core`: jelszó, magic link, TOTP 2FA, **WebAuthn passkey**, reset, lockout
+- OIDC provider; a deploymentek helyi user táblája `platform_user_id`-vel linkel (Google OAuth mintára)
+- CRM / Portal NextAuth később OIDC klienssé válik
+
+#### Next template (Track 3)
+
+- **Külön repository** (nem ebben a monorepóban)
+- Deploy szerződés: `output: "standalone"`, GHCR névkonvenció, `/api/health`, Portainer webhook, `nginxproxy_default`
+
+#### Megfigyelhetőség
+
+Metrikák / logok **későbbre halasztva**; a seam leírása: `docs/deferred/observability.md`.

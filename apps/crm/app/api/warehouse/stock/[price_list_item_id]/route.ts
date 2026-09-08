@@ -15,7 +15,7 @@ const patchSchema = z.object({
   warehouse_location: z.string().nullable().optional(),
   low_stock_threshold: z.number().nullable().optional(),
   notes: z.string().nullable().optional(),
-  quantity_allocated: z.number().optional(),
+  quantity_allocated: z.number().min(0).optional(),
   project_id: z.string().nullable().optional(),
   allocate_quantity: z.number().optional(),
 });
@@ -60,6 +60,20 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
       }
 
       if (b.project_id && b.allocate_quantity && b.allocate_quantity > 0) {
+        // Nem foglalhatunk le többet, mint amennyi ténylegesen raktáron van –
+        // lásd DATABASE.md §4.8 "available = in_stock - allocated" invariáns.
+        const currentStock = (await StockItemModel.findOne(query).lean()) as any;
+        const inStock = currentStock?.quantity_in_stock ?? 0;
+        const alreadyAllocated = currentStock?.quantity_allocated ?? 0;
+        if (alreadyAllocated + b.allocate_quantity > inStock) {
+          return NextResponse.json(
+            {
+              error: `Nincs elég szabad készlet a foglaláshoz: kért ${b.allocate_quantity}, elérhető ${Math.max(0, inStock - alreadyAllocated)}.`,
+            },
+            { status: 400 },
+          );
+        }
+
         const project = await ProjectModel.findOne({
           _id: b.project_id,
           tenantId: actor.tenantId,
@@ -117,6 +131,19 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
         });
 
         return NextResponse.json(serializeForJson(doc));
+      }
+
+      if (b.quantity_allocated !== undefined) {
+        const currentStock = (await StockItemModel.findOne(query).lean()) as any;
+        const inStock = currentStock?.quantity_in_stock ?? 0;
+        if (b.quantity_allocated > inStock) {
+          return NextResponse.json(
+            {
+              error: `A lefoglalt mennyiség (${b.quantity_allocated}) nem haladhatja meg a raktáron lévő készletet (${inStock}).`,
+            },
+            { status: 400 },
+          );
+        }
       }
 
       const doc = await StockItemModel.findOneAndUpdate(

@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { TicketModel, formatNumber, nextCounterValue, serializeForJson } from "@crm/db";
-import { guard, handleApiError, requirePortalActor, withDb } from "@/lib/api-helpers";
+import {
+  guard,
+  handleApiError,
+  requirePortalActor,
+  stripInternalComments,
+  withDb,
+} from "@/lib/api-helpers";
 
 const createSchema = z.object({
   title: z.string().min(1),
@@ -28,7 +34,9 @@ export async function GET(req: Request) {
         filter.project_id = projectId;
       }
       const rows = await TicketModel.find(filter).sort({ updated_at: -1 }).lean();
-      return NextResponse.json(serializeForJson(rows));
+      return NextResponse.json(
+        serializeForJson(rows.map((r) => stripInternalComments(r as any))),
+      );
     });
   } catch (e) {
     return handleApiError(e);

@@ -38,6 +38,21 @@ const contractSchema = defineSchema(
     body: { type: String, default: null },
     variables_filled: { type: Schema.Types.Mixed, default: null },
     pdf_url: { type: String, default: null },
+    // Feltöltött ("uploaded" típusú) szerződés bináris PDF-je – a Mongo az
+    // egyetlen tartósan mentett tárhely ebben a deploymentben, ezért itt
+    // tároljuk, és egy dedikált route-on keresztül szolgáljuk ki.
+    pdf_file: {
+      type: new Schema(
+        {
+          data: { type: Buffer, required: true },
+          content_type: { type: String, required: true },
+          filename: { type: String, required: true },
+          size: { type: Number, required: true },
+        },
+        { _id: false },
+      ),
+      default: null,
+    },
     portal_visible: { type: Boolean, required: true },
     signing_type: { type: String, enum: ["digital", "paper", "none"], required: true },
     client_name: { type: String, default: null },

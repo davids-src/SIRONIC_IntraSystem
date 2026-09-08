@@ -28,6 +28,13 @@ erDiagram
     PriceListItem ||--o{ StockTransaction : "naplózva"
     WarehouseLocation ||--o{ StockItem : "elhelyezve"
     Contact ||--o{ WarrantyCard : "rendelkezik"
+    Contact ||--o{ Deployment : "rendelkezik"
+    Deployment ||--o{ DeploymentEvent : "naplozza"
+    Deployment }o--o| DeploymentPackage : "csomag"
+    Deployment ||--o{ DeploymentPayment : "dijak"
+    Deployment }o--o| StackTemplate : "sablon"
+    PortalUser ||--o{ PartnerDeploymentAccess : "hozzaferes"
+    Deployment ||--o{ PartnerDeploymentAccess : "scope"
 
     Contact {
         string _id PK
@@ -290,7 +297,7 @@ A raktárkészlet változásait (bevételezés, kivételezés, leltárkorrekció
 A rendszer szintén tartalmaz egy szigorú hozzáférés-szabályzást (`ActorContext` és `Permission`).
 
 - Szerepkörök (`RoleKey`): `crm.admin`, `crm.staff`, `partner.admin`, `partner.viewer`.
-- A jogosultságokat modulokra bontva (`dashboard`, `ticket`, `worklog`, `price_list` stb.), akciókhoz rendelve (`view`, `write`, `manage`, `sign`, `add_staging_link`) és hatókörrel (`global`, `contact`, `resource`) tárolják.
+- A jogosultságokat modulokra bontva (`dashboard`, `ticket`, `worklog`, `price_list`, valamint tervezetten `deployment`, `deployment_billing`, `integration`, `partner_team` stb.), akciókhoz rendelve (`view`, `write`, `manage`, `sign`, `provision`, `adopt`, …) és hatókörrel (`global`, `contact`, `resource`) tárolják.
 
 ### 15. DeliveryNote (Szállítólevél)
 
@@ -336,3 +343,20 @@ Projekt- és/vagy partner-alapú bizalmas adat tároló. Jelszavak, API kulcsok,
   - 2. oldal: Jogi tájékoztató (szerkeszthető szöveg a Settings kollekcióban)
 - **Szerkeszthető jogi szöveg:** `Settings.warranty_legal_notice` mező – változás esetén nem kell kódot módosítani.
 - **RBAC:** `crm.admin` – teljes hozzáférés, `crm.staff` – létrehozás + PDF, `partner.admin` / `partner.viewer` – saját jótállások megtekintése + letöltése a Partner Portálon.
+
+### 18. Deployment (Tervezett — lásd `docs/deployments/02-data-model.md`)
+
+Partnerhez kötött hosztolt site / stack nyilvántartás és provisioning állapotgép.
+
+- **Sorszám:** `DEP-XXXXXX` (Counter: `deployment`).
+- **Kulcs mezők:** `contact_id`, `domain`, `status` (`draft` \| `provisioning` \| `live` \| `degraded` \| `suspended` \| `archived`), `steps[]` (8 pipeline lépés saját státusszal), `external_ids` (Cloudflare zone, NPM cert/host, Portainer stack/webhook, GHCR digest), `package_id`, `billing_cycle`, `price_override_huf`, `next_billing_at`, `last_paid_at`.
+- **Kapcsolódó:** `DeploymentEvent` (append-only audit), `DeploymentPackage`, `DeploymentPayment`, `StackTemplate`, `IntegrationConnection`, `PartnerDeploymentAccess`.
+- **Migráció:** a meglévő `DomainHostingRecord` rekordok importálhatók; `migrated_from_domain_hosting_id` mező.
+
+### 19. IntegrationConnection (Tervezett)
+
+Provider kapcsolatok (cloudflare \| npm \| portainer \| github): `base_url`, AES-256-GCM `encrypted_credentials`, `meta` (pl. Portainer `endpoint_id`), healthcheck mezők.
+
+### 20. PartnerDeploymentAccess (Tervezett)
+
+Portál felhasználó (`portal_user_id`) ↔ `deployment_id` mátrix `view` \| `manage` szinttel; a partner admin a `/team` felületen kezeli.
