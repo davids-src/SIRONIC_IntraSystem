@@ -10,6 +10,8 @@ export interface NpmClientConfig {
   baseUrl: string;
   email: string;
   password: string;
+  /** Self-hosted NPM on a self-signed cert (internal network only) — opt-in, never for public providers. */
+  insecureTls?: boolean;
 }
 
 export interface CreateCertificateInput {

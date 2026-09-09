@@ -1,9 +1,20 @@
+import { Agent } from "undici";
 import type { IntegrationProvider } from "@crm/types";
 import { IntegrationError, ProviderHttpError } from "./errors";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 const MAX_RETRIES = 3;
 const NON_RETRYABLE_STATUSES = new Set([400, 401, 403, 404, 409, 422]);
+
+// Self-hosted admin panels (NPM, Portainer) are frequently reached over a self-signed
+// certificate on an internal network. Shared across calls since it holds no per-request state.
+let insecureAgent: Agent | null = null;
+function getInsecureAgent(): Agent {
+  if (!insecureAgent) {
+    insecureAgent = new Agent({ connect: { rejectUnauthorized: false } });
+  }
+  return insecureAgent;
+}
 
 export interface HttpRequestOptions {
   provider: IntegrationProvider;
@@ -14,6 +25,11 @@ export interface HttpRequestOptions {
   timeoutMs?: number;
   /** Set false to disable the shared retry policy for this call (e.g. non-idempotent one-shot actions). */
   retry?: boolean;
+  /**
+   * Skip TLS certificate verification. Opt-in only, for self-hosted providers (NPM/Portainer) reached
+   * over a self-signed certificate on a trusted internal network. Never used for Cloudflare/GitHub.
+   */
+  insecureTls?: boolean;
 }
 
 export interface HttpResponse {
@@ -93,6 +109,7 @@ export async function httpRequest(
     body,
     timeoutMs = DEFAULT_TIMEOUT_MS,
     retry = true,
+    insecureTls = false,
   } = options;
   const maxAttempts = retry ? MAX_RETRIES + 1 : 1;
 
@@ -103,11 +120,14 @@ export async function httpRequest(
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const init: RequestInit = {
+      const init: RequestInit & { dispatcher?: Agent } = {
         method,
         headers,
         signal: controller.signal,
       };
+      if (insecureTls) {
+        init.dispatcher = getInsecureAgent();
+      }
       if (body !== undefined) {
         init.body = typeof body === "string" ? body : JSON.stringify(body);
       }

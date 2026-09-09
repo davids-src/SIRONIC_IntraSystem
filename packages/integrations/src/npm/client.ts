@@ -65,6 +65,7 @@ export class NpmClient {
       headers: { "Content-Type": "application/json" },
       body: { identity: this.config.email, secret: this.config.password },
       retry: false,
+      insecureTls: this.config.insecureTls,
     });
     const parsed = zNpmTokenResponse.parse(res.json);
     this.token = parsed.token;
@@ -85,6 +86,7 @@ export class NpmClient {
       method: init.method,
       headers,
       body: init.body,
+      insecureTls: this.config.insecureTls,
     });
     if (res.status === 401) {
       this.token = null;
@@ -94,6 +96,7 @@ export class NpmClient {
         method: init.method,
         headers,
         body: init.body,
+        insecureTls: this.config.insecureTls,
       });
     }
     return res.json;
@@ -101,7 +104,11 @@ export class NpmClient {
 
   /** Healthcheck probe (docs/deployments/03-integrations.md §6) — login + version read. */
   async getVersion(): Promise<{ major: number; minor: number; revision: number } | null> {
-    const res = await httpRequest(this.url("/api/"), { provider: "npm", retry: true });
+    const res = await httpRequest(this.url("/api/"), {
+      provider: "npm",
+      retry: true,
+      insecureTls: this.config.insecureTls,
+    });
     const parsed = zNpmHealth.safeParse(res.json);
     return parsed.success ? (parsed.data.version ?? null) : null;
   }

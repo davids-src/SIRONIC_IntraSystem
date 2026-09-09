@@ -38,6 +38,7 @@ async function probe(
           baseUrl: connection.base_url,
           email: creds.email,
           password: creds.password,
+          insecureTls: connection.meta?.allow_insecure_tls === true,
         });
         await client.login();
         const version = await client.getVersion();
@@ -57,6 +58,7 @@ async function probe(
           baseUrl: connection.base_url,
           apiKey: creds.api_key,
           endpointId,
+          insecureTls: connection.meta?.allow_insecure_tls === true,
         });
         const { ok } = await client.getStatus();
         return { ok, message: ok ? "Elérhető." : "Nem elérhető." };

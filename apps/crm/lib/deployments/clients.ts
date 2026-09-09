@@ -50,6 +50,7 @@ export function buildStepClients(connections: IntegrationConnection[]): {
       baseUrl: byProvider.npm.base_url,
       email: creds.email,
       password: creds.password,
+      insecureTls: byProvider.npm.meta?.allow_insecure_tls === true,
     });
   }
   if (byProvider.portainer) {
@@ -61,6 +62,7 @@ export function buildStepClients(connections: IntegrationConnection[]): {
       baseUrl: byProvider.portainer.base_url,
       apiKey: creds.api_key,
       endpointId,
+      insecureTls: byProvider.portainer.meta?.allow_insecure_tls === true,
     });
   }
   if (byProvider.github) {

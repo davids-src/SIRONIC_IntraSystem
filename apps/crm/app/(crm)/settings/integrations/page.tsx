@@ -41,6 +41,36 @@ const CREDENTIAL_FIELDS: Record<IntegrationProvider, string[]> = {
   github: ["token"],
 };
 
+const DEFAULT_BASE_URL: Partial<Record<IntegrationProvider, string>> = {
+  cloudflare: "https://api.cloudflare.com/client/v4",
+};
+
+const SELF_HOSTED_PROVIDERS: IntegrationProvider[] = ["npm", "portainer"];
+
+const PROVIDER_SETUP_NOTES: Record<IntegrationProvider, string[]> = {
+  cloudflare: [
+    "Nem önhosztolt — a Cloudflare fiókodban hozd létre: My Profile → API Tokens → Create Token → Custom token.",
+    "Jogosultságok: Account → Zone → Edit (zóna LÉTREHOZÁSHOZ kell, ez account-szintű), Zone → DNS → Edit, Zone → Zone Settings → Read.",
+    "Zone Resources: Include → All zones from account (különben új zónát nem tud létrehozni).",
+    "Base URL mindig: https://api.cloudflare.com/client/v4",
+  ],
+  npm: [
+    "Önhosztolt — csak akkor érhető el, ha a CRM konténer ugyanazon a docker hálózaton van (pl. nginxproxy_default), vagy a szerver LAN IP-jén publikált porton (:81).",
+    "Hitelesítés: ugyanaz az email+jelszó, amivel az NPM admin felületére (:81) belépsz — érdemes külön felhasználót létrehozni csak erre.",
+    "A CRM 2.11.3-nál régebbi NPM verziónál elutasítja a cert/proxy műveleteket (CVE-2024-39935 védelem).",
+  ],
+  portainer: [
+    "Önhosztolt — ugyanaz a hálózati szabály, mint az NPM-nél: közös docker hálózat vagy a szerver LAN IP-je + publikált port (gyakran :9443 HTTPS vagy :9000 HTTP).",
+    "API kulcs: Portainer → felhasználói menü → My account → Access tokens → Add access token (csak egyszer látod, másold ki azonnal).",
+    "Endpoint ID: Environments lista → a Docker környezet száma (általában 1).",
+    "Ha önaláírt TLS tanúsítványt használ (pl. https://IP:9443), pipáld be lent az önaláírt tanúsítvány engedélyezését — enélkül a kapcsolat sikertelen lesz.",
+  ],
+  github: [
+    "Nem önhosztolt — Settings → Developer settings → Personal access tokens → Fine-grained token.",
+    "Jogosultságok: Actions (Read and write), Contents (Read-only), Packages (Read-only) a repóhoz, ahol a GHCR image épül.",
+  ],
+};
+
 async function fetchConnections(): Promise<ConnectionRow[]> {
   return apiJson<ConnectionRow[]>("/api/integrations");
 }
@@ -59,6 +89,7 @@ export default function IntegrationsSettingsPage() {
   const [credentials, setCredentials] = useState<Record<string, string>>({});
   const [endpointId, setEndpointId] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [allowInsecureTls, setAllowInsecureTls] = useState(false);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["integrations"] });
 
@@ -69,6 +100,7 @@ export default function IntegrationsSettingsPage() {
     setCredentials({});
     setEndpointId("");
     setIsActive(true);
+    setAllowInsecureTls(false);
   };
 
   const openCreateModal = () => {
@@ -84,6 +116,7 @@ export default function IntegrationsSettingsPage() {
     setCredentials({});
     setEndpointId(row.meta?.endpoint_id != null ? String(row.meta.endpoint_id) : "");
     setIsActive(row.is_active);
+    setAllowInsecureTls(row.meta?.allow_insecure_tls === true);
     setEditTarget(row);
     setModalOpen(true);
   };
@@ -93,6 +126,14 @@ export default function IntegrationsSettingsPage() {
     setEditTarget(null);
   };
 
+  const buildMeta = (): Record<string, unknown> | undefined => {
+    const meta: Record<string, unknown> = {};
+    if (provider === "portainer" && endpointId) meta.endpoint_id = Number(endpointId);
+    if (SELF_HOSTED_PROVIDERS.includes(provider))
+      meta.allow_insecure_tls = allowInsecureTls;
+    return Object.keys(meta).length > 0 ? meta : undefined;
+  };
+
   const createMutation = useMutation({
     mutationFn: () =>
       apiJsonBody("/api/integrations", "POST", {
@@ -100,10 +141,7 @@ export default function IntegrationsSettingsPage() {
         label,
         base_url: baseUrl,
         credentials,
-        meta:
-          provider === "portainer" && endpointId
-            ? { endpoint_id: Number(endpointId) }
-            : undefined,
+        meta: buildMeta(),
       }),
     onSuccess: () => {
       toast.success("Integráció létrehozva.");
@@ -125,10 +163,7 @@ export default function IntegrationsSettingsPage() {
         label,
         base_url: baseUrl,
         is_active: isActive,
-        meta:
-          provider === "portainer" && endpointId
-            ? { endpoint_id: Number(endpointId) }
-            : undefined,
+        meta: buildMeta(),
         ...(anyCredentialFilled ? { credentials } : {}),
       });
     },
@@ -318,8 +353,12 @@ export default function IntegrationsSettingsPage() {
                   <Select
                     value={provider}
                     onValueChange={(v) => {
-                      setProvider(v as IntegrationProvider);
+                      const next = v as IntegrationProvider;
+                      setProvider(next);
                       setCredentials({});
+                      if (!baseUrl && DEFAULT_BASE_URL[next]) {
+                        setBaseUrl(DEFAULT_BASE_URL[next] as string);
+                      }
                     }}
                   >
                     <SelectTrigger className="w-full">
@@ -355,6 +394,38 @@ export default function IntegrationsSettingsPage() {
                   onChange={(e) => setEndpointId(e.target.value)}
                 />
               )}
+              {SELF_HOSTED_PROVIDERS.includes(provider) && (
+                <CheckboxField
+                  label="Önaláírt tanúsítvány engedélyezése (csak belső hálózaton!)"
+                  checked={allowInsecureTls}
+                  onCheckedChange={(checked) => setAllowInsecureTls(checked === true)}
+                />
+              )}
+              <div
+                className="rounded-lg border p-3"
+                style={{
+                  borderColor: "var(--color-border-subtle)",
+                  background: "var(--color-bg-secondary)",
+                }}
+              >
+                <p style={{ fontSize: "0.75rem", fontWeight: 700, margin: "0 0 6px 0" }}>
+                  Beállítási útmutató — {PROVIDER_LABEL[provider]}
+                </p>
+                <ul
+                  style={{
+                    margin: 0,
+                    paddingLeft: "16px",
+                    fontSize: "0.75rem",
+                    color: "var(--color-text-muted, #555)",
+                  }}
+                >
+                  {PROVIDER_SETUP_NOTES[provider].map((note) => (
+                    <li key={note} style={{ marginBottom: "4px" }}>
+                      {note}
+                    </li>
+                  ))}
+                </ul>
+              </div>
               {editTarget ? (
                 <>
                   <p

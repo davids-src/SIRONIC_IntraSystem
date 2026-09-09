@@ -10,6 +10,8 @@ export interface PortainerClientConfig {
   baseUrl: string;
   apiKey: string;
   endpointId: number;
+  /** Self-hosted Portainer on a self-signed cert (internal network only) — opt-in, never for public providers. */
+  insecureTls?: boolean;
 }
 
 export interface StackEnvVar {
