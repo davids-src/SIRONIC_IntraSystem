@@ -74,6 +74,10 @@ async function probe(
     }
   } catch (err) {
     if (err instanceof IntegrationError) return { ok: false, message: err.safeMessage };
+    // Surface the real cause (network/TLS/DNS/parsing) — this is an internal admin tool,
+    // staff need the actual error to fix their own infra (wrong port, self-signed cert, etc).
+    if (err instanceof Error)
+      return { ok: false, message: `Váratlan hiba: ${err.message}` };
     return { ok: false, message: "Ismeretlen hiba a healthcheck közben." };
   }
 }

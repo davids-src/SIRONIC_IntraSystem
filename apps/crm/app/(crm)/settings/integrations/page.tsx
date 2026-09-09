@@ -7,6 +7,7 @@ import {
   Badge,
   Button,
   Card,
+  CheckboxField,
   Input,
   Label,
   PageHeader,
@@ -19,7 +20,7 @@ import {
 } from "@crm/ui";
 import type { Column } from "@crm/ui";
 import type { IntegrationConnection, IntegrationProvider } from "@crm/types";
-import { Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 
 type ConnectionRow = Omit<IntegrationConnection, "encrypted_credentials"> & {
@@ -51,13 +52,46 @@ export default function IntegrationsSettingsPage() {
     queryFn: fetchConnections,
   });
   const [modalOpen, setModalOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<ConnectionRow | null>(null);
   const [provider, setProvider] = useState<IntegrationProvider>("cloudflare");
   const [label, setLabel] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
   const [credentials, setCredentials] = useState<Record<string, string>>({});
   const [endpointId, setEndpointId] = useState("");
+  const [isActive, setIsActive] = useState(true);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["integrations"] });
+
+  const resetForm = () => {
+    setProvider("cloudflare");
+    setLabel("");
+    setBaseUrl("");
+    setCredentials({});
+    setEndpointId("");
+    setIsActive(true);
+  };
+
+  const openCreateModal = () => {
+    resetForm();
+    setEditTarget(null);
+    setModalOpen(true);
+  };
+
+  const openEditModal = (row: ConnectionRow) => {
+    setProvider(row.provider);
+    setLabel(row.label);
+    setBaseUrl(row.base_url);
+    setCredentials({});
+    setEndpointId(row.meta?.endpoint_id != null ? String(row.meta.endpoint_id) : "");
+    setIsActive(row.is_active);
+    setEditTarget(row);
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditTarget(null);
+  };
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -73,15 +107,39 @@ export default function IntegrationsSettingsPage() {
       }),
     onSuccess: () => {
       toast.success("Integráció létrehozva.");
-      setModalOpen(false);
-      setLabel("");
-      setBaseUrl("");
-      setCredentials({});
-      setEndpointId("");
+      closeModal();
+      resetForm();
       invalidate();
     },
     onError: (e: unknown) =>
       toast.error(e instanceof ApiError ? e.message : "Létrehozás sikertelen."),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: () => {
+      if (!editTarget) return Promise.reject(new Error("Nincs kiválasztott integráció."));
+      const anyCredentialFilled = Object.values(credentials).some(
+        (v) => v.trim().length > 0,
+      );
+      return apiJsonBody(`/api/integrations/${editTarget._id}`, "PATCH", {
+        label,
+        base_url: baseUrl,
+        is_active: isActive,
+        meta:
+          provider === "portainer" && endpointId
+            ? { endpoint_id: Number(endpointId) }
+            : undefined,
+        ...(anyCredentialFilled ? { credentials } : {}),
+      });
+    },
+    onSuccess: () => {
+      toast.success("Integráció frissítve.");
+      closeModal();
+      resetForm();
+      invalidate();
+    },
+    onError: (e: unknown) =>
+      toast.error(e instanceof ApiError ? e.message : "Frissítés sikertelen."),
   });
 
   const deleteMutation = useMutation({
@@ -102,11 +160,13 @@ export default function IntegrationsSettingsPage() {
       ),
     onSuccess: (res) => {
       if (res.ok) toast.success(res.message);
-      else toast.warning(res.message);
+      else toast.error(res.message, { duration: 10000 });
       invalidate();
     },
     onError: (e: unknown) =>
-      toast.error(e instanceof ApiError ? e.message : "Healthcheck sikertelen."),
+      toast.error(e instanceof ApiError ? e.message : "Healthcheck sikertelen.", {
+        duration: 10000,
+      }),
   });
 
   const columns: Column<ConnectionRow>[] = [
@@ -120,21 +180,51 @@ export default function IntegrationsSettingsPage() {
       ),
     },
     {
+      key: "is_active",
+      header: "Állapot",
+      width: "90px",
+      render: (r) =>
+        r.is_active ? (
+          <Badge variant="success">Aktív</Badge>
+        ) : (
+          <Badge variant="default">Inaktív</Badge>
+        ),
+    },
+    {
       key: "last_healthcheck_ok",
       header: "Healthcheck",
-      render: (r) =>
-        r.last_healthcheck_ok == null ? (
-          <Badge variant="default">Nincs teszt</Badge>
-        ) : r.last_healthcheck_ok ? (
-          <Badge variant="success">OK</Badge>
-        ) : (
-          <Badge variant="error">Hiba</Badge>
-        ),
+      render: (r) => {
+        const badge =
+          r.last_healthcheck_ok == null ? (
+            <Badge variant="default">Nincs teszt</Badge>
+          ) : r.last_healthcheck_ok ? (
+            <Badge variant="success">OK</Badge>
+          ) : (
+            <Badge variant="error">Hiba</Badge>
+          );
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+            {badge}
+            {r.last_healthcheck_message ? (
+              <span
+                style={{
+                  fontSize: "0.7rem",
+                  color: "var(--color-text-muted, #555)",
+                  maxWidth: "260px",
+                  whiteSpace: "normal",
+                }}
+              >
+                {r.last_healthcheck_message}
+              </span>
+            ) : null}
+          </div>
+        );
+      },
     },
     {
       key: "actions",
       header: "",
-      width: "90px",
+      width: "110px",
       render: (r) => (
         <div style={{ display: "flex", gap: "4px" }}>
           <button
@@ -143,6 +233,13 @@ export default function IntegrationsSettingsPage() {
             style={{ background: "none", border: "none", cursor: "pointer" }}
           >
             <RefreshCw size={14} />
+          </button>
+          <button
+            onClick={() => openEditModal(r)}
+            title="Szerkesztés"
+            style={{ background: "none", border: "none", cursor: "pointer" }}
+          >
+            <Pencil size={14} />
           </button>
           <button
             onClick={() => confirm("Biztosan törlöd?") && deleteMutation.mutate(r._id)}
@@ -161,13 +258,15 @@ export default function IntegrationsSettingsPage() {
     },
   ];
 
+  const saving = createMutation.isPending || updateMutation.isPending;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       <PageHeader
         title="Integrációk"
         subtitle="Cloudflare, Nginx Proxy Manager, Portainer és GitHub kapcsolatok"
         actions={
-          <Button variant="primary" onClick={() => setModalOpen(true)}>
+          <Button variant="primary" onClick={openCreateModal}>
             <Plus size={16} style={{ marginRight: "6px" }} />
             Új kapcsolat
           </Button>
@@ -193,7 +292,7 @@ export default function IntegrationsSettingsPage() {
             justifyContent: "center",
             zIndex: 1000,
           }}
-          onClick={() => setModalOpen(false)}
+          onClick={closeModal}
         >
           <div
             className="rounded-xl border p-6"
@@ -205,28 +304,36 @@ export default function IntegrationsSettingsPage() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{ margin: "0 0 16px 0" }}>Új integráció</h2>
+            <h2 style={{ margin: "0 0 16px 0" }}>
+              {editTarget
+                ? `Integráció szerkesztése — ${editTarget.label}`
+                : "Új integráció"}
+            </h2>
             <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
               <div className="flex flex-col gap-1.5">
                 <Label>Provider</Label>
-                <Select
-                  value={provider}
-                  onValueChange={(v) => {
-                    setProvider(v as IntegrationProvider);
-                    setCredentials({});
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="z-[1100]">
-                    {(Object.keys(PROVIDER_LABEL) as IntegrationProvider[]).map((p) => (
-                      <SelectItem key={p} value={p}>
-                        {PROVIDER_LABEL[p]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {editTarget ? (
+                  <Input value={PROVIDER_LABEL[provider]} readOnly disabled />
+                ) : (
+                  <Select
+                    value={provider}
+                    onValueChange={(v) => {
+                      setProvider(v as IntegrationProvider);
+                      setCredentials({});
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="z-[1100]">
+                      {(Object.keys(PROVIDER_LABEL) as IntegrationProvider[]).map((p) => (
+                        <SelectItem key={p} value={p}>
+                          {PROVIDER_LABEL[p]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               <Input
                 label="Címke"
@@ -248,23 +355,59 @@ export default function IntegrationsSettingsPage() {
                   onChange={(e) => setEndpointId(e.target.value)}
                 />
               )}
-              {CREDENTIAL_FIELDS[provider].map((field) => (
-                <Input
-                  key={field}
-                  label={field}
-                  type={
-                    field === "password" ||
-                    field.includes("token") ||
-                    field.includes("key")
-                      ? "password"
-                      : "text"
-                  }
-                  value={credentials[field] ?? ""}
-                  onChange={(e) =>
-                    setCredentials((prev) => ({ ...prev, [field]: e.target.value }))
-                  }
-                />
-              ))}
+              {editTarget ? (
+                <>
+                  <p
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "var(--color-text-muted, #555)",
+                      margin: 0,
+                    }}
+                  >
+                    Hagyd üresen a hitelesítő adatokat, ha nem szeretnéd módosítani őket.
+                  </p>
+                  {CREDENTIAL_FIELDS[provider].map((field) => (
+                    <Input
+                      key={field}
+                      label={`${field} (új érték, opcionális)`}
+                      type={
+                        field === "password" ||
+                        field.includes("token") ||
+                        field.includes("key")
+                          ? "password"
+                          : "text"
+                      }
+                      value={credentials[field] ?? ""}
+                      onChange={(e) =>
+                        setCredentials((prev) => ({ ...prev, [field]: e.target.value }))
+                      }
+                    />
+                  ))}
+                  <CheckboxField
+                    label="Aktív"
+                    checked={isActive}
+                    onCheckedChange={(checked) => setIsActive(checked === true)}
+                  />
+                </>
+              ) : (
+                CREDENTIAL_FIELDS[provider].map((field) => (
+                  <Input
+                    key={field}
+                    label={field}
+                    type={
+                      field === "password" ||
+                      field.includes("token") ||
+                      field.includes("key")
+                        ? "password"
+                        : "text"
+                    }
+                    value={credentials[field] ?? ""}
+                    onChange={(e) =>
+                      setCredentials((prev) => ({ ...prev, [field]: e.target.value }))
+                    }
+                  />
+                ))
+              )}
             </div>
             <div
               style={{
@@ -274,13 +417,15 @@ export default function IntegrationsSettingsPage() {
                 marginTop: "20px",
               }}
             >
-              <Button variant="ghost" onClick={() => setModalOpen(false)}>
+              <Button variant="ghost" onClick={closeModal}>
                 Mégse
               </Button>
               <Button
                 variant="primary"
-                onClick={() => createMutation.mutate()}
-                style={{ opacity: createMutation.isPending ? 0.6 : 1 }}
+                onClick={() =>
+                  editTarget ? updateMutation.mutate() : createMutation.mutate()
+                }
+                style={{ opacity: saving ? 0.6 : 1 }}
               >
                 Mentés
               </Button>

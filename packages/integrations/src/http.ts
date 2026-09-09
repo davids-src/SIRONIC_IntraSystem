@@ -41,6 +41,33 @@ function retryAfterMs(headers: Headers): number | null {
   return null;
 }
 
+/** Best-effort extraction of a human-readable message from a provider's error JSON shape. */
+function extractProviderMessage(json: unknown): string | null {
+  if (!json || typeof json !== "object") return null;
+  const obj = json as Record<string, unknown>;
+  if (Array.isArray(obj.errors) && obj.errors.length > 0) {
+    const first = obj.errors[0];
+    if (first && typeof first === "object") {
+      const msg = (first as Record<string, unknown>).message;
+      if (typeof msg === "string") return msg;
+    }
+  }
+  if (typeof obj.message === "string") return obj.message;
+  if (typeof obj.error === "string") return obj.error;
+  return null;
+}
+
+/** Node/undici network errors nest the real cause (ECONNREFUSED, self-signed cert, DNS, ...) under `.cause`. */
+function describeNetworkError(err: unknown): string {
+  if (err instanceof Error) {
+    const cause = (err as Error & { cause?: unknown }).cause;
+    const causeMessage =
+      cause instanceof Error ? cause.message : typeof cause === "string" ? cause : null;
+    return causeMessage ? `${err.message}: ${causeMessage}` : err.message;
+  }
+  return String(err);
+}
+
 async function parseBody(res: Response): Promise<{ text: string; json: unknown }> {
   const text = await res.text();
   if (!text) return { text, json: null };
@@ -108,10 +135,13 @@ export async function httpRequest(
         continue;
       }
 
+      const providerMessage = extractProviderMessage(json);
       throw new ProviderHttpError(
         provider,
         res.status,
-        `${provider} kérés sikertelen (HTTP ${res.status})`,
+        providerMessage
+          ? `${provider} kérés sikertelen (HTTP ${res.status}): ${providerMessage}`
+          : `${provider} kérés sikertelen (HTTP ${res.status})`,
         false,
         json ?? text,
       );
@@ -130,7 +160,9 @@ export async function httpRequest(
       throw new IntegrationError(
         provider,
         isAbort ? "TIMEOUT" : "NETWORK_ERROR",
-        `${provider} elérhetetlen (${isAbort ? "időtúllépés" : "hálózati hiba"})`,
+        isAbort
+          ? `${provider} elérhetetlen (időtúllépés)`
+          : `${provider} elérhetetlen: ${describeNetworkError(err)}`,
         undefined,
         false,
         err,
