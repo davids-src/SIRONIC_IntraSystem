@@ -219,7 +219,7 @@ export default function IntegrationsSettingsPage() {
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[1100]">
                     {(Object.keys(PROVIDER_LABEL) as IntegrationProvider[]).map((p) => (
                       <SelectItem key={p} value={p}>
                         {PROVIDER_LABEL[p]}

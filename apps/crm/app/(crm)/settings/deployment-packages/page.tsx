@@ -225,7 +225,7 @@ export default function DeploymentPackagesSettingsPage() {
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[1100]">
                     <SelectItem value="monthly">Havi</SelectItem>
                     <SelectItem value="quarterly">Negyedéves</SelectItem>
                     <SelectItem value="yearly">Éves</SelectItem>
