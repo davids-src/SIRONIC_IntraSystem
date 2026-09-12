@@ -14,6 +14,7 @@ import {
   CheckboxField,
   Input,
   Textarea,
+  ContactSelect,
 } from "@crm/ui";
 import { useRouter } from "next/navigation";
 import type { Ticket, TicketStatus, TicketPriority } from "@crm/types";
@@ -388,24 +389,13 @@ export default function TicketDetailPage({
                 Partner / Ügyfél kapcsolódás
               </h3>
 
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="ticket-contact">Partner / Cég</Label>
-                <Select value={newContactId} onValueChange={setNewContactId}>
-                  <SelectTrigger id="ticket-contact" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">
-                      Egyszeri / Nem regisztrált partner
-                    </SelectItem>
-                    {contacts.map((c) => (
-                      <SelectItem key={c._id} value={c._id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <ContactSelect
+                label="Partner / Cég"
+                value={newContactId === "__none__" ? "" : newContactId}
+                onChange={(id) => setNewContactId(id || "__none__")}
+                contacts={contacts}
+                placeholder="Válassz partnert (vagy töröld az egyszeri partnerhez)..."
+              />
 
               {newContactId === "__none__" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border-subtle)]">

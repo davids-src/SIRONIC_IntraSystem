@@ -13,6 +13,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  ContactSelect,
 } from "@crm/ui";
 import {
   Plus,
@@ -593,27 +594,13 @@ export default function EditOfferPage({ params }: { params: Promise<{ id: string
       {/* Step 0: Fejléc */}
       {step === 0 && (
         <Card className="p-6 flex flex-col gap-5 max-w-xl">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="offer-contact">Partner (Ügyfél) *</Label>
-            <Select
-              value={header.contact_id || "__empty__"}
-              onValueChange={(v) =>
-                setHeader((prev) => ({ ...prev, contact_id: v === "__empty__" ? "" : v }))
-              }
-            >
-              <SelectTrigger id="offer-contact" className="w-full">
-                <SelectValue placeholder="Válassz partnert…" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__empty__">Válassz partnert…</SelectItem>
-                {contacts.map((c) => (
-                  <SelectItem key={c._id} value={c._id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <ContactSelect
+            label="Partner (Ügyfél) *"
+            value={header.contact_id}
+            onChange={(id) => setHeader((prev) => ({ ...prev, contact_id: id }))}
+            contacts={contacts as any}
+            placeholder="Válassz partnert…"
+          />
 
           <Input
             label="Ajánlat címe *"

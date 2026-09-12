@@ -12,7 +12,7 @@ function baseDeployment(overrides: Partial<Deployment> = {}): Deployment {
     www_redirect: true,
     status: "draft",
     notes: null,
-    dns: { record_type: "A", target: "1.2.3.4", proxied: false },
+    dns: { name: "@", record_type: "A", target: "1.2.3.4", proxied: false },
     proxy: {
       forward_host: "app",
       forward_port: 3000,
@@ -25,7 +25,12 @@ function baseDeployment(overrides: Partial<Deployment> = {}): Deployment {
       workflow_id: null,
       workflow_ref: null,
     },
-    stack: { stack_name: "partner-example", template_id: "tpl1", env: [] },
+    stack: {
+      stack_name: "partner-example",
+      template_id: "tpl1",
+      compose_yaml: null,
+      env: [],
+    },
     package_id: null,
     billing_cycle: null,
     price_override_huf: null,
@@ -45,6 +50,7 @@ function baseDeployment(overrides: Partial<Deployment> = {}): Deployment {
       image_digest: null,
     },
     source: "created",
+    group_id: null,
     migrated_from_domain_hosting_id: null,
     created_by: "user1",
     archived_at: null,
@@ -66,7 +72,7 @@ describe("computeIdempotencyKey", () => {
   it("changes when the relevant intent changes", () => {
     const a = baseDeployment();
     const b = baseDeployment({
-      dns: { record_type: "A", target: "5.6.7.8", proxied: false },
+      dns: { name: "@", record_type: "A", target: "5.6.7.8", proxied: false },
     });
     expect(computeIdempotencyKey(a, "dns_records")).not.toBe(
       computeIdempotencyKey(b, "dns_records"),

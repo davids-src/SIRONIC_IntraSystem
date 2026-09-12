@@ -13,6 +13,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  ContactSelect,
 } from "@crm/ui";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -161,11 +162,7 @@ export default function NewProjectPage() {
         .map((c) => ({
           label: c.label.trim(),
           category: c.category as
-            | "content"
-            | "assets"
-            | "documents"
-            | "technical"
-            | "other",
+            "content" | "assets" | "documents" | "technical" | "other",
           required: c.required,
         }));
       const body = {
@@ -227,21 +224,13 @@ export default function NewProjectPage() {
               />
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="project-org">Ügyfél (Szervezet) *</Label>
-              <Select value={contactId || undefined} onValueChange={setContactId}>
-                <SelectTrigger id="project-org" className="w-full">
-                  <SelectValue placeholder="Válassz szervezetet" />
-                </SelectTrigger>
-                <SelectContent>
-                  {contacts.map((c) => (
-                    <SelectItem key={c._id} value={c._id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <ContactSelect
+              label="Ügyfél (Szervezet) *"
+              value={contactId}
+              onChange={(id) => setContactId(id)}
+              contacts={contacts}
+              placeholder="Válassz szervezetet"
+            />
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="project-staff">Felelős munkatárs</Label>

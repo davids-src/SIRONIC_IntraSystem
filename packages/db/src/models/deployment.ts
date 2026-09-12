@@ -58,6 +58,7 @@ const deploymentSchema = defineSchema(
 
     dns: {
       record_type: { type: String, enum: ["A", "CNAME"], default: "A" },
+      name: { type: String, default: "@" },
       target: { type: String, default: null },
       proxied: { type: Boolean, default: false },
     },
@@ -76,6 +77,7 @@ const deploymentSchema = defineSchema(
     stack: {
       stack_name: { type: String, default: null },
       template_id: { type: String, default: null },
+      compose_yaml: { type: String, default: null },
       env: [
         {
           name: { type: String, required: true },
@@ -83,6 +85,7 @@ const deploymentSchema = defineSchema(
         },
       ],
     },
+    group_id: { type: String, default: null, index: true },
 
     package_id: { type: String, default: null },
     billing_cycle: {

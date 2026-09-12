@@ -12,6 +12,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  ContactSelect,
 } from "@crm/ui";
 import type { Floorplan, FloorplanMarker, MarkerType, Contact } from "@crm/types";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
@@ -390,25 +391,13 @@ export default function FloorplansPage() {
                 placeholder="Pl. 1. emelet — Szerviz szoba"
               />
             </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="fp-contact">Partner *</Label>
-              <Select
-                value={newContactId || "__empty__"}
-                onValueChange={(v) => setNewContactId(v === "__empty__" ? "" : v)}
-              >
-                <SelectTrigger id="fp-contact" className="w-full">
-                  <SelectValue placeholder="-- Partner --" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__empty__">-- Partner --</SelectItem>
-                  {contacts.map((c) => (
-                    <SelectItem key={c._id} value={c._id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <ContactSelect
+              label="Partner *"
+              value={newContactId}
+              onChange={(id) => setNewContactId(id)}
+              contacts={contacts}
+              placeholder="-- Partner --"
+            />
             <div className="flex flex-col gap-2">
               <Label htmlFor="fp-file">Alaprajz fájl feltöltése *</Label>
               <Input

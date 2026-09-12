@@ -11,6 +11,7 @@ loadEnvConfig(__dirname);
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  outputFileTracing: false,
   transpilePackages: [
     "@crm/ui",
     "@crm/types",

@@ -232,17 +232,19 @@ export default function DeploymentDetailPage() {
           >
             <dt style={{ color: "var(--color-text-muted, #555)" }}>Cloudflare zone ID</dt>
             <dd style={{ fontFamily: "monospace" }}>
-              {deployment.external_ids.cloudflare_zone_id ?? "—"}
+              {deployment.external_ids.cloudflare_zone_id ?? "\u2014"}
             </dd>
             <dt style={{ color: "var(--color-text-muted, #555)" }}>Rekord típus</dt>
             <dd>{deployment.dns.record_type}</dd>
+            <dt style={{ color: "var(--color-text-muted, #555)" }}>Rekord neve</dt>
+            <dd style={{ fontFamily: "monospace" }}>{deployment.dns.name ?? "@"}</dd>
             <dt style={{ color: "var(--color-text-muted, #555)" }}>Cél</dt>
-            <dd>{deployment.dns.target ?? "—"}</dd>
+            <dd>{deployment.dns.target ?? "\u2014"}</dd>
             <dt style={{ color: "var(--color-text-muted, #555)" }}>Proxied</dt>
             <dd>{deployment.dns.proxied ? "Igen" : "Nem"}</dd>
             <dt style={{ color: "var(--color-text-muted, #555)" }}>DNS record ID-k</dt>
             <dd style={{ fontFamily: "monospace" }}>
-              {deployment.external_ids.cloudflare_dns_record_ids.join(", ") || "—"}
+              {deployment.external_ids.cloudflare_dns_record_ids.join(", ") || "\u2014"}
             </dd>
           </dl>
         </Card>
@@ -288,24 +290,47 @@ export default function DeploymentDetailPage() {
             }}
           >
             <dt style={{ color: "var(--color-text-muted, #555)" }}>Stack név</dt>
-            <dd>{deployment.stack.stack_name ?? "—"}</dd>
+            <dd>{deployment.stack.stack_name ?? "\u2014"}</dd>
             <dt style={{ color: "var(--color-text-muted, #555)" }}>Portainer stack ID</dt>
             <dd style={{ fontFamily: "monospace" }}>
-              {deployment.external_ids.portainer_stack_id ?? "—"}
+              {deployment.external_ids.portainer_stack_id ?? "\u2014"}
             </dd>
             <dt style={{ color: "var(--color-text-muted, #555)" }}>Webhook ID</dt>
             <dd style={{ fontFamily: "monospace" }}>
-              {deployment.external_ids.portainer_webhook_id ?? "—"}
+              {deployment.external_ids.portainer_webhook_id ?? "\u2014"}
             </dd>
             <dt style={{ color: "var(--color-text-muted, #555)" }}>Image</dt>
             <dd>
-              {deployment.image.repository ?? "—"}:{deployment.image.tag ?? "—"}
+              {deployment.image.repository ?? "\u2014"}:{deployment.image.tag ?? "\u2014"}
             </dd>
             <dt style={{ color: "var(--color-text-muted, #555)" }}>GitHub last run</dt>
             <dd style={{ fontFamily: "monospace" }}>
-              {deployment.external_ids.github_last_run_id ?? "—"}
+              {deployment.external_ids.github_last_run_id ?? "\u2014"}
             </dd>
           </dl>
+          {deployment.stack.compose_yaml ? (
+            <div style={{ marginTop: "20px" }}>
+              <p style={{ fontSize: "0.8rem", fontWeight: 600, marginBottom: "8px" }}>
+                docker-compose YAML
+              </p>
+              <pre
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "0.75rem",
+                  lineHeight: 1.6,
+                  background: "var(--color-surface-input, #111)",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  overflowX: "auto",
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                  color: "var(--color-text-muted, #aaa)",
+                }}
+              >
+                {deployment.stack.compose_yaml}
+              </pre>
+            </div>
+          ) : null}
         </Card>
       )}
 

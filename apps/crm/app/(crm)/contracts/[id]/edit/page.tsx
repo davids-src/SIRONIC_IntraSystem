@@ -15,6 +15,7 @@ import {
   Checkbox,
   CheckboxField,
   InputControl,
+  ContactSelect,
 } from "@crm/ui";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, use } from "react";
@@ -270,25 +271,13 @@ export default function EditContractPage({
                 onChange={(e) => setContractNumber(e.target.value)}
                 placeholder="Üresen hagyva automatikus: SZ-..."
               />
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="edit-contract-contact">Kontakt *</Label>
-                <Select
-                  value={contactId || "__empty__"}
-                  onValueChange={(v) => setContactId(v === "__empty__" ? "" : v)}
-                >
-                  <SelectTrigger id="edit-contract-contact" className="w-full">
-                    <SelectValue placeholder="-- Kontakt kiválasztása --" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__empty__">-- Kontakt kiválasztása --</SelectItem>
-                    {contacts.map((c) => (
-                      <SelectItem key={c._id} value={c._id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <ContactSelect
+                label="Kontakt *"
+                value={contactId}
+                onChange={(id) => setContactId(id)}
+                contacts={contacts}
+                placeholder="-- Kontakt kiválasztása --"
+              />
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="edit-contract-category">Kategória *</Label>
                 <Select
@@ -457,25 +446,13 @@ export default function EditContractPage({
                 onChange={(e) => setUploadContractNumber(e.target.value)}
                 placeholder="Üresen hagyva automatikus: SZ-..."
               />
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="upload-contact">Kontakt *</Label>
-                <Select
-                  value={uploadContactId || "__empty__"}
-                  onValueChange={(v) => setUploadContactId(v === "__empty__" ? "" : v)}
-                >
-                  <SelectTrigger id="upload-contact" className="w-full">
-                    <SelectValue placeholder="-- Kontakt kiválasztása --" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__empty__">-- Kontakt kiválasztása --</SelectItem>
-                    {contacts.map((c) => (
-                      <SelectItem key={c._id} value={c._id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <ContactSelect
+                label="Kontakt *"
+                value={uploadContactId}
+                onChange={(id) => setUploadContactId(id)}
+                contacts={contacts}
+                placeholder="-- Kontakt kiválasztása --"
+              />
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="upload-category">Kategória *</Label>
                 <Select

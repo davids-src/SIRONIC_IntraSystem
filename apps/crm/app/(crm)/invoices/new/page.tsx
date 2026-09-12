@@ -11,6 +11,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  ContactSelect,
 } from "@crm/ui";
 import type { Contact } from "@crm/types";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
@@ -104,21 +105,13 @@ export default function NewInvoicePage() {
         </p>
       )}
       <Card className="p-6 space-y-4">
-        <div className="space-y-2">
-          <Label>Ügyfél *</Label>
-          <Select value={contactId || undefined} onValueChange={setContactId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Válassz ügyfelet" />
-            </SelectTrigger>
-            <SelectContent>
-              {contacts.map((c) => (
-                <SelectItem key={c._id} value={c._id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <ContactSelect
+          label="Ügyfél *"
+          value={contactId}
+          onChange={(id) => setContactId(id)}
+          contacts={contacts}
+          placeholder="Válassz ügyfelet"
+        />
         <Input
           label="Megnevezés (opcionális)"
           value={title}

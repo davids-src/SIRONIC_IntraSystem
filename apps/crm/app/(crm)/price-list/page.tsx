@@ -1,6 +1,6 @@
 "use client";
 
-import { PageHeader, Card, Badge, Button, Input } from "@crm/ui";
+import { PageHeader, Card, Badge, Button, Input, SupplierSelect } from "@crm/ui";
 import {
   Search,
   Plus,
@@ -1772,39 +1772,16 @@ export default function PriceListPage() {
                 style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}
               >
                 <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <label style={{ fontSize: "14px" }}>Beszállító</label>
-                  <select
+                  <SupplierSelect
+                    label="Beszállító"
                     value={newPurchase.supplier_id}
-                    onChange={(e) =>
-                      setNewPurchase({ ...newPurchase, supplier_id: e.target.value })
+                    onSelect={(s) =>
+                      setNewPurchase({ ...newPurchase, supplier_id: s._id })
                     }
+                    onClear={() => setNewPurchase({ ...newPurchase, supplier_id: "" })}
+                    suppliers={suppliers}
                     required
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      border: "1px solid var(--color-border-subtle)",
-                      background: "var(--color-bg-secondary)",
-                      color: "var(--color-text-primary)",
-                      fontSize: "14px",
-                    }}
-                  >
-                    <option value="">— Válassz —</option>
-                    {[...suppliers]
-                      .sort((a, b) => a.name.localeCompare(b.name, "hu"))
-                      .map((s) => (
-                        <option key={s._id} value={s._id}>
-                          {s.name}
-                        </option>
-                      ))}
-                  </select>
-                  {suppliers.length === 0 && (
-                    <span style={{ fontSize: "11px", color: "var(--color-text-muted)" }}>
-                      <a href="/suppliers/new" style={{ color: "var(--color-accent)" }}>
-                        Adj hozzá beszállítót
-                      </a>
-                    </span>
-                  )}
+                  />
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                   <label style={{ fontSize: "14px" }}>Beszállítói Cikkszám</label>

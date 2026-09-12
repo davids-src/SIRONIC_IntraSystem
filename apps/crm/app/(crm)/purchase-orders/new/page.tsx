@@ -1,6 +1,14 @@
 "use client";
 
-import { PageHeader, Card, Button, InputControl, Label } from "@crm/ui";
+import {
+  PageHeader,
+  Card,
+  Button,
+  InputControl,
+  Label,
+  ProductSelect,
+  SupplierSelect,
+} from "@crm/ui";
 import { Save, ChevronLeft, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -118,43 +126,13 @@ export default function NewPurchaseOrderPage() {
           <h3 style={{ fontWeight: 700, marginBottom: "20px" }}>Megrendelés adatai</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
             <div>
-              <Label htmlFor="supplier">Beszállító *</Label>
-              <select
-                id="supplier"
+              <SupplierSelect
                 value={supplierId}
-                onChange={(e) => setSupplierId(e.target.value)}
+                onSelect={(s) => setSupplierId(s._id)}
+                onClear={() => setSupplierId("")}
+                suppliers={suppliers}
                 required
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  borderRadius: "8px",
-                  border: "1px solid var(--color-border-subtle)",
-                  background: "var(--color-bg-secondary)",
-                  color: "var(--color-text-primary)",
-                  fontSize: "14px",
-                }}
-              >
-                <option value="">— Válassz —</option>
-                {suppliers.map((s) => (
-                  <option key={s._id} value={s._id}>
-                    {s.name} ({s.partner_id})
-                  </option>
-                ))}
-              </select>
-              {suppliers.length === 0 && (
-                <p
-                  style={{
-                    fontSize: "12px",
-                    color: "var(--color-text-muted)",
-                    marginTop: "6px",
-                  }}
-                >
-                  Nincs rögzített beszállító.{" "}
-                  <a href="/suppliers/new" style={{ color: "var(--color-accent)" }}>
-                    Hozzáadás
-                  </a>
-                </p>
-              )}
+              />
             </div>
             <div>
               <Label htmlFor="expected_date">Várható szállítási határidő</Label>
@@ -250,50 +228,29 @@ export default function NewPurchaseOrderPage() {
                   style={{ borderBottom: "1px solid var(--color-border-subtle)" }}
                 >
                   <td style={{ padding: "8px", minWidth: "220px" }}>
-                    <select
-                      value={l.price_list_item_id ?? ""}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (!val) {
-                          updateLine(idx, "price_list_item_id", null);
-                        } else {
-                          const selected = priceListItems.find((p) => p._id === val);
-                          if (selected) {
-                            setLines((prev) =>
-                              prev.map((line, i) =>
-                                i === idx
-                                  ? {
-                                      ...line,
-                                      price_list_item_id: selected._id,
-                                      description: selected.name,
-                                      unit: selected.unit,
-                                      net_unit_price: selected.last_purchase_price ?? 0,
-                                      tax_rate: selected.tax_rate,
-                                    }
-                                  : line,
-                              ),
-                            );
-                          }
-                        }
+                    <ProductSelect
+                      value={l.price_list_item_id}
+                      onSelect={(item, type) => {
+                        updateLine(idx, "price_list_item_id", item._id);
+                        updateLine(idx, "description", item.name);
+                        updateLine(idx, "unit", item.unit);
+                        updateLine(
+                          idx,
+                          "net_unit_price",
+                          (item as any).last_purchase_price ??
+                            (item as any).net_price ??
+                            0,
+                        );
+                        updateLine(idx, "tax_rate", (item as any).tax_rate);
                       }}
-                      style={{
-                        width: "100%",
-                        padding: "6px 10px",
-                        borderRadius: "8px",
-                        border: "1px solid var(--color-border-subtle)",
-                        background: "var(--color-bg-secondary)",
-                        color: "var(--color-text-primary)",
-                        fontSize: "13px",
-                        marginBottom: "6px",
+                      onClear={() => {
+                        updateLine(idx, "price_list_item_id", null);
                       }}
-                    >
-                      <option value="">— Egyedi tétel —</option>
-                      {priceListItems.map((p) => (
-                        <option key={p._id} value={p._id}>
-                          {p.name} ({p.item_number})
-                        </option>
-                      ))}
-                    </select>
+                      priceList={priceListItems}
+                      defaultTab="product"
+                      placeholder="— Egyedi tétel —"
+                      className="mb-2"
+                    />
                     <InputControl
                       value={l.description}
                       onChange={(e) => updateLine(idx, "description", e.target.value)}

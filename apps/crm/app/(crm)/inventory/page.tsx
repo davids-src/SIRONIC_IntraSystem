@@ -1,7 +1,17 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { PageHeader, Card, Badge, Button, InputControl, Label } from "@crm/ui";
+import {
+  PageHeader,
+  Card,
+  Badge,
+  Button,
+  InputControl,
+  Label,
+  ContactSelect,
+  ProductSelect,
+  SupplierSelect,
+} from "@crm/ui";
 import {
   Search,
   Package,
@@ -1773,31 +1783,15 @@ export default function InventoryPage() {
 
               {!isNewProduct ? (
                 <div>
-                  <Label htmlFor="price-item-select">Termék kiválasztása *</Label>
-                  <select
-                    id="price-item-select"
+                  <ProductSelect
+                    label="Termék kiválasztása *"
                     value={selectedProductId}
-                    onChange={(e) => setSelectedProductId(e.target.value)}
+                    onSelect={(item) => setSelectedProductId(item._id)}
+                    onClear={() => setSelectedProductId("")}
+                    priceList={priceListItems}
+                    defaultTab="product"
                     required={!isNewProduct}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      border: "1px solid var(--color-border-subtle)",
-                      background: "var(--color-bg-secondary)",
-                      color: "var(--color-text-primary)",
-                      fontSize: "14px",
-                    }}
-                  >
-                    <option value="">— Válassz a terméktörzsből —</option>
-                    {priceListItems
-                      .filter((p) => p.type === "product")
-                      .map((p) => (
-                        <option key={p._id} value={p._id}>
-                          {p.name} ({p.item_number})
-                        </option>
-                      ))}
-                  </select>
+                  />
                 </div>
               ) : (
                 <div className="flex flex-col gap-4 p-4 rounded-lg bg-gray-900/30 border border-gray-800">
@@ -1878,29 +1872,14 @@ export default function InventoryPage() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="prod-supplier">Beszállító *</Label>
-                      <select
-                        id="prod-supplier"
+                      <SupplierSelect
+                        label="Beszállító *"
                         value={prodSupplier}
-                        onChange={(e) => setProdSupplier(e.target.value)}
+                        onSelect={(s) => setProdSupplier(s._id)}
+                        onClear={() => setProdSupplier("")}
+                        suppliers={suppliers}
                         required={isNewProduct}
-                        style={{
-                          width: "100%",
-                          padding: "10px 12px",
-                          borderRadius: "8px",
-                          border: "1px solid var(--color-border-subtle)",
-                          background: "var(--color-bg-secondary)",
-                          color: "var(--color-text-primary)",
-                          fontSize: "14px",
-                        }}
-                      >
-                        <option value="">— Válassz beszállítót —</option>
-                        {suppliers.map((s) => (
-                          <option key={s._id} value={s.name}>
-                            {s.name}
-                          </option>
-                        ))}
-                      </select>
+                      />
                     </div>
                   </div>
                 </div>
@@ -2571,31 +2550,15 @@ export default function InventoryPage() {
 
             <form onSubmit={handleRmaSubmit} className="flex flex-col gap-4">
               <div>
-                <Label htmlFor="rma-prod">Termék kiválasztása *</Label>
-                <select
-                  id="rma-prod"
+                <ProductSelect
+                  label="Termék kiválasztása *"
                   value={rmaProductId}
-                  onChange={(e) => setRmaProductId(e.target.value)}
+                  onSelect={(item) => setRmaProductId(item._id)}
+                  onClear={() => setRmaProductId("")}
+                  priceList={priceListItems}
+                  defaultTab="product"
                   required
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: "8px",
-                    border: "1px solid var(--color-border-subtle)",
-                    background: "var(--color-bg-secondary)",
-                    color: "var(--color-text-primary)",
-                    fontSize: "14px",
-                  }}
-                >
-                  <option value="">— Válassz terméket —</option>
-                  {priceListItems
-                    .filter((p) => p.type === "product")
-                    .map((p) => (
-                      <option key={p._id} value={p._id}>
-                        {p.name} ({p.item_number})
-                      </option>
-                    ))}
-                </select>
+                />
               </div>
 
               <div>

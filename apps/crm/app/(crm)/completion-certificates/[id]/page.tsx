@@ -17,6 +17,7 @@ import {
   ItemPickerModal,
   PdfPreviewModal,
   generatePdfFromElement,
+  ContactSelect,
 } from "@crm/ui";
 import type {
   CompletionCertificate,
@@ -572,27 +573,13 @@ export default function CompletionCertificateFormPage({
           <h3 className="text-sm font-bold text-[var(--color-text-secondary)]">
             Partner (Ügyfél)
           </h3>
-          <div className="flex flex-col gap-1.5">
-            <Label>Partner</Label>
-            <Select
-              value={contactId || "__empty__"}
-              onValueChange={(v) => setContactId(v === "__empty__" ? "" : v)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Válassz partnert (opcionális)…" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__empty__">
-                  — Válassz partnert (opcionális) —
-                </SelectItem>
-                {contacts.map((c) => (
-                  <SelectItem key={c._id} value={c._id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <ContactSelect
+            label="Partner"
+            value={contactId}
+            onChange={(id) => setContactId(id)}
+            contacts={contacts}
+            placeholder="Válassz partnert (opcionális)…"
+          />
         </Card>
       )}
 

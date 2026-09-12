@@ -16,8 +16,9 @@ import {
   ItemPickerModal,
   UnifiedPdfTemplate,
   PdfPreviewModal,
-  generatePdfFromElement,
   PreflightDialog,
+  ContactSelect,
+  generatePdfFromElement,
 } from "@crm/ui";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, use, Suspense, useEffect, useCallback, useRef } from "react";
@@ -709,23 +710,13 @@ function WorklogFormContent({ id }: { id: string }) {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             <div className="flex flex-col gap-2">
               <Label htmlFor="wl-contact">Szervezet *</Label>
-              <Select
-                value={contactId || "__empty__"}
-                onValueChange={(v) => setContactId(v === "__empty__" ? "" : v)}
+              <ContactSelect
+                value={contactId}
+                onChange={(id) => setContactId(id)}
+                contacts={contacts}
                 disabled={disabled}
-              >
-                <SelectTrigger id="wl-contact" className="w-full">
-                  <SelectValue placeholder="-- Szervezet --" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__empty__">-- Szervezet --</SelectItem>
-                  {contacts.map((c) => (
-                    <SelectItem key={c._id} value={c._id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                required
+              />
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="wl-category">Munkavégzés típusa *</Label>

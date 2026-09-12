@@ -3,7 +3,7 @@
 import { PageHeader, Card, Table, Badge, Button, Input } from "@crm/ui";
 import type { Column } from "@crm/ui";
 import type { Contact, Deployment, DeploymentStatus } from "@crm/types";
-import { Plus, Search, Rocket } from "lucide-react";
+import { Plus, Search, Rocket, Download } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiJson } from "@/lib/api-client";
@@ -140,10 +140,19 @@ export default function DeploymentsPage() {
         title="Deploymentek"
         subtitle="Partner site-ok provisioning, DNS, SSL, stack és számlázás egy helyen"
         actions={
-          <Button variant="primary" onClick={() => router.push("/deployments/new")}>
-            <Plus size={16} style={{ marginRight: "6px" }} />
-            Új deployment
-          </Button>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <Button
+              variant="secondary"
+              onClick={() => router.push("/deployments/import")}
+            >
+              <Download size={16} style={{ marginRight: "6px" }} />
+              Importálás
+            </Button>
+            <Button variant="primary" onClick={() => router.push("/deployments/new")}>
+              <Plus size={16} style={{ marginRight: "6px" }} />
+              Új deployment
+            </Button>
+          </div>
         }
       />
 

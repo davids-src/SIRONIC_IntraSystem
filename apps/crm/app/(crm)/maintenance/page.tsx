@@ -13,6 +13,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  ContactSelect,
 } from "@crm/ui";
 import type { MaintenancePlan, Contact } from "@crm/types";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
@@ -175,27 +176,13 @@ export default function MaintenancePage() {
                 placeholder="Pl. Éves tűzjelző karbantartás"
               />
             </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="mp-contact">Partner *</Label>
-              <Select
-                value={editing.contact_id || "__empty__"}
-                onValueChange={(v) =>
-                  setEditing({ ...editing, contact_id: v === "__empty__" ? "" : v })
-                }
-              >
-                <SelectTrigger id="mp-contact" className="w-full">
-                  <SelectValue placeholder="-- Partner --" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__empty__">-- Partner --</SelectItem>
-                  {contacts.map((c) => (
-                    <SelectItem key={c._id} value={c._id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <ContactSelect
+              label="Partner *"
+              value={editing.contact_id}
+              onChange={(id) => setEditing({ ...editing, contact_id: id })}
+              contacts={contacts}
+              placeholder="-- Partner --"
+            />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex flex-col gap-2">

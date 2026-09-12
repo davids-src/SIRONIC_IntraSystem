@@ -13,7 +13,8 @@ import {
   SelectContent,
   SelectItem,
   Textarea,
-  ItemPickerModal,
+  SupplierSelect,
+  ProductSelect,
 } from "@crm/ui";
 import { Save, ChevronLeft, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState, use } from "react";
@@ -63,8 +64,6 @@ export default function EditPurchaseOrderPage({
   const [lines, setLines] = useState<Line[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showPicker, setShowPicker] = useState(false);
-  const [pickerTargetIdx, setPickerTargetIdx] = useState<number | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -187,22 +186,13 @@ export default function EditPurchaseOrderPage({
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="supplier">Beszállító *</Label>
-              <Select
-                value={supplierId || "__empty__"}
-                onValueChange={(v) => setSupplierId(v === "__empty__" ? "" : v)}
-              >
-                <SelectTrigger id="supplier" className="w-full">
-                  <SelectValue placeholder="— Válassz —" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__empty__">— Válassz —</SelectItem>
-                  {suppliers.map((s) => (
-                    <SelectItem key={s._id} value={s._id}>
-                      {s.name} ({s.partner_id})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SupplierSelect
+                value={supplierId}
+                onSelect={(s) => setSupplierId(s._id)}
+                onClear={() => setSupplierId("")}
+                suppliers={suppliers}
+                required
+              />
             </div>
             <div>
               <Label htmlFor="expected_date">Várható szállítási határidő</Label>
@@ -273,62 +263,26 @@ export default function EditPurchaseOrderPage({
                 }}
               >
                 <div>
-                  <Label style={{ fontSize: "11px" }}>Árlistaelem tallózása</Label>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      marginTop: "4px",
+                  <ProductSelect
+                    value={line.price_list_item_id}
+                    onSelect={(item, type) => {
+                      updateLine(idx, "price_list_item_id", item._id);
+                      updateLine(idx, "description", item.name);
+                      updateLine(idx, "unit", item.unit || "db");
+                      updateLine(
+                        idx,
+                        "net_unit_price",
+                        (item as any).last_purchase_price || (item as any).net_price || 0,
+                      );
+                      updateLine(idx, "tax_rate", (item as any).tax_rate || 27);
                     }}
-                  >
-                    {line.price_list_item_id ? (
-                      <span
-                        style={{
-                          fontSize: "12px",
-                          color: "var(--color-text-secondary)",
-                          flex: 1,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {priceListItems.find((p) => p._id === line.price_list_item_id)
-                          ?.name ?? "Ismeretlen"}
-                      </span>
-                    ) : (
-                      <span
-                        style={{
-                          fontSize: "12px",
-                          color: "var(--color-text-muted)",
-                          flex: 1,
-                        }}
-                      >
-                        Szabad szöveg
-                      </span>
-                    )}
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => {
-                        setPickerTargetIdx(idx);
-                        setShowPicker(true);
-                      }}
-                    >
-                      Tallózás
-                    </Button>
-                    {line.price_list_item_id && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => updateLine(idx, "price_list_item_id", null)}
-                      >
-                        ✕
-                      </Button>
-                    )}
-                  </div>
+                    onClear={() => {
+                      updateLine(idx, "price_list_item_id", null);
+                    }}
+                    priceList={priceListItems}
+                    defaultTab="product"
+                    placeholder="Szabad szöveg"
+                  />
                 </div>
 
                 <div>
@@ -482,21 +436,6 @@ export default function EditPurchaseOrderPage({
           </Button>
         </div>
       </form>
-
-      <ItemPickerModal
-        open={showPicker}
-        onClose={() => setShowPicker(false)}
-        priceList={priceListItems as any[]}
-        servicePriceList={[]}
-        defaultTab="product"
-        onSelectProduct={(p) => {
-          if (pickerTargetIdx !== null) {
-            selectPriceListItem(pickerTargetIdx, p._id);
-          }
-        }}
-        onSelectService={() => {}}
-        title="Árlistaelem kiválasztása"
-      />
     </div>
   );
 }

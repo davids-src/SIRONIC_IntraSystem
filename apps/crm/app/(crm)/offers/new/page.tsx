@@ -13,6 +13,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  ContactSelect,
 } from "@crm/ui";
 import {
   Plus,
@@ -945,24 +946,13 @@ export default function NewOfferPage() {
               maxWidth: "560px",
             }}
           >
-            <div className="flex flex-col gap-1.5 max-w-[560px]">
-              <Label>Ügyfél *</Label>
-              <Select
-                value={header.contact_id || undefined}
-                onValueChange={handleContactChange}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Válassz ügyfelet" />
-                </SelectTrigger>
-                <SelectContent>
-                  {contacts.map((c) => (
-                    <SelectItem key={c._id} value={c._id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <ContactSelect
+              label="Ügyfél *"
+              value={header.contact_id}
+              onChange={(id) => handleContactChange(id)}
+              contacts={contacts as any}
+              placeholder="Válassz ügyfelet..."
+            />
             <Input
               label="Ajánlat tárgya *"
               placeholder="pl. Irodaház kamerarendszer bővítése"

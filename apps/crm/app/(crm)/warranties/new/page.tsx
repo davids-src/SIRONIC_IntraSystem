@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, Button } from "@crm/ui";
+import { Card, Button, ContactSelect, ProductSelect } from "@crm/ui";
 import { ChevronLeft, Plus, Trash2, Save, ShieldCheck } from "lucide-react";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 import type { Contact, PriceListItem } from "@crm/types";
@@ -226,23 +226,13 @@ export default function NewWarrantyPage() {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Partner */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-[var(--color-text-secondary)]">
-              Partner *
-            </label>
-            <select
-              value={contactId}
-              onChange={(e) => setContactId(e.target.value)}
-              className={inputCls}
-            >
-              <option value="">Válassz partnert…</option>
-              {contacts.map((c) => (
-                <option key={c._id} value={c._id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <ContactSelect
+            label="Partner *"
+            value={contactId}
+            onChange={(id) => setContactId(id)}
+            contacts={contacts}
+            placeholder="Válassz partnert…"
+          />
 
           {/* Kiállítás dátuma */}
           <div className="flex flex-col gap-1.5">
@@ -383,22 +373,16 @@ export default function NewWarrantyPage() {
 
               {/* Sor 1: Árlista tétel + Termék neve */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs text-[var(--color-text-muted)]">
-                    Árlistaelem (opcionális)
-                  </label>
-                  <select
+                <div>
+                  <ProductSelect
+                    label="Árlistaelem (opcionális)"
                     value={line.price_list_item_id}
-                    onChange={(e) => selectPriceListItem(idx, e.target.value)}
-                    className={inputCls}
-                  >
-                    <option value="">— Válassz termékből, vagy írd be kézzel —</option>
-                    {priceListItems.map((p) => (
-                      <option key={p._id} value={p._id}>
-                        {p.item_number} – {p.name}
-                      </option>
-                    ))}
-                  </select>
+                    onSelect={(item) => selectPriceListItem(idx, item._id)}
+                    onClear={() => updateLine(idx, "price_list_item_id", "")}
+                    priceList={priceListItems as any}
+                    placeholder="Válassz terméket…"
+                    defaultTab="product"
+                  />
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-xs text-[var(--color-text-muted)]">

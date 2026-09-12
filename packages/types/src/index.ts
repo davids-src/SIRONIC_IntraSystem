@@ -268,6 +268,8 @@ export interface Deployment {
   notes: string | null;
   dns: {
     record_type: "A" | "CNAME";
+    /** DNS rekordnév, pl. "@" (apex) vagy "www" */
+    name: string | null;
     target: string | null;
     proxied: boolean;
   };
@@ -286,8 +288,12 @@ export interface Deployment {
   stack: {
     stack_name: string | null;
     template_id: string | null;
+    /** Inline docker-compose YAML (ha nincs template_id) */
+    compose_yaml: string | null;
     env: Array<{ name: string; value: string }>;
   };
+  /** Multi-deployment csoportazonosító */
+  group_id: string | null;
   package_id: string | null;
   billing_cycle: BillingCycle | null;
   price_override_huf: number | null;

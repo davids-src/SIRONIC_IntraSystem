@@ -12,6 +12,8 @@ import {
   SelectValue,
   SelectContent,
   SelectItem,
+  ContactSelect,
+  ProductSelect,
 } from "@crm/ui";
 import { ChevronLeft, Plus, Trash2, Save, FileOutput } from "lucide-react";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
@@ -158,25 +160,13 @@ export default function NewDeliveryNotePage() {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Partner */}
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="dn-contact">Partner *</Label>
-            <Select
-              value={contactId || "__empty__"}
-              onValueChange={(v) => setContactId(v === "__empty__" ? "" : v)}
-            >
-              <SelectTrigger id="dn-contact" className="w-full">
-                <SelectValue placeholder="Válassz partnert…" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__empty__">Válassz partnert…</SelectItem>
-                {contacts.map((c) => (
-                  <SelectItem key={c._id} value={c._id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <ContactSelect
+            label="Partner *"
+            value={contactId}
+            onChange={(id) => setContactId(id)}
+            contacts={contacts}
+            placeholder="Válassz partnert…"
+          />
 
           {/* Issue date */}
           <Input
@@ -244,27 +234,15 @@ export default function NewDeliveryNotePage() {
               key={idx}
               className="grid grid-cols-12 gap-4 items-end p-3 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border-subtle)]"
             >
-              {/* Product picker */}
-              <div className="col-span-5 flex flex-col gap-1.5">
-                <Label>Raktáron lévő termék *</Label>
-                <Select
-                  value={line.price_list_item_id || "__empty__"}
-                  onValueChange={(v) => selectStockItem(idx, v === "__empty__" ? "" : v)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Válassz terméket…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__empty__">Válassz terméket…</SelectItem>
-                    {stockItems.map((s) => (
-                      <SelectItem key={s._id} value={s.price_list_item_id}>
-                        {s.product?.item_number || "—"} –{" "}
-                        {s.product?.name || "Ismeretlen cikk"} (készlet:{" "}
-                        {s.quantity_in_stock} {s.product?.unit || "db"})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="col-span-5">
+                <ProductSelect
+                  label="Raktáron lévő termék *"
+                  value={line.price_list_item_id}
+                  onSelect={(item) => selectStockItem(idx, item._id)}
+                  onClear={() => updateLine(idx, "price_list_item_id", "")}
+                  placeholder="Válassz terméket…"
+                  defaultTab="product"
+                />
               </div>
 
               {/* Name (auto-filled, editable) */}

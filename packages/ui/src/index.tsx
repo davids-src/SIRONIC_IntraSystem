@@ -81,5 +81,20 @@ export { generatePdfFromElement } from "./lib/pdf-generator";
 export { PreflightDialog } from "./components/PreflightDialog";
 export type { PreflightDialogProps } from "./components/PreflightDialog";
 
+export { ContactPickerModal } from "./components/ContactPickerModal";
+export type { ContactPickerModalProps } from "./components/ContactPickerModal";
+
+export { ContactSelect } from "./components/ContactSelect";
+export type { ContactSelectProps } from "./components/ContactSelect";
+
+export { ProductSelect } from "./components/ProductSelect";
+export type { ProductSelectProps } from "./components/ProductSelect";
+
+export { SupplierPickerModal } from "./components/SupplierPickerModal";
+export type { SupplierPickerModalProps } from "./components/SupplierPickerModal";
+
+export { SupplierSelect } from "./components/SupplierSelect";
+export type { SupplierSelectProps } from "./components/SupplierSelect";
+
 // Tokens
 export { colors, radius, spacing } from "./tokens";
