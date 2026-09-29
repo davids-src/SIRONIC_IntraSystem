@@ -23,6 +23,33 @@ const offerSchema = defineSchema(
     is_archived: { type: Boolean, default: false },
     archived_at: { type: Date, default: null },
     archive_reason: { type: String, default: null },
+    /** Utánkövetési dátum és megjegyzés */
+    follow_up_date: { type: Date, default: null, index: true },
+    follow_up_notes: { type: String, default: null },
+    sent_at: { type: Date, default: null },
+    /** Elvesztett / elutasított ajánlat oka */
+    lost_reason: {
+      type: String,
+      enum: [
+        "price",
+        "competitor",
+        "project_cancelled",
+        "internal_solution",
+        "no_response",
+        "timing",
+        "technical_content",
+        "unknown",
+        "other",
+      ],
+      default: null,
+    },
+    lost_reason_custom: { type: String, default: null },
+    /** Következő teendő */
+    next_action: { type: String, default: null },
+    next_action_at: { type: Date, default: null, index: true },
+    next_action_assigned_to: { type: String, default: null },
+    /** Divízió / Business Unit */
+    business_unit: { type: String, default: null },
   },
   ts,
 );
@@ -47,6 +74,19 @@ const offerLineSchema = defineSchema(
     is_group_parent: { type: Boolean, default: false },
     /** Csoport (csomag) azonosítója. A szülő és a gyerekek is megkapják, ami összeköti őket. */
     group_id: { type: String, default: null },
+    /** Belső költség és fedezet számítási snapshot mezők */
+    purchase_unit_price_snapshot: { type: Number, default: null },
+    purchase_price_source: {
+      type: String,
+      enum: ["price_list", "service_price_list", "manual"],
+      default: null,
+    },
+    internal_cost_unit_price: { type: Number, default: null },
+    line_type: {
+      type: String,
+      enum: ["product", "service", "labor", "other"],
+      default: "product",
+    },
   },
   { _id: false },
 );

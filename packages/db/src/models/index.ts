@@ -41,3 +41,9 @@ export { DeploymentPaymentModel } from "./deployment-payment";
 export { StackTemplateModel } from "./stack-template";
 export { IntegrationConnectionModel } from "./integration-connection";
 export { PartnerDeploymentAccessModel } from "./partner-deployment-access";
+// SIROTECH ERP & Sales additions
+export { LeadModel } from "./lead";
+export { NotificationModel, NotificationPreferenceModel } from "./notification";
+export { DeliveryLogModel } from "./delivery-log";
+export { AuditLogModel } from "./audit-log";
+export { DocumentRecordModel } from "./document-record";

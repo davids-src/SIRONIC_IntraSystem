@@ -1,49 +1,57 @@
 "use client";
 
+import { useEffect, useState, useRef } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { calculateOfferTotals } from "@crm/lib";
 import {
-  PageHeader,
+  Clock,
+  AlertTriangle,
+  HelpCircle,
+  XCircle,
+  Calendar,
+  DollarSign,
+  Briefcase,
+  Layers,
+  CheckCircle,
+  ShoppingCart,
+  ChevronLeft,
+  Edit,
+  Eye,
+  Download,
+  Send,
+  FolderKanban,
+} from "lucide-react";
+import {
+  Button,
   Card,
   Badge,
-  Button,
+  PageHeader,
   UnifiedPdfTemplate,
   PdfPreviewModal,
   generatePdfFromElement,
 } from "@crm/ui";
-import {
-  Download,
-  Edit,
-  ChevronLeft,
-  Send,
-  Eye,
-  ShoppingCart,
-  CheckCircle,
-} from "lucide-react";
-import { useRouter, useParams } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
-import type { Contact, Offer, CompanyDetails, Settings, Project } from "@crm/types";
-
-const statusVariant = {
-  draft: "default",
-  ready: "warning",
-  sent: "info",
-  accepted: "success",
-  rejected: "error",
-} as const;
-
-const statusLabel = {
-  draft: "Piszkozat",
-  ready: "Elkészült",
-  sent: "Elküldve",
-  accepted: "Elfogadva",
-  rejected: "Elutasítva",
-} as const;
+import type { Offer, Contact, CompanyDetails, Project, Settings } from "@crm/types";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("hu-HU", {
     style: "currency",
     currency: "HUF",
     maximumFractionDigits: 0,
-  }).format(n);
+  }).format(n || 0);
+
+const statusVariant: Record<string, "default" | "success" | "error" | "warning"> = {
+  draft: "default",
+  sent: "warning",
+  accepted: "success",
+  rejected: "error",
+};
+const statusLabel: Record<string, string> = {
+  draft: "Piszkozat",
+  sent: "Elküldve",
+  accepted: "Elfogadva",
+  rejected: "Elutasítva",
+};
 
 export default function OfferDetailsPage() {
   const router = useRouter();
@@ -61,6 +69,14 @@ export default function OfferDetailsPage() {
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [importing, setImporting] = useState(false);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
+
+  // Follow-up and lost reason state
+  const [isUpdatingFollowUp, setIsUpdatingFollowUp] = useState(false);
+  const [newFollowUpDate, setNewFollowUpDate] = useState("");
+  const [newFollowUpNotes, setNewFollowUpNotes] = useState("");
+  const [showLostModal, setShowLostModal] = useState(false);
+  const [selectedLostReason, setSelectedLostReason] = useState<string>("price");
+  const [customLostReason, setCustomLostReason] = useState("");
 
   const handleSendEmail = async () => {
     if (!confirm("Szeretnél e-mail értesítést küldeni a partnernek erről az ajánlatról?"))
@@ -83,6 +99,47 @@ export default function OfferDetailsPage() {
     }
   };
 
+  const handleUpdateFollowUp = async () => {
+    try {
+      const res = await fetch(`/api/offers/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          follow_up_date: newFollowUpDate ? new Date(newFollowUpDate) : null,
+          follow_up_notes: newFollowUpNotes || null,
+        }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setOffer(updated);
+        setIsUpdatingFollowUp(false);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleMarkLost = async () => {
+    try {
+      const res = await fetch(`/api/offers/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "rejected",
+          lost_reason: selectedLostReason,
+          lost_reason_custom: selectedLostReason === "other" ? customLostReason : null,
+        }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setOffer(updated);
+        setShowLostModal(false);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
     const ac = new AbortController();
     (async () => {
@@ -95,6 +152,12 @@ export default function OfferDetailsPage() {
         if (!oRes.ok) throw new Error("Ajánlat nem található.");
         const oData = (await oRes.json()) as Offer;
         setOffer(oData);
+        if (oData.follow_up_date) {
+          setNewFollowUpDate(new Date(oData.follow_up_date).toISOString().slice(0, 10));
+        }
+        if (oData.follow_up_notes) {
+          setNewFollowUpNotes(oData.follow_up_notes);
+        }
 
         if (setRes.ok) {
           const sData = (await setRes.json()) as Settings;
@@ -162,20 +225,39 @@ export default function OfferDetailsPage() {
   if (loadErr) return <div className="p-8 text-red-500">{loadErr}</div>;
   if (!offer) return <div className="p-8">Betöltés...</div>;
 
-  const totalNet = offer.lines.reduce((sum, l) => {
-    if ((l as any).group_id && !(l as any).is_group_parent) return sum;
-    return sum + l.net_unit_price * (1 - (l.discount_percent ?? 0) / 100) * l.quantity;
-  }, 0);
-  const totalVat = offer.lines.reduce((sum, l) => {
-    if ((l as any).group_id && !(l as any).is_group_parent) return sum;
-    return (
-      sum +
-      l.net_unit_price *
-        (1 - (l.discount_percent ?? 0) / 100) *
-        l.quantity *
-        (l.tax_rate / 100)
-    );
-  }, 0);
+  // Canonical calculations
+  const calc = calculateOfferTotals(offer.lines);
+  const totalNet = calc.discounted_net_total;
+  const totalVat = calc.tax_total;
+  const totalGross = calc.gross_total;
+
+  // Follow-up calculations
+  const isSent = offer.status === "sent";
+  const daysSinceSent = offer.sent_at
+    ? Math.floor((Date.now() - new Date(offer.sent_at).getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+  const isFollowUpOverdue =
+    offer.follow_up_date &&
+    new Date(offer.follow_up_date) < new Date() &&
+    offer.status === "sent";
+
+  const linkedProject = projects.find((p: any) => p.offer_id === id);
+
+  const handleAcceptOffer = async () => {
+    if (!confirm("Biztosan elfogadottra állítod ezt az ajánlatot?")) return;
+    try {
+      const res = await fetch(`/api/offers/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "accepted" }),
+      });
+      if (!res.ok) throw new Error("Hiba történt az állapot mentése során.");
+      const updated = await res.json();
+      setOffer(updated);
+    } catch (err) {
+      alert((err as Error).message);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -187,6 +269,48 @@ export default function OfferDetailsPage() {
             <Button variant="ghost" onClick={() => router.push("/offers")}>
               <ChevronLeft size={16} /> Vissza
             </Button>
+            {linkedProject ? (
+              <Button
+                variant="secondary"
+                onClick={() => router.push(`/projects/${linkedProject._id}`)}
+                className="border-emerald-600 text-emerald-400 hover:bg-emerald-950/40"
+              >
+                <FolderKanban size={16} className="mr-1.5" />
+                Projekt: {linkedProject.project_number}
+              </Button>
+            ) : (
+              <>
+                {offer.status !== "accepted" && (
+                  <Button
+                    variant="secondary"
+                    onClick={handleAcceptOffer}
+                    className="text-emerald-400 hover:text-emerald-300 border-emerald-800"
+                  >
+                    <CheckCircle size={16} className="mr-1.5" /> Elfogadva
+                  </Button>
+                )}
+                <Button
+                  variant="primary"
+                  onClick={() =>
+                    router.push(
+                      `/projects/new?offer_id=${id}&contact_id=${offer.contact_id || ""}`,
+                    )
+                  }
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  <FolderKanban size={16} className="mr-1.5" /> Projekt létrehozása
+                </Button>
+              </>
+            )}
+            {offer.status !== "rejected" && (
+              <Button
+                variant="secondary"
+                onClick={() => setShowLostModal(true)}
+                className="text-red-400 hover:text-red-300"
+              >
+                <XCircle size={16} className="mr-1.5" /> Elutasítva
+              </Button>
+            )}
             <Button
               variant="secondary"
               onClick={() => {
@@ -202,7 +326,7 @@ export default function OfferDetailsPage() {
             <Button variant="secondary" onClick={() => setShowPreviewModal(true)}>
               <Eye size={16} className="mr-2" /> Előnézet
             </Button>
-            <Button variant="secondary" onClick={() => setShowPreviewModal(true)}>
+            <Button variant="secondary" onClick={handleDownloadPdf}>
               <Download size={16} className="mr-2" /> PDF Letöltés
             </Button>
             <Button
@@ -223,6 +347,125 @@ export default function OfferDetailsPage() {
         </div>
       )}
 
+      {/* Follow-up Tracking Banner */}
+      {isSent && (
+        <div
+          className={`p-4 rounded-xl border flex flex-wrap items-center justify-between gap-4 ${
+            isFollowUpOverdue
+              ? "bg-red-950/25 border-red-800/60 text-red-200"
+              : "bg-slate-900 border-slate-800 text-slate-200"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <Clock
+              size={20}
+              className={
+                isFollowUpOverdue ? "text-red-400 animate-pulse" : "text-amber-400"
+              }
+            />
+            <div>
+              <div className="font-semibold text-sm flex items-center gap-2">
+                <span>Ajánlat utánkövetése</span>
+                {daysSinceSent !== null && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-normal">
+                    {daysSinceSent} napja kiküldve
+                  </span>
+                )}
+                {isFollowUpOverdue && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-red-600 text-white font-bold">
+                    LEJÁRT UTÁNKÖVETÉS
+                  </span>
+                )}
+              </div>
+              <div className="text-xs text-slate-400 mt-0.5">
+                Következő utánkövetés:{" "}
+                <span className="font-semibold text-slate-200">
+                  {offer.follow_up_date
+                    ? new Date(offer.follow_up_date).toLocaleDateString("hu-HU")
+                    : "Nincs beállítva"}
+                </span>
+                {offer.follow_up_notes ? ` • Megjegyzés: ${offer.follow_up_notes}` : ""}
+              </div>
+            </div>
+          </div>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setIsUpdatingFollowUp(!isUpdatingFollowUp)}
+          >
+            {isUpdatingFollowUp ? "Bezárás" : "Utánkövetés módosítása"}
+          </Button>
+
+          {isUpdatingFollowUp && (
+            <div className="w-full pt-3 border-t border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">
+                  Új utánkövetési dátum
+                </label>
+                <input
+                  type="date"
+                  value={newFollowUpDate}
+                  onChange={(e) => setNewFollowUpDate(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-700 text-xs rounded-lg px-2.5 py-1.5 text-slate-200"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">
+                  Utánkövetési megjegyzés
+                </label>
+                <input
+                  type="text"
+                  value={newFollowUpNotes}
+                  onChange={(e) => setNewFollowUpNotes(e.target.value)}
+                  placeholder="pl. Ügyfél visszahívást kért pénteken"
+                  className="w-full bg-slate-800 border border-slate-700 text-xs rounded-lg px-2.5 py-1.5 text-slate-200"
+                />
+              </div>
+              <div className="flex items-end">
+                <Button variant="primary" size="sm" onClick={handleUpdateFollowUp}>
+                  Mentés
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Lost Reason Banner if rejected */}
+      {offer.status === "rejected" && (
+        <div className="p-4 rounded-xl bg-red-950/30 border border-red-800/50 flex items-center justify-between text-xs text-red-300">
+          <div className="flex items-center gap-2">
+            <XCircle size={16} className="text-red-400" />
+            <span>
+              Elvesztett ajánlat oka:{" "}
+              <strong>
+                {offer.lost_reason === "price"
+                  ? "Ár / Drága"
+                  : offer.lost_reason === "competitor"
+                    ? "Konkurencia nyert"
+                    : offer.lost_reason === "project_cancelled"
+                      ? "Projekt elmaradt"
+                      : offer.lost_reason === "internal_solution"
+                        ? "Belső megoldás"
+                        : offer.lost_reason === "no_response"
+                          ? "Nincs válasz"
+                          : offer.lost_reason === "timing"
+                            ? "Időzítés nem megfelelő"
+                            : offer.lost_reason === "technical_content"
+                              ? "Műszaki tartalom"
+                              : offer.lost_reason === "other"
+                                ? offer.lost_reason_custom || "Egyéb"
+                                : "Ismeretlen"}
+              </strong>
+            </span>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setShowLostModal(true)}>
+            Ok módosítása
+          </Button>
+        </div>
+      )}
+
       {importSuccess && (
         <div className="bg-green-950/30 text-green-400 p-4 rounded-lg border border-green-900/50 flex items-center gap-2">
           <CheckCircle size={16} />
@@ -237,17 +480,19 @@ export default function OfferDetailsPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="p-6 md:col-span-2">
+      {/* Main Content Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left 2 Cols: Offer Lines */}
+        <Card className="p-6 lg:col-span-2 bg-slate-900 border-slate-800">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="font-bold text-lg">Tételek</h3>
+            <h3 className="font-bold text-lg text-slate-100">Ajánlati tételek</h3>
             <Badge variant={statusVariant[offer.status]}>
               {statusLabel[offer.status]}
             </Badge>
           </div>
 
           <div className="flex flex-col gap-4">
-            {offer.lines.map((l, i) => {
+            {offer.lines.map((l: any, i: number) => {
               if ((l as any).group_id && !(l as any).is_group_parent) return null;
 
               const discountedPrice =
@@ -255,7 +500,7 @@ export default function OfferDetailsPage() {
               const isParent = (l as any).is_group_parent;
               const children = isParent
                 ? offer.lines.filter(
-                    (cl) =>
+                    (cl: any) =>
                       (cl as any).group_id === (l as any).group_id &&
                       !(cl as any).is_group_parent,
                   )
@@ -264,25 +509,32 @@ export default function OfferDetailsPage() {
               return (
                 <div
                   key={i}
-                  className="flex justify-between items-start border-b border-[#222] pb-4"
+                  className="flex justify-between items-start border-b border-slate-800 pb-4"
                 >
                   <div>
-                    <div
-                      className="font-semibold text-sm"
-                      style={{ display: "flex", alignItems: "center", gap: "8px" }}
-                    >
-                      {l.description}
+                    <div className="font-semibold text-sm text-slate-100 flex items-center gap-2">
+                      <span>{l.description}</span>
                       {l.discount_percent ? (
                         <Badge variant="success">-{l.discount_percent}%</Badge>
                       ) : null}
+                      {l.line_type && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-400 uppercase">
+                          {l.line_type === "labor"
+                            ? "Munkadíj"
+                            : l.line_type === "service"
+                              ? "Szolgáltatás"
+                              : "Termék"}
+                        </span>
+                      )}
                     </div>
                     {isParent && children.length > 0 && (
-                      <div className="text-xs text-[var(--color-accent-primary)] mt-1 break-words">
-                        {children.map((cl) => cl.description).join(", ")}
+                      <div className="text-xs text-red-400 mt-1 break-words">
+                        Csomag tartalma:{" "}
+                        {children.map((cl: any) => cl.description).join(", ")}
                       </div>
                     )}
                     {!isParent && (
-                      <div className="text-xs text-gray-400 mt-1">
+                      <div className="text-xs text-slate-400 mt-1">
                         {l.quantity} {l.unit} x {fmt(l.net_unit_price)}
                         {l.discount_percent
                           ? ` (Kedvezményes: ${fmt(discountedPrice)} / ${l.unit})`
@@ -290,7 +542,7 @@ export default function OfferDetailsPage() {
                       </div>
                     )}
                   </div>
-                  <div className="font-bold text-sm">
+                  <div className="font-bold text-sm text-slate-100">
                     {fmt(l.quantity * discountedPrice)}
                   </div>
                 </div>
@@ -298,183 +550,337 @@ export default function OfferDetailsPage() {
             })}
           </div>
 
-          <div className="mt-6 flex flex-col gap-2 text-sm border-t border-[#333] pt-4">
-            <div className="flex justify-between text-gray-400">
-              <span>Nettó összesen:</span>
+          <div className="mt-6 flex flex-col gap-2 text-sm border-t border-slate-800 pt-4">
+            <div className="flex justify-between text-slate-400">
+              <span>Nettó ajánlati érték:</span>
               <span>{fmt(totalNet)}</span>
             </div>
-            <div className="flex justify-between text-gray-400">
+            <div className="flex justify-between text-slate-400">
               <span>ÁFA:</span>
               <span>{fmt(totalVat)}</span>
             </div>
             <div className="flex justify-between font-bold text-lg mt-2">
-              <span>Bruttó összesen:</span>
-              <span className="text-red-500">{fmt(totalNet + totalVat)}</span>
+              <span className="text-slate-100">Bruttó összesen:</span>
+              <span className="text-red-500">{fmt(totalGross)}</span>
             </div>
           </div>
         </Card>
 
-        <Card className="p-6">
-          <h3 className="font-bold text-lg mb-4">Ügyfél adatok</h3>
-          <div className="text-sm flex flex-col gap-2">
-            <div>
-              <span className="text-gray-400 block text-xs uppercase mb-1">Név</span>
-              <span className="font-medium">{contact?.name || "Ismeretlen"}</span>
-            </div>
-            {contact?.email && (
+        {/* Right 1 Col: Customer & Internal Margin Financial Summary */}
+        <div className="space-y-6">
+          {/* Customer Card */}
+          <Card className="p-6 bg-slate-900 border-slate-800">
+            <h3 className="font-bold text-base text-slate-100 mb-4">Ügyfél adatok</h3>
+            <div className="text-sm flex flex-col gap-2">
               <div>
-                <span className="text-gray-400 block text-xs uppercase mb-1">E-mail</span>
-                <span>{contact.email}</span>
-              </div>
-            )}
-            {contact?.phone && (
-              <div>
-                <span className="text-gray-400 block text-xs uppercase mb-1">
-                  Telefon
+                <span className="text-slate-500 block text-xs uppercase mb-1">Név</span>
+                <span className="font-medium text-slate-200">
+                  {contact?.name || "Ismeretlen"}
                 </span>
-                <span>{contact.phone}</span>
+              </div>
+              {contact?.email && (
+                <div>
+                  <span className="text-slate-500 block text-xs uppercase mb-1">
+                    E-mail
+                  </span>
+                  <span className="text-slate-300">{contact.email}</span>
+                </div>
+              )}
+              {contact?.phone && (
+                <div>
+                  <span className="text-slate-500 block text-xs uppercase mb-1">
+                    Telefon
+                  </span>
+                  <span className="text-slate-300">{contact.phone}</span>
+                </div>
+              )}
+            </div>
+
+            {offer.notes && (
+              <div className="mt-5 pt-4 border-t border-slate-800">
+                <span className="text-slate-500 block text-xs uppercase mb-1">
+                  Megjegyzések
+                </span>
+                <p className="text-xs text-slate-300 whitespace-pre-wrap">
+                  {offer.notes}
+                </p>
               </div>
             )}
-          </div>
+          </Card>
 
-          {offer.notes && (
-            <div className="mt-6 pt-4 border-t border-[#333]">
-              <span className="text-gray-400 block text-xs uppercase mb-2">
-                Megjegyzések
+          {/* PÉNZÜGYI ÁTTEKINTÉS */}
+          <Card className="p-6 bg-slate-900 border-slate-800 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <DollarSign size={16} className="text-slate-400" />
+                <h3 className="font-bold text-sm text-slate-100 uppercase tracking-wide">
+                  Pénzügyi áttekintés
+                </h3>
+              </div>
+              <span className="text-[10px] bg-slate-800 text-slate-400 font-semibold px-2 py-0.5 rounded border border-slate-700">
+                BELSŐ
               </span>
-              <p className="text-sm whitespace-pre-wrap">{offer.notes}</p>
             </div>
-          )}
-        </Card>
+
+            {calc.has_historical_snapshot ? (
+              <div className="space-y-2.5 text-xs">
+                {/* Nettó eladási érték */}
+                <div className="flex justify-between text-slate-400">
+                  <span>Nettó eladási érték</span>
+                  <span className="font-medium text-slate-200">
+                    {fmt(calc.discounted_net_total)}
+                  </span>
+                </div>
+
+                {/* Részletezés: anyag vs munkadíj */}
+                {calc.product_revenue > 0 && (
+                  <div className="flex justify-between text-slate-500 pl-2">
+                    <span>Anyag / eszköz érték</span>
+                    <span>{fmt(calc.product_revenue)}</span>
+                  </div>
+                )}
+                {(calc.labor_revenue > 0 || calc.service_revenue > 0) && (
+                  <div className="flex justify-between text-slate-500 pl-2">
+                    <span>Munkadíj / szolgáltatás</span>
+                    <span>{fmt(calc.labor_revenue + calc.service_revenue)}</span>
+                  </div>
+                )}
+
+                {/* Beszerzési költség – semleges szín, pozitív szám */}
+                <div className="pt-2 border-t border-slate-800/60">
+                  <div className="flex justify-between text-slate-400">
+                    <span>Beszerzési költség</span>
+                    <span className="text-slate-300">
+                      {fmt(calc.direct_purchase_cost)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Elválasztó + eredmény */}
+                <div className="pt-3 border-t border-slate-800 space-y-1.5">
+                  <div className="flex justify-between items-center text-sm font-bold">
+                    <span className="text-slate-200">Beszerzés után marad</span>
+                    <span className="text-emerald-400">
+                      {fmt(calc.calculated_margin)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs font-semibold">
+                    <span className="text-slate-400">Maradó arány</span>
+                    <span className="text-emerald-400 text-sm">
+                      {calc.margin_percent}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-3 rounded-lg bg-slate-800/40 border border-slate-800 text-xs text-slate-400 italic text-center">
+                Korábbi ajánlat – nincs történeti beszerzési költség rögzítve.
+              </div>
+            )}
+          </Card>
+        </div>
       </div>
 
-      {/* Hidden PDF Container */}
-      <div
-        ref={printRef}
-        style={{
-          position: "fixed",
-          left: "-9999px",
-          top: "0px",
-          width: "210mm",
-          backgroundColor: "#ffffff",
-          color: "#000000",
-          zIndex: 99999,
-        }}
-      >
-        <UnifiedPdfTemplate
-          documentTitle="ÁRAJÁNLAT"
-          documentId={offer.offer_number}
-          date={new Date(offer.created_at)}
-          provider={provider}
-          client={contact}
-          showSignatures={false}
-        >
-          <div style={{ marginBottom: "30px" }}>
-            <h3 style={{ fontSize: "16px", marginBottom: "10px", color: "#333" }}>
-              {offer.title}
+      {/* Lost Reason Dialog Modal */}
+      {showLostModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+            onClick={() => setShowLostModal(false)}
+          />
+          <div className="relative z-50 w-full max-w-md bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-6 space-y-4">
+            <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+              <XCircle size={18} className="text-red-400" />
+              Elvesztett ajánlat rögzítése
             </h3>
-            {offer.notes && (
-              <p
+            <p className="text-xs text-slate-400">
+              Kérjük válassza ki az ajánlat elutasításának fő okát a statisztikai
+              elemzéshez:
+            </p>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="text-slate-300 font-medium block mb-1">
+                  Elutasítás oka
+                </label>
+                <select
+                  value={selectedLostReason}
+                  onChange={(e) => setSelectedLostReason(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-2"
+                >
+                  <option value="price">Ár / Drágának találták</option>
+                  <option value="competitor">Konkurencia nyert</option>
+                  <option value="project_cancelled">Projekt / beruházás elmaradt</option>
+                  <option value="internal_solution">Belső megoldást választottak</option>
+                  <option value="no_response">Nincs válasz az ügyféltől</option>
+                  <option value="timing">Időzítés nem megfelelő</option>
+                  <option value="technical_content">
+                    Műszaki tartalom nem felelt meg
+                  </option>
+                  <option value="unknown">Ismeretlen</option>
+                  <option value="other">Egyéb indok</option>
+                </select>
+              </div>
+
+              {selectedLostReason === "other" && (
+                <div>
+                  <label className="text-slate-300 font-medium block mb-1">
+                    Egyéb indok részletezése
+                  </label>
+                  <input
+                    type="text"
+                    value={customLostReason}
+                    onChange={(e) => setCustomLostReason(e.target.value)}
+                    placeholder="Indok leírása..."
+                    className="w-full bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-2"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowLostModal(false)}
+              >
+                Mégse
+              </Button>
+              <Button type="button" variant="primary" size="sm" onClick={handleMarkLost}>
+                Mentés
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden PDF Container */}
+      <div style={{ height: 0, overflow: "hidden" }}>
+        <div
+          ref={printRef}
+          style={{
+            width: "210mm",
+            backgroundColor: "#ffffff",
+            color: "#000000",
+            padding: "20px", // add some padding just in case
+          }}
+        >
+          <UnifiedPdfTemplate
+            documentTitle="ÁRAJÁNLAT"
+            documentId={offer.offer_number}
+            date={new Date(offer.created_at)}
+            provider={provider}
+            client={contact}
+            showSignatures={false}
+          >
+            <div style={{ marginBottom: "30px" }}>
+              <h3 style={{ fontSize: "16px", marginBottom: "10px", color: "#333" }}>
+                {offer.title}
+              </h3>
+              {offer.notes && (
+                <p
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    marginBottom: "20px",
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {offer.notes}
+                </p>
+              )}
+            </div>
+
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: "12px",
+                marginBottom: "30px",
+              }}
+            >
+              <thead>
+                <tr style={{ borderBottom: "2px solid #000" }}>
+                  <th style={{ textAlign: "left", padding: "8px" }}>Megnevezés</th>
+                  <th style={{ textAlign: "right", padding: "8px" }}>Mennyiség</th>
+                  <th style={{ textAlign: "right", padding: "8px" }}>Nettó egységár</th>
+                  <th style={{ textAlign: "right", padding: "8px" }}>Nettó összesen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {offer.lines.map((l: any, i: number) => {
+                  const discountedPrice =
+                    l.net_unit_price * (1 - (l.discount_percent ?? 0) / 100);
+                  return (
+                    <tr key={i} style={{ borderBottom: "1px solid #eee" }}>
+                      <td style={{ padding: "8px", fontWeight: 600 }}>
+                        {l.description}
+                        {l.discount_percent ? (
+                          <span
+                            style={{
+                              marginLeft: "6px",
+                              color: "#22c55e",
+                              fontSize: "10px",
+                            }}
+                          >
+                            (-{l.discount_percent}%)
+                          </span>
+                        ) : null}
+                      </td>
+                      <td style={{ textAlign: "right", padding: "8px" }}>
+                        {l.quantity} {l.unit}
+                      </td>
+                      <td style={{ textAlign: "right", padding: "8px" }}>
+                        {fmt(discountedPrice)}
+                      </td>
+                      <td style={{ textAlign: "right", padding: "8px" }}>
+                        {fmt(l.quantity * discountedPrice)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            <div style={{ width: "250px", marginLeft: "auto", fontSize: "12px" }}>
+              <div
                 style={{
-                  fontSize: "12px",
-                  color: "#666",
-                  marginBottom: "20px",
-                  whiteSpace: "pre-wrap",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: "4px",
                 }}
               >
-                {offer.notes}
-              </p>
-            )}
-          </div>
-
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              fontSize: "12px",
-              marginBottom: "30px",
-            }}
-          >
-            <thead>
-              <tr style={{ borderBottom: "2px solid #000" }}>
-                <th style={{ textAlign: "left", padding: "8px" }}>Megnevezés</th>
-                <th style={{ textAlign: "right", padding: "8px" }}>Mennyiség</th>
-                <th style={{ textAlign: "right", padding: "8px" }}>Nettó egységár</th>
-                <th style={{ textAlign: "right", padding: "8px" }}>Nettó összesen</th>
-              </tr>
-            </thead>
-            <tbody>
-              {offer.lines.map((l, i) => {
-                const discountedPrice =
-                  l.net_unit_price * (1 - (l.discount_percent ?? 0) / 100);
-                return (
-                  <tr key={i} style={{ borderBottom: "1px solid #eee" }}>
-                    <td style={{ padding: "8px", fontWeight: 600 }}>
-                      {l.description}
-                      {l.discount_percent ? (
-                        <span
-                          style={{
-                            marginLeft: "6px",
-                            color: "#22c55e",
-                            fontSize: "10px",
-                          }}
-                        >
-                          (-{l.discount_percent}%)
-                        </span>
-                      ) : null}
-                    </td>
-                    <td style={{ textAlign: "right", padding: "8px" }}>
-                      {l.quantity} {l.unit}
-                    </td>
-                    <td style={{ textAlign: "right", padding: "8px" }}>
-                      {fmt(discountedPrice)}
-                    </td>
-                    <td style={{ textAlign: "right", padding: "8px" }}>
-                      {fmt(l.quantity * discountedPrice)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-
-          <div style={{ width: "250px", marginLeft: "auto", fontSize: "12px" }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: "4px",
-              }}
-            >
-              <span>Nettó összesen:</span>
-              <span>{fmt(totalNet)}</span>
+                <span>Nettó összesen:</span>
+                <span>{fmt(totalNet)}</span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: "4px",
+                }}
+              >
+                <span>ÁFA:</span>
+                <span>{fmt(totalVat)}</span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontWeight: 700,
+                  fontSize: "14px",
+                  marginTop: "8px",
+                  paddingTop: "8px",
+                  borderTop: "2px solid #000",
+                }}
+              >
+                <span>Fizetendő:</span>
+                <span>{fmt(totalNet + totalVat)}</span>
+              </div>
             </div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: "4px",
-              }}
-            >
-              <span>ÁFA:</span>
-              <span>{fmt(totalVat)}</span>
-            </div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                fontWeight: 700,
-                fontSize: "14px",
-                marginTop: "8px",
-                paddingTop: "8px",
-                borderTop: "2px solid #000",
-              }}
-            >
-              <span>Fizetendő:</span>
-              <span>{fmt(totalNet + totalVat)}</span>
-            </div>
-          </div>
-        </UnifiedPdfTemplate>
+          </UnifiedPdfTemplate>
+        </div>
       </div>
 
       {/* PDF Előnézet Modal */}
@@ -699,7 +1105,7 @@ export default function OfferDetailsPage() {
                 }}
               >
                 <option value="">-- Válassz projektet --</option>
-                {projects.map((p) => (
+                {projects.map((p: any) => (
                   <option key={p._id} value={p._id}>
                     {p.project_number} – {p.name}
                   </option>

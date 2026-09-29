@@ -8,6 +8,7 @@ export interface TopbarProps {
   locale?: string;
   onLocaleChange?: (locale: string) => void;
   notificationCount?: number;
+  onNotificationClick?: () => void;
   userInitials?: string;
   userMenuItems?: { label: string; onClick: () => void }[];
   /** Mobile hamburger */
@@ -19,6 +20,7 @@ export function Topbar({
   locale = "hu",
   onLocaleChange,
   notificationCount = 0,
+  onNotificationClick,
   userInitials = "U",
   userMenuItems = [],
   onMenuToggle,
@@ -143,6 +145,7 @@ export function Topbar({
 
           {/* Notification bell */}
           <button
+            onClick={onNotificationClick}
             style={{
               position: "relative",
               width: "36px",
@@ -175,14 +178,23 @@ export function Topbar({
               <span
                 style={{
                   position: "absolute",
-                  top: "4px",
-                  right: "4px",
-                  width: "8px",
-                  height: "8px",
+                  top: "-4px",
+                  right: "-4px",
+                  minWidth: "16px",
+                  height: "16px",
+                  padding: "0 4px",
                   background: colors.accent.primary,
-                  borderRadius: "50%",
+                  color: "#fff",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  borderRadius: "10px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
-              />
+              >
+                {notificationCount > 99 ? "99+" : notificationCount}
+              </span>
             )}
           </button>
 

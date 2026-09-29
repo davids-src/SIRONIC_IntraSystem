@@ -15,8 +15,8 @@ import {
   SelectValue,
   ContactSelect,
 } from "@crm/ui";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
 import { Save, Plus, Trash2, GripVertical } from "lucide-react";
 import type { Contact, PriceListItem } from "@crm/types";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
@@ -27,8 +27,12 @@ type CrmUserRow = {
   email: string;
 };
 
-export default function NewProjectPage() {
+function NewProjectContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const offerIdParam = searchParams.get("offer_id");
+  const contactIdParam = searchParams.get("contact_id");
+  const [offerId, setOfferId] = useState<string | null>(offerIdParam);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [users, setUsers] = useState<CrmUserRow[]>([]);
   const [loadErr, setLoadErr] = useState<string | null>(null);
@@ -85,6 +89,49 @@ export default function NewProjectPage() {
         setContacts(parsed);
         setUsers(uRows);
         setPriceList(pRows.filter((p) => p.is_active && p.type === "product"));
+
+        if (contactIdParam) {
+          setContactId(contactIdParam);
+        }
+
+        if (offerIdParam) {
+          try {
+            const off = await apiJson<any>(`/api/offers/${offerIdParam}`, {
+              signal: ac.signal,
+            });
+            if (off) {
+              setOfferId(off._id);
+              if (off.contact_id) setContactId(off.contact_id);
+              setProjectName(off.title || `Projekt - ${off.offer_number}`);
+              setDescription(
+                off.notes
+                  ? `${off.notes}\n\n(Ajánlat: ${off.offer_number})`
+                  : `Ajánlat: ${off.offer_number}`,
+              );
+
+              const laborHours = (off.lines || [])
+                .filter((l: any) => l.unit === "óra" || l.type === "service")
+                .reduce((sum: number, l: any) => sum + (l.quantity || 0), 0);
+              if (laborHours > 0) setBudgetHours(String(laborHours));
+
+              const items = (off.lines || [])
+                .filter(
+                  (l: any) => l.price_list_item_id && l.price_list_item_id !== "null",
+                )
+                .map((l: any) => ({
+                  price_list_item_id: l.price_list_item_id,
+                  name: l.item_name || l.description || "Tétel",
+                  unit: l.unit || "db",
+                  required_quantity: l.quantity || 1,
+                }));
+              if (items.length > 0) {
+                setRequiredItems(items);
+              }
+            }
+          } catch {
+            /* non-fatal */
+          }
+        }
       } catch {
         if (!ac.signal.aborted) {
           setLoadErr(
@@ -94,7 +141,7 @@ export default function NewProjectPage() {
       }
     })();
     return () => ac.abort();
-  }, []);
+  }, [contactIdParam, offerIdParam]);
 
   const applyTypePresets = (val: string) => {
     setProjectType(val);
@@ -179,8 +226,20 @@ export default function NewProjectPage() {
         phases: phasesPayload,
         checklist: checklistPayload,
         required_items: requiredItems,
+        offer_id: offerId || null,
       };
       const created = await apiJsonBody<{ _id: string }>("/api/projects", "POST", body);
+      if (offerId) {
+        try {
+          await fetch(`/api/offers/${offerId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "accepted" }),
+          });
+        } catch {
+          /* non-fatal */
+        }
+      }
       router.push(`/projects/${created._id}`);
     } catch (err) {
       setLoadErr(err instanceof ApiError ? err.message : "Mentés sikertelen.");
@@ -657,5 +716,13 @@ export default function NewProjectPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function NewProjectPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-slate-400">Betöltés...</div>}>
+      <NewProjectContent />
+    </Suspense>
   );
 }

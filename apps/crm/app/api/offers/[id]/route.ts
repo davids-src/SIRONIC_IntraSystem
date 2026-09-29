@@ -34,13 +34,34 @@ const patchSchema = z.object({
   is_archived: z.boolean().optional(),
   archived_at: z.coerce.date().nullable().optional(),
   archive_reason: z.string().nullable().optional(),
+  follow_up_date: z.coerce.date().nullable().optional(),
+  follow_up_notes: z.string().nullable().optional(),
+  sent_at: z.coerce.date().nullable().optional(),
+  lost_reason: z
+    .enum([
+      "price",
+      "competitor",
+      "project_cancelled",
+      "internal_solution",
+      "no_response",
+      "timing",
+      "technical_content",
+      "unknown",
+      "other",
+    ])
+    .nullable()
+    .optional(),
+  lost_reason_custom: z.string().nullable().optional(),
+  next_action: z.string().nullable().optional(),
+  next_action_at: z.coerce.date().nullable().optional(),
+  next_action_assigned_to: z.string().nullable().optional(),
+  business_unit: z.string().nullable().optional(),
 });
 
 // Az árlista-tartalmat (cím, tételsorok, stb.) csak piszkozat (draft)
 // állapotban lehet módosítani – kiküldés után az ajánlat tartalma zárolt,
-// lásd SIRONIC_SYSTEM_MANUAL.md. Az archiválás és a státusz-váltás (pl.
-// portál elfogadás/elutasítás, admin visszavonás) ettől függetlenül mindig
-// engedélyezett.
+// lásd SIRONIC_SYSTEM_MANUAL.md. Az archiválás, az utánkövetés és a státusz-váltás
+// ettől függetlenül mindig engedélyezett.
 const CONTENT_ONLY_FIELDS = [
   "title",
   "contact_id",
@@ -53,7 +74,7 @@ const CONTENT_ONLY_FIELDS = [
 export async function PATCH(req: Request, ctx: RouteCtx) {
   try {
     const { id } = await ctx.params;
-    const { actor } = await requireCrmAuth();
+    const { actor, session } = await requireCrmAuth();
     guard(actor, { module: "offer", action: "write", scope: "global" });
     const json: unknown = await req.json();
     const parsed = patchSchema.safeParse(json);
@@ -84,6 +105,25 @@ export async function PATCH(req: Request, ctx: RouteCtx) {
         }).lean();
         if (!contact) {
           return NextResponse.json({ error: "Contact not found" }, { status: 404 });
+        }
+      }
+
+      // If status transitioning to "sent", automatically set sent_at and default follow-up (+3 work days)
+      if (patch.status === "sent" && (existing as any).status !== "sent") {
+        if (!patch.sent_at) {
+          patch.sent_at = new Date();
+        }
+        if (!patch.follow_up_date && !(existing as any).follow_up_date) {
+          const followUp = new Date();
+          let addedDays = 0;
+          while (addedDays < 3) {
+            followUp.setDate(followUp.getDate() + 1);
+            // skip Saturday (6) and Sunday (0)
+            if (followUp.getDay() !== 0 && followUp.getDay() !== 6) {
+              addedDays++;
+            }
+          }
+          patch.follow_up_date = followUp;
         }
       }
 

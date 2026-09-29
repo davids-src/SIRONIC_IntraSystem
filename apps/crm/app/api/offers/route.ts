@@ -19,6 +19,12 @@ const createSchema = z.object({
   valid_until: z.coerce.date().nullable().optional(),
   lines: z.array(offerLineSchema).optional(),
   notes: z.string().nullable().optional(),
+  follow_up_date: z.coerce.date().nullable().optional(),
+  follow_up_notes: z.string().nullable().optional(),
+  next_action: z.string().nullable().optional(),
+  next_action_at: z.coerce.date().nullable().optional(),
+  next_action_assigned_to: z.string().nullable().optional(),
+  business_unit: z.string().nullable().optional(),
 });
 
 export async function GET(req: Request) {
@@ -73,16 +79,15 @@ export async function POST(req: Request) {
       price_snapshot: l.price_snapshot ?? null,
       is_group_parent: l.is_group_parent ?? false,
       group_id: l.group_id ?? null,
+      purchase_unit_price_snapshot: l.purchase_unit_price_snapshot ?? null,
+      purchase_price_source: l.purchase_price_source ?? null,
+      internal_cost_unit_price: l.internal_cost_unit_price ?? null,
+      line_type: l.line_type ?? "product",
     }));
+
     const totalFromLines = lines.length > 0 ? grossTotalFromLines(lines) : null;
     const total_amount =
       totalFromLines !== null ? Math.round(totalFromLines) : (b.total_amount ?? 0);
-    if (!total_amount || total_amount <= 0) {
-      return NextResponse.json(
-        { error: "total_amount required when lines empty" },
-        { status: 400 },
-      );
-    }
 
     return await withDb(async () => {
       const contact = await ContactModel.findOne({
@@ -110,6 +115,12 @@ export async function POST(req: Request) {
         created_by: actor.actorId,
         lines,
         notes: b.notes ?? null,
+        follow_up_date: b.follow_up_date ?? null,
+        follow_up_notes: b.follow_up_notes ?? null,
+        next_action: b.next_action ?? null,
+        next_action_at: b.next_action_at ?? null,
+        next_action_assigned_to: b.next_action_assigned_to ?? null,
+        business_unit: b.business_unit ?? null,
       });
       return NextResponse.json(serializeForJson(doc.toObject()), { status: 201 });
     });

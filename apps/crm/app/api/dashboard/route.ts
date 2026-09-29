@@ -8,6 +8,8 @@ import {
   TicketModel,
   WorklogModel,
   WarrantyCardModel,
+  LeadModel,
+  OfferModel,
   serializeForJson,
 } from "@crm/db";
 import { guard, handleApiError, requireCrmAuth, withDb } from "@/lib/api-helpers";
@@ -83,6 +85,12 @@ export async function GET() {
         // Heti aktivitás alapadatok
         ticketsLast7,
         worklogsLast7,
+        // Sales & Next Actions
+        openLeadsCount,
+        sentOffersCount,
+        leadsWithNextAction,
+        offersWithFollowup,
+        projectsWithNextAction,
       ] = await Promise.all([
         TicketModel.countDocuments({
           tenantId,
@@ -95,14 +103,14 @@ export async function GET() {
         }),
         ContractModel.countDocuments({ tenantId, status: "sent" }),
         CompletionCertificateModel.countDocuments({ tenantId, status: "sent" }),
-        // ÚJ: Nyitott (nem lezárt) munkalapok
+        // Nyitott munkalapok
         WorklogModel.countDocuments({
           tenantId,
           status: { $nin: ["finalized", "cancelled"] },
         }),
-        // ÚJ: Lejárt (overdue) számlák
+        // Lejárt számlák
         InvoiceModel.countDocuments({ tenantId, status: "overdue" }),
-        // ÚJ: Lejáró garancia kártyák (30 napon belül)
+        // Lejáró garancia kártyák
         WarrantyCardModel.countDocuments({
           tenantId,
           status: "active",
@@ -138,6 +146,35 @@ export async function GET() {
           .lean(),
         WorklogModel.find({ tenantId, updated_at: { $gte: last7d } })
           .select("updated_at")
+          .lean(),
+        // Sales & Next Actions
+        LeadModel.countDocuments({
+          tenantId,
+          status: { $nin: ["won", "lost", "not_relevant"] },
+        }),
+        OfferModel.countDocuments({ tenantId, status: "sent" }),
+        LeadModel.find({
+          tenantId,
+          next_action: { $ne: null },
+          status: { $nin: ["won", "lost", "not_relevant"] },
+        })
+          .sort({ next_action_at: 1 })
+          .limit(10)
+          .lean(),
+        OfferModel.find({
+          tenantId,
+          status: "sent",
+        })
+          .sort({ follow_up_date: 1 })
+          .limit(10)
+          .lean(),
+        ProjectModel.find({
+          tenantId,
+          next_action: { $ne: null },
+          status: { $in: ["open", "on_hold"] },
+        })
+          .sort({ next_action_at: 1 })
+          .limit(10)
           .lean(),
       ]);
 
@@ -288,12 +325,70 @@ export async function GET() {
         });
       }
 
-      // Heti aktivitás heatmap
       const allDates = [
-        ...ticketsLast7.map((t) => new Date(t.updated_at as Date)),
-        ...worklogsLast7.map((w) => new Date(w.updated_at as Date)),
+        ...ticketsLast7.map((t: any) => new Date(t.updated_at as Date)),
+        ...worklogsLast7.map((w: any) => new Date(w.updated_at as Date)),
       ];
       const weeklyActivity = buildWeeklyActivity(allDates);
+
+      // Mai és lejáró teendők (Next Actions)
+      const todayNextActions: {
+        id: string;
+        kind: "lead" | "offer" | "project";
+        title: string;
+        action: string;
+        date: string;
+        isOverdue: boolean;
+        assignedTo?: string | null;
+        href: string;
+      }[] = [];
+
+      for (const l of leadsWithNextAction) {
+        if (!l.next_action) continue;
+        const due = l.next_action_at ? new Date(l.next_action_at as Date) : null;
+        const isOverdue = due ? due.getTime() < nowMs : false;
+        todayNextActions.push({
+          id: `lead-${l._id}`,
+          kind: "lead",
+          title: l.company_name,
+          action: l.next_action,
+          date: due ? fmtHuDate(due) : "—",
+          isOverdue,
+          assignedTo: l.assigned_user,
+          href: `/leads`,
+        });
+      }
+
+      for (const o of offersWithFollowup) {
+        const due = o.follow_up_date ? new Date(o.follow_up_date as Date) : null;
+        const isOverdue = due ? due.getTime() < nowMs : false;
+        todayNextActions.push({
+          id: `offer-${o._id}`,
+          kind: "offer",
+          title: `Ajánlat ${o.offer_number} (${contactName.get(o.contact_id) ?? "Ügyfél"})`,
+          action: o.next_action || "Kiküldött ajánlat utánkövetése",
+          date: due ? fmtHuDate(due) : "—",
+          isOverdue,
+          assignedTo: null,
+          href: `/offers/${o._id}`,
+        });
+      }
+
+      for (const p of projectsWithNextAction) {
+        if (!p.next_action) continue;
+        const due = p.next_action_at ? new Date(p.next_action_at as Date) : null;
+        const isOverdue = due ? due.getTime() < nowMs : false;
+        todayNextActions.push({
+          id: `proj-${p._id}`,
+          kind: "project",
+          title: `Projekt: ${p.name}`,
+          action: p.next_action,
+          date: due ? fmtHuDate(due) : "—",
+          isOverdue,
+          assignedTo: p.assigned_to,
+          href: `/projects/${p._id}`,
+        });
+      }
 
       const payload = {
         stats: {
@@ -301,13 +396,15 @@ export async function GET() {
           activeProjects: projectsActive,
           invoicesAwaiting: invoicesDue,
           pendingSignatures: contractsSent + certsSent,
-          // ÚJ statisztikák
           openWorklogs: worklogsOpen,
           overdueInvoices: invoicesOverdue,
           warrantiesExpiringSoon: warrantiesExpiringCount,
+          openLeads: openLeadsCount,
+          sentOffers: sentOffersCount,
         },
         recentActivity,
         upcomingDeadlines,
+        todayNextActions,
         pendingSignatures: signatureQueue.slice(0, 12),
         weeklyActivity,
       };

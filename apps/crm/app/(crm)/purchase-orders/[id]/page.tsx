@@ -409,131 +409,130 @@ export default function PurchaseOrderDetailPage() {
       </div>
 
       {/* Rejtett PDF */}
-      <div
-        ref={printRef}
-        style={{
-          position: "fixed",
-          left: "-9999px",
-          top: "0px",
-          width: "210mm",
-          backgroundColor: "#ffffff",
-          color: "#000000",
-          zIndex: 99999,
-        }}
-      >
-        <UnifiedPdfTemplate
-          documentTitle="MEGRENDELŐLAP"
-          documentId={order.order_number}
-          date={new Date(order.created_at)}
-          provider={provider}
-          client={supplierAsClient}
-          showSignatures={true}
+      <div style={{ height: 0, overflow: "hidden" }}>
+        <div
+          ref={printRef}
+          style={{
+            width: "210mm",
+            backgroundColor: "#ffffff",
+            color: "#000000",
+            padding: "20px",
+          }}
         >
-          {/* Szállítási határidő */}
-          {order.expected_delivery_date && (
-            <div
-              style={{
-                marginBottom: "20px",
-                padding: "12px 16px",
-                background: "#f0f7ff",
-                borderRadius: "6px",
-                borderLeft: "4px solid #3b82f6",
-              }}
-            >
-              <strong style={{ fontSize: "12px" }}>Várható szállítási határidő:</strong>{" "}
-              <span style={{ fontSize: "13px" }}>
-                {new Date(order.expected_delivery_date).toLocaleDateString("hu-HU")}
-              </span>
-            </div>
-          )}
-
-          {/* Tételek */}
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              fontSize: "12px",
-              marginBottom: "30px",
-            }}
+          <UnifiedPdfTemplate
+            documentTitle="MEGRENDELŐLAP"
+            documentId={order.order_number}
+            date={new Date(order.created_at)}
+            provider={provider}
+            client={supplierAsClient}
+            showSignatures={true}
           >
-            <thead>
-              <tr style={{ borderBottom: "2px solid #000" }}>
-                <th style={{ padding: "8px", textAlign: "left" }}>Megnevezés</th>
-                <th style={{ padding: "8px", textAlign: "center" }}>Menny.</th>
-                <th style={{ padding: "8px", textAlign: "center" }}>Egység</th>
-                <th style={{ padding: "8px", textAlign: "right" }}>Nettó egységár</th>
-                <th style={{ padding: "8px", textAlign: "right" }}>Nettó összesen</th>
-              </tr>
-            </thead>
-            <tbody>
-              {order.lines.map((l, i) => (
-                <tr key={i} style={{ borderBottom: "1px solid #eee" }}>
-                  <td style={{ padding: "8px", fontWeight: 600 }}>{l.description}</td>
-                  <td style={{ padding: "8px", textAlign: "center" }}>{l.quantity}</td>
-                  <td style={{ padding: "8px", textAlign: "center" }}>{l.unit}</td>
-                  <td style={{ padding: "8px", textAlign: "right" }}>
-                    {fmt(l.net_unit_price)}
-                  </td>
-                  <td style={{ padding: "8px", textAlign: "right" }}>
-                    {fmt(l.net_unit_price * l.quantity)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            {/* Szállítási határidő */}
+            {order.expected_delivery_date && (
+              <div
+                style={{
+                  marginBottom: "20px",
+                  padding: "12px 16px",
+                  background: "#f0f7ff",
+                  borderRadius: "6px",
+                  borderLeft: "4px solid #3b82f6",
+                }}
+              >
+                <strong style={{ fontSize: "12px" }}>Várható szállítási határidő:</strong>{" "}
+                <span style={{ fontSize: "13px" }}>
+                  {new Date(order.expected_delivery_date).toLocaleDateString("hu-HU")}
+                </span>
+              </div>
+            )}
 
-          {/* Összesen */}
-          <div style={{ width: "260px", marginLeft: "auto", fontSize: "12px" }}>
-            <div
+            {/* Tételek */}
+            <table
               style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: "4px",
-              }}
-            >
-              <span>Nettó összesen:</span>
-              <span>{fmt(totalNet)}</span>
-            </div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: "4px",
-              }}
-            >
-              <span>ÁFA:</span>
-              <span>{fmt(totalVat)}</span>
-            </div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                fontWeight: 700,
-                fontSize: "14px",
-                borderTop: "2px solid #000",
-                paddingTop: "8px",
-                marginTop: "8px",
-              }}
-            >
-              <span>Fizetendő bruttó:</span>
-              <span>{fmt(order.total_amount)}</span>
-            </div>
-          </div>
-
-          {order.notes && (
-            <div
-              style={{
-                marginTop: "30px",
-                padding: "12px",
-                background: "#f8f9fa",
-                borderRadius: "6px",
+                width: "100%",
+                borderCollapse: "collapse",
                 fontSize: "12px",
+                marginBottom: "30px",
               }}
             >
-              <strong>Megjegyzés:</strong> {order.notes}
+              <thead>
+                <tr style={{ borderBottom: "2px solid #000" }}>
+                  <th style={{ padding: "8px", textAlign: "left" }}>Megnevezés</th>
+                  <th style={{ padding: "8px", textAlign: "center" }}>Menny.</th>
+                  <th style={{ padding: "8px", textAlign: "center" }}>Egység</th>
+                  <th style={{ padding: "8px", textAlign: "right" }}>Nettó egységár</th>
+                  <th style={{ padding: "8px", textAlign: "right" }}>Nettó összesen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {order.lines.map((l, i) => (
+                  <tr key={i} style={{ borderBottom: "1px solid #eee" }}>
+                    <td style={{ padding: "8px", fontWeight: 600 }}>{l.description}</td>
+                    <td style={{ padding: "8px", textAlign: "center" }}>{l.quantity}</td>
+                    <td style={{ padding: "8px", textAlign: "center" }}>{l.unit}</td>
+                    <td style={{ padding: "8px", textAlign: "right" }}>
+                      {fmt(l.net_unit_price)}
+                    </td>
+                    <td style={{ padding: "8px", textAlign: "right" }}>
+                      {fmt(l.net_unit_price * l.quantity)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Összesen */}
+            <div style={{ width: "260px", marginLeft: "auto", fontSize: "12px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: "4px",
+                }}
+              >
+                <span>Nettó összesen:</span>
+                <span>{fmt(totalNet)}</span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: "4px",
+                }}
+              >
+                <span>ÁFA:</span>
+                <span>{fmt(totalVat)}</span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontWeight: 700,
+                  fontSize: "14px",
+                  borderTop: "2px solid #000",
+                  paddingTop: "8px",
+                  marginTop: "8px",
+                }}
+              >
+                <span>Fizetendő bruttó:</span>
+                <span>{fmt(order.total_amount)}</span>
+              </div>
             </div>
-          )}
-        </UnifiedPdfTemplate>
+
+            {order.notes && (
+              <div
+                style={{
+                  marginTop: "30px",
+                  padding: "12px",
+                  background: "#f8f9fa",
+                  borderRadius: "6px",
+                  fontSize: "12px",
+                }}
+              >
+                <strong>Megjegyzés:</strong> {order.notes}
+              </div>
+            )}
+          </UnifiedPdfTemplate>
+        </div>
       </div>
 
       {/* PDF Előnézet Modal */}

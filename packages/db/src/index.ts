@@ -50,4 +50,11 @@ export {
   StackTemplateModel,
   IntegrationConnectionModel,
   PartnerDeploymentAccessModel,
+  // SIROTECH ERP & Sales additions
+  LeadModel,
+  NotificationModel,
+  NotificationPreferenceModel,
+  DeliveryLogModel,
+  AuditLogModel,
+  DocumentRecordModel,
 } from "./models";

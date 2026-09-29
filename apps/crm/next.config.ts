@@ -12,6 +12,7 @@ loadEnvConfig(__dirname);
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   outputFileTracing: false,
+  outputFileTracingRoot: repoRoot,
   transpilePackages: [
     "@crm/ui",
     "@crm/types",
@@ -19,6 +20,7 @@ const nextConfig: NextConfig = {
     "@crm/modules",
     "@crm/auth",
     "@crm/db",
+    "@crm/lib",
   ],
   serverExternalPackages: ["mongoose", "mongodb"],
 };

@@ -49,7 +49,13 @@ export type PermissionModule =
   | "deployment"
   | "deployment_billing"
   | "integration"
-  | "partner_team";
+  | "partner_team"
+  // SIROTECH ERP additions
+  | "lead"
+  | "audit_log"
+  | "sales_dashboard"
+  | "financial_margin"
+  | "document";
 
 /** CRM app login roles only (subset of RoleKey). */
 export type CrmRoleKey = "crm.admin" | "crm.staff";
@@ -68,6 +74,8 @@ export interface CrmUser {
   email: string;
   display_name: string | null;
   roleKeys: CrmRoleKey[];
+  internal_hourly_cost?: number | null;
+  billable_hourly_rate?: number | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -85,6 +93,17 @@ export interface PortalUser {
 }
 
 export type OfferStatus = "draft" | "ready" | "sent" | "accepted" | "rejected";
+
+export type OfferLostReason =
+  | "price"
+  | "competitor"
+  | "project_cancelled"
+  | "internal_solution"
+  | "no_response"
+  | "timing"
+  | "technical_content"
+  | "unknown"
+  | "other";
 
 /** Lefagyasztott ár snapshot – létrehozáskor rögzítve, nem változik */
 export interface PriceSnapshot {
@@ -113,6 +132,11 @@ export interface OfferLine {
   is_group_parent?: boolean;
   /** Csoport (csomag) azonosítója. A szülő és a gyerekek is megkapják, ami összeköti őket. */
   group_id?: string | null;
+  /** Belső költség és fedezet számítási snapshot mezők */
+  purchase_unit_price_snapshot?: number | null;
+  purchase_price_source?: "price_list" | "service_price_list" | "manual" | null;
+  internal_cost_unit_price?: number | null;
+  line_type?: "product" | "service" | "labor" | "other";
 }
 
 export interface Offer {
@@ -132,6 +156,15 @@ export interface Offer {
   is_archived?: boolean;
   archived_at?: Date | null;
   archive_reason?: string | null;
+  follow_up_date?: Date | string | null;
+  follow_up_notes?: string | null;
+  sent_at?: Date | string | null;
+  lost_reason?: OfferLostReason | null;
+  lost_reason_custom?: string | null;
+  next_action?: string | null;
+  next_action_at?: Date | string | null;
+  next_action_assigned_to?: string | null;
+  business_unit?: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -677,6 +710,7 @@ export interface Project {
   project_number: string;
   tenantId: string;
   contact_id: string | null;
+  offer_id?: string | null;
   created_by: string;
   assigned_to: string | null;
   contract_type: ProjectContractType;
@@ -780,15 +814,24 @@ export interface Contact {
 }
 
 export interface CompanyDetails {
-  name: string | null;
-  headquarters: string | null;
-  tax_number: string | null;
-  registration_number: string | null;
-  email: string | null;
-  phone: string | null;
-  bank_account: string | null;
-  iban: string | null;
-  website: string | null;
+  name?: string | null;
+  legal_name?: string | null;
+  display_brand?: string | null;
+  logo_url?: string | null;
+  primary_color?: string | null;
+  accent_color?: string | null;
+  headquarters?: string | null;
+  tax_number?: string | null;
+  registration_number?: string | null;
+  bank_account?: string | null;
+  iban?: string | null;
+  website?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  email_from_name?: string | null;
+  email_from_address?: string | null;
+  email_reply_to?: string | null;
+  business_units?: string[];
 }
 
 export interface ItemCategory {
@@ -1571,4 +1614,150 @@ export interface PreflightResult {
   documentType: string;
   /** A forrás dokumentum azonosítója */
   documentId: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SIROTECH ERP – SALES PIPELINE, LEADS, NOTIFICATIONS, AUDIT & DOCUMENTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type LeadStatus =
+  | "target"
+  | "contacted"
+  | "replied"
+  | "meeting"
+  | "quotation_needed"
+  | "quotation_sent"
+  | "follow_up"
+  | "negotiation"
+  | "won"
+  | "lost"
+  | "no_response"
+  | "later"
+  | "not_relevant";
+
+export type LeadActivityType =
+  "call" | "email" | "meeting" | "note" | "status_change" | "offer_created" | "follow_up";
+
+export interface LeadActivity {
+  _id?: string;
+  type: LeadActivityType;
+  timestamp: Date | string;
+  user_id: string;
+  user_name: string;
+  text: string;
+  entity_type?: string | null;
+  entity_id?: string | null;
+}
+
+export interface Lead {
+  _id: string;
+  tenantId: string;
+  lead_number: string;
+  company_name: string;
+  contact_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  source?: string | null;
+  category?: string | null;
+  industry?: string | null;
+  assigned_to?: string | null;
+  assigned_user_name?: string | null;
+  estimated_value?: number | null;
+  status: LeadStatus;
+  next_action?: string | null;
+  next_action_at?: Date | string | null;
+  next_action_assigned_to?: string | null;
+  notes?: string | null;
+  contact_id?: string | null;
+  offer_id?: string | null;
+  business_unit?: string | null;
+  lost_reason?: string | null;
+  lost_reason_custom?: string | null;
+  activities?: LeadActivity[];
+  created_at: Date;
+  updated_at: Date;
+}
+
+export type NotificationChannel = "in_app" | "email";
+
+export type NotificationEventType =
+  | "offer.sent"
+  | "offer.accepted"
+  | "offer.rejected"
+  | "offer.followup_due"
+  | "project.created"
+  | "project.deadline_soon"
+  | "invoice.overdue"
+  | "warranty.expiring"
+  | "ticket.created"
+  | "worklog.created"
+  | "lead.created"
+  | "lead.status_change"
+  | "system.alert";
+
+export interface NotificationItem {
+  _id: string;
+  tenantId: string;
+  user_id: string;
+  type: NotificationEventType | string;
+  title: string;
+  message: string;
+  entity_type?: string | null;
+  entity_id?: string | null;
+  href?: string | null;
+  read: boolean;
+  created_at: Date;
+}
+
+export interface NotificationPreference {
+  _id?: string;
+  tenantId: string;
+  user_id: string;
+  event_type: NotificationEventType | string;
+  channel: NotificationChannel;
+  enabled: boolean;
+}
+
+export interface DeliveryLog {
+  _id: string;
+  tenantId: string;
+  channel: "email" | "in_app";
+  recipient: string;
+  event: string;
+  subject: string;
+  status: "sent" | "failed" | "pending";
+  sent_at: Date;
+  error?: string | null;
+  retry_count?: number;
+  entity_type?: string | null;
+  entity_id?: string | null;
+}
+
+export interface AuditLog {
+  _id: string;
+  tenantId: string;
+  user_id: string;
+  user_name: string;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  timestamp: Date;
+  summary: string;
+  changes?: Record<string, { before: unknown; after: unknown }> | null;
+}
+
+export interface DocumentRecord {
+  _id: string;
+  tenantId: string;
+  name: string;
+  document_type: string;
+  file_url: string;
+  file_size?: number | null;
+  mime_type?: string | null;
+  entity_type?: "partner" | "project" | "offer" | "contract" | "other" | null;
+  entity_id?: string | null;
+  created_by: string;
+  created_at: Date;
+  updated_at: Date;
 }

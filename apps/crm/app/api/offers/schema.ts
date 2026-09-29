@@ -25,6 +25,16 @@ export const offerLineSchema = z.object({
   price_snapshot: priceSnapshotZodSchema.nullable().optional(),
   is_group_parent: z.boolean().optional(),
   group_id: z.string().nullable().optional(),
+  purchase_unit_price_snapshot: z.number().nullable().optional(),
+  purchase_price_source: z
+    .enum(["price_list", "service_price_list", "manual"])
+    .nullable()
+    .optional(),
+  internal_cost_unit_price: z.number().nullable().optional(),
+  line_type: z
+    .enum(["product", "service", "labor", "other"])
+    .optional()
+    .default("product"),
 });
 
 export function grossTotalFromLines(

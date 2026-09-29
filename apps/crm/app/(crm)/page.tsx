@@ -42,7 +42,19 @@ type DashboardPayload = {
     openWorklogs: number;
     overdueInvoices: number;
     warrantiesExpiringSoon: number;
+    openLeads?: number;
+    sentOffers?: number;
   };
+  todayNextActions?: {
+    id: string;
+    kind: "lead" | "offer" | "project";
+    title: string;
+    action: string;
+    date: string;
+    isOverdue: boolean;
+    assignedTo?: string | null;
+    href: string;
+  }[];
   recentActivity: {
     id: string;
     kind: ActivityKind;
@@ -372,6 +384,64 @@ export default function CrmDashboardPage() {
               </span>
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* ── Mai teendők / Next Actions ── */}
+      <div className="rounded-xl border border-red-500/30 bg-card p-5 flex flex-col gap-4">
+        <div className="flex items-center justify-between pb-2 border-b border-border">
+          <div className="flex items-center gap-2">
+            <CalendarCheck size={18} className="text-red-500" />
+            <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">
+              Mai teendők & Következő lépések (Next Actions)
+            </h2>
+          </div>
+          <span className="text-xs text-muted-foreground">
+            {data?.todayNextActions?.length ?? 0} aktív teendő
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {(data?.todayNextActions ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground col-span-full py-2">
+              Nincs mára esedékes vagy lejárt teendő.
+            </p>
+          ) : (
+            (data?.todayNextActions ?? []).map((action) => (
+              <button
+                key={action.id}
+                onClick={() => router.push(action.href)}
+                className={`p-3 rounded-lg border text-left flex flex-col gap-1.5 transition-all hover:border-red-500/50 ${
+                  action.isOverdue
+                    ? "bg-destructive/10 border-destructive/40"
+                    : "bg-muted/40 border-border"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-foreground truncate">
+                    {action.title}
+                  </span>
+                  <span
+                    className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                      action.isOverdue
+                        ? "bg-destructive/20 text-destructive"
+                        : "bg-blue-500/20 text-blue-400"
+                    }`}
+                  >
+                    {action.isOverdue ? "Lejárt" : action.date}
+                  </span>
+                </div>
+                <p className="text-xs text-foreground/90 font-medium line-clamp-2">
+                  {action.action}
+                </p>
+                {action.assignedTo && (
+                  <span className="text-[10px] text-muted-foreground">
+                    Felelős: {action.assignedTo}
+                  </span>
+                )}
+              </button>
+            ))
+          )}
         </div>
       </div>
 

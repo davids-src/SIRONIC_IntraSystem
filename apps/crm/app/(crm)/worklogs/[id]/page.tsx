@@ -1379,300 +1379,304 @@ function WorklogFormContent({ id }: { id: string }) {
       </form>
 
       {/* Rejtett PDF sablon */}
-      <div
-        ref={printRef}
-        style={{
-          position: "fixed",
-          left: "-9999px",
-          top: "0px",
-          width: "210mm",
-          backgroundColor: "#ffffff",
-          color: "#000000",
-          zIndex: 99999,
-        }}
-      >
-        <UnifiedPdfTemplate
-          documentTitle="Munkalap"
-          documentId={worklogNumber || id}
-          date={workDate ? new Date(workDate) : new Date()}
-          provider={companyDetails}
-          client={pdfClient}
+      <div style={{ height: 0, overflow: "hidden" }}>
+        <div
+          ref={printRef}
+          style={{
+            width: "210mm",
+            backgroundColor: "#ffffff",
+            color: "#000000",
+            padding: "20px",
+          }}
         >
-          {/* Munkalap alapadatok kártya */}
-          <div
-            style={{
-              marginBottom: "20px",
-              padding: "14px 16px",
-              backgroundColor: "#f8fafc",
-              border: "1px solid #e2e8f0",
-              borderRadius: "8px",
-              fontSize: "12px",
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "12px 24px",
-            }}
+          <UnifiedPdfTemplate
+            documentTitle="Munkalap"
+            documentId={worklogNumber || id}
+            date={workDate ? new Date(workDate) : new Date()}
+            provider={companyDetails}
+            client={pdfClient}
           >
-            <div>
-              <span
-                style={{
-                  color: "#64748b",
-                  fontSize: "10px",
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  display: "block",
-                  marginBottom: "2px",
-                }}
-              >
-                Munkavégzés Helyszíne (Cím)
-              </span>
-              <span style={{ fontWeight: 700, color: "#0f172a", fontSize: "13px" }}>
-                {pdfClient.address
-                  ? typeof pdfClient.address === "string"
-                    ? pdfClient.address
-                    : `${pdfClient.address.street || ""}`
-                  : siteAddress.trim() || "—"}
-              </span>
-            </div>
-            <div>
-              <span
-                style={{
-                  color: "#64748b",
-                  fontSize: "10px",
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  display: "block",
-                  marginBottom: "2px",
-                }}
-              >
-                Munkakategória
-              </span>
-              <span style={{ fontWeight: 600, color: "#0f172a" }}>
-                {category || "Általános munkavégzés"}
-              </span>
-            </div>
-            <div>
-              <span
-                style={{
-                  color: "#64748b",
-                  fontSize: "10px",
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  display: "block",
-                  marginBottom: "2px",
-                }}
-              >
-                Felelős Munkatárs / Technikus
-              </span>
-              <span style={{ fontWeight: 600, color: "#0f172a" }}>
-                {technicianName || "—"}
-              </span>
-            </div>
-            <div>
-              <span
-                style={{
-                  color: "#64748b",
-                  fontSize: "10px",
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  display: "block",
-                  marginBottom: "2px",
-                }}
-              >
-                Munkavégzés Időpontja & Időtartama
-              </span>
-              <span style={{ fontWeight: 600, color: "#0f172a" }}>
-                {workDate ? new Date(workDate).toLocaleDateString("hu-HU") : "—"}{" "}
-                {workStart && workEnd ? `(${workStart} – ${workEnd})` : ""}
-              </span>
-            </div>
-          </div>
-          <div style={{ marginBottom: "20px" }}>
-            <h3
-              style={{
-                fontSize: "14px",
-                fontWeight: 700,
-                margin: "0 0 10px",
-                color: "#000",
-              }}
-            >
-              Elvégzett feladatok
-            </h3>
+            {/* Munkalap alapadatok kártya */}
             <div
               style={{
-                padding: "12px",
-                borderLeft: "3px solid #e53935",
-                backgroundColor: "#fff5f5",
-                fontSize: "13px",
-                lineHeight: 1.6,
-                color: "#333",
-                whiteSpace: "pre-wrap",
-              }}
-            >
-              {description}
-            </div>
-          </div>
-
-          <div style={{ marginBottom: "20px" }}>
-            <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 8px 0" }}>
-              Felhasznált anyagok és munkadíjak:
-            </h3>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
+                marginBottom: "20px",
+                padding: "14px 16px",
+                backgroundColor: "#f8fafc",
+                border: "1px solid #e2e8f0",
+                borderRadius: "8px",
                 fontSize: "12px",
-                border: "1px solid #dee2e6",
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "12px 24px",
               }}
             >
-              <thead>
-                <tr
+              <div>
+                <span
                   style={{
-                    backgroundColor: "#f8f9fa",
-                    borderBottom: "2px solid #dee2e6",
+                    color: "#64748b",
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    display: "block",
+                    marginBottom: "2px",
                   }}
                 >
-                  <th
-                    style={{
-                      padding: "8px",
-                      textAlign: "left",
-                      borderRight: "1px solid #dee2e6",
-                    }}
-                  >
-                    Megnevezés
-                  </th>
-                  <th
-                    style={{
-                      padding: "8px",
-                      textAlign: "center",
-                      borderRight: showPricesOnPdf ? "1px solid #dee2e6" : "none",
-                    }}
-                  >
-                    Mennyiség
-                  </th>
-                  {showPricesOnPdf && (
-                    <>
-                      <th
-                        style={{
-                          padding: "8px",
-                          textAlign: "right",
-                          borderRight: "1px solid #dee2e6",
-                        }}
-                      >
-                        Nettó egységár
-                      </th>
-                      <th style={{ padding: "8px", textAlign: "right" }}>
-                        Nettó összesen
-                      </th>
-                    </>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((it, i) => (
-                  <tr key={i} style={{ borderBottom: "1px solid #e9ecef" }}>
-                    <td style={{ padding: "6px 8px", borderRight: "1px solid #e9ecef" }}>
-                      {it.description}
-                    </td>
-                    <td
-                      style={{
-                        padding: "6px 8px",
-                        textAlign: "center",
-                        borderRight: showPricesOnPdf ? "1px solid #e9ecef" : "none",
-                      }}
-                    >
-                      {it.quantity} {it.unit}
-                    </td>
-                    {showPricesOnPdf && (
-                      <>
-                        <td
-                          style={{
-                            padding: "6px 8px",
-                            textAlign: "right",
-                            borderRight: "1px solid #e9ecef",
-                          }}
-                        >
-                          {it.unit_price
-                            ? new Intl.NumberFormat("hu-HU", {
-                                style: "currency",
-                                currency: "HUF",
-                                maximumFractionDigits: 0,
-                              }).format(it.unit_price)
-                            : "-"}
-                        </td>
-                        <td style={{ padding: "6px 8px", textAlign: "right" }}>
-                          {it.unit_price
-                            ? new Intl.NumberFormat("hu-HU", {
-                                style: "currency",
-                                currency: "HUF",
-                                maximumFractionDigits: 0,
-                              }).format(it.unit_price * it.quantity)
-                            : "-"}
-                        </td>
-                      </>
-                    )}
-                  </tr>
-                ))}
-                {travelKm && Number(travelKm) > 0 && (
-                  <tr style={{ borderBottom: "1px solid #e9ecef" }}>
-                    <td style={{ padding: "6px 8px", borderRight: "1px solid #e9ecef" }}>
-                      Kiszállás / Útiköltség
-                    </td>
-                    <td
-                      style={{
-                        padding: "6px 8px",
-                        textAlign: "center",
-                        borderRight: showPricesOnPdf ? "1px solid #e9ecef" : "none",
-                      }}
-                    >
-                      {travelKm} km
-                    </td>
-                    {showPricesOnPdf && (
-                      <>
-                        <td
-                          style={{
-                            padding: "6px 8px",
-                            textAlign: "right",
-                            borderRight: "1px solid #e9ecef",
-                          }}
-                        >
-                          -
-                        </td>
-                        <td style={{ padding: "6px 8px", textAlign: "right" }}>-</td>
-                      </>
-                    )}
-                  </tr>
-                )}
-              </tbody>
-            </table>
-
-            {showPricesOnPdf && (
-              <div
+                  Munkavégzés Helyszíne (Cím)
+                </span>
+                <span style={{ fontWeight: 700, color: "#0f172a", fontSize: "13px" }}>
+                  {pdfClient.address
+                    ? typeof pdfClient.address === "string"
+                      ? pdfClient.address
+                      : `${pdfClient.address.street || ""}`
+                    : siteAddress.trim() || "—"}
+                </span>
+              </div>
+              <div>
+                <span
+                  style={{
+                    color: "#64748b",
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    display: "block",
+                    marginBottom: "2px",
+                  }}
+                >
+                  Munkakategória
+                </span>
+                <span style={{ fontWeight: 600, color: "#0f172a" }}>
+                  {category || "Általános munkavégzés"}
+                </span>
+              </div>
+              <div>
+                <span
+                  style={{
+                    color: "#64748b",
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    display: "block",
+                    marginBottom: "2px",
+                  }}
+                >
+                  Felelős Munkatárs / Technikus
+                </span>
+                <span style={{ fontWeight: 600, color: "#0f172a" }}>
+                  {technicianName || "—"}
+                </span>
+              </div>
+              <div>
+                <span
+                  style={{
+                    color: "#64748b",
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    display: "block",
+                    marginBottom: "2px",
+                  }}
+                >
+                  Munkavégzés Időpontja & Időtartama
+                </span>
+                <span style={{ fontWeight: 600, color: "#0f172a" }}>
+                  {workDate ? new Date(workDate).toLocaleDateString("hu-HU") : "—"}{" "}
+                  {workStart && workEnd ? `(${workStart} – ${workEnd})` : ""}
+                </span>
+              </div>
+            </div>
+            <div style={{ marginBottom: "20px" }}>
+              <h3
                 style={{
-                  marginTop: "12px",
-                  textAlign: "right",
-                  fontSize: "13px",
-                  fontWeight: "bold",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  margin: "0 0 10px",
+                  color: "#000",
                 }}
               >
-                Nettó végösszeg:{" "}
-                {new Intl.NumberFormat("hu-HU", {
-                  style: "currency",
-                  currency: "HUF",
-                  maximumFractionDigits: 0,
-                }).format(
-                  items.reduce(
-                    (sum, it) => sum + (it.unit_price ? it.unit_price * it.quantity : 0),
-                    0,
-                  ),
-                )}
+                Elvégzett feladatok
+              </h3>
+              <div
+                style={{
+                  padding: "12px",
+                  borderLeft: "3px solid #e53935",
+                  backgroundColor: "#fff5f5",
+                  fontSize: "13px",
+                  lineHeight: 1.6,
+                  color: "#333",
+                  whiteSpace: "pre-wrap",
+                }}
+              >
+                {description}
               </div>
-            )}
-          </div>
-        </UnifiedPdfTemplate>
+            </div>
+
+            <div style={{ marginBottom: "20px" }}>
+              <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 8px 0" }}>
+                Felhasznált anyagok és munkadíjak:
+              </h3>
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  fontSize: "12px",
+                  border: "1px solid #dee2e6",
+                }}
+              >
+                <thead>
+                  <tr
+                    style={{
+                      backgroundColor: "#f8f9fa",
+                      borderBottom: "2px solid #dee2e6",
+                    }}
+                  >
+                    <th
+                      style={{
+                        padding: "8px",
+                        textAlign: "left",
+                        borderRight: "1px solid #dee2e6",
+                      }}
+                    >
+                      Megnevezés
+                    </th>
+                    <th
+                      style={{
+                        padding: "8px",
+                        textAlign: "center",
+                        borderRight: showPricesOnPdf ? "1px solid #dee2e6" : "none",
+                      }}
+                    >
+                      Mennyiség
+                    </th>
+                    {showPricesOnPdf && (
+                      <>
+                        <th
+                          style={{
+                            padding: "8px",
+                            textAlign: "right",
+                            borderRight: "1px solid #dee2e6",
+                          }}
+                        >
+                          Nettó egységár
+                        </th>
+                        <th style={{ padding: "8px", textAlign: "right" }}>
+                          Nettó összesen
+                        </th>
+                      </>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((it, i) => (
+                    <tr key={i} style={{ borderBottom: "1px solid #e9ecef" }}>
+                      <td
+                        style={{ padding: "6px 8px", borderRight: "1px solid #e9ecef" }}
+                      >
+                        {it.description}
+                      </td>
+                      <td
+                        style={{
+                          padding: "6px 8px",
+                          textAlign: "center",
+                          borderRight: showPricesOnPdf ? "1px solid #e9ecef" : "none",
+                        }}
+                      >
+                        {it.quantity} {it.unit}
+                      </td>
+                      {showPricesOnPdf && (
+                        <>
+                          <td
+                            style={{
+                              padding: "6px 8px",
+                              textAlign: "right",
+                              borderRight: "1px solid #e9ecef",
+                            }}
+                          >
+                            {it.unit_price
+                              ? new Intl.NumberFormat("hu-HU", {
+                                  style: "currency",
+                                  currency: "HUF",
+                                  maximumFractionDigits: 0,
+                                }).format(it.unit_price)
+                              : "-"}
+                          </td>
+                          <td style={{ padding: "6px 8px", textAlign: "right" }}>
+                            {it.unit_price
+                              ? new Intl.NumberFormat("hu-HU", {
+                                  style: "currency",
+                                  currency: "HUF",
+                                  maximumFractionDigits: 0,
+                                }).format(it.unit_price * it.quantity)
+                              : "-"}
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  ))}
+                  {travelKm && Number(travelKm) > 0 && (
+                    <tr style={{ borderBottom: "1px solid #e9ecef" }}>
+                      <td
+                        style={{ padding: "6px 8px", borderRight: "1px solid #e9ecef" }}
+                      >
+                        Kiszállás / Útiköltség
+                      </td>
+                      <td
+                        style={{
+                          padding: "6px 8px",
+                          textAlign: "center",
+                          borderRight: showPricesOnPdf ? "1px solid #e9ecef" : "none",
+                        }}
+                      >
+                        {travelKm} km
+                      </td>
+                      {showPricesOnPdf && (
+                        <>
+                          <td
+                            style={{
+                              padding: "6px 8px",
+                              textAlign: "right",
+                              borderRight: "1px solid #e9ecef",
+                            }}
+                          >
+                            -
+                          </td>
+                          <td style={{ padding: "6px 8px", textAlign: "right" }}>-</td>
+                        </>
+                      )}
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+
+              {showPricesOnPdf && (
+                <div
+                  style={{
+                    marginTop: "12px",
+                    textAlign: "right",
+                    fontSize: "13px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  Nettó végösszeg:{" "}
+                  {new Intl.NumberFormat("hu-HU", {
+                    style: "currency",
+                    currency: "HUF",
+                    maximumFractionDigits: 0,
+                  }).format(
+                    items.reduce(
+                      (sum, it) =>
+                        sum + (it.unit_price ? it.unit_price * it.quantity : 0),
+                      0,
+                    ),
+                  )}
+                </div>
+              )}
+            </div>
+          </UnifiedPdfTemplate>
+        </div>
       </div>
 
       <ItemPickerModal

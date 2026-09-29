@@ -46,6 +46,7 @@ const createSchema = z.object({
   phases: z.array(phaseSchema).optional(),
   checklist: z.array(checklistCreateSchema).optional(),
   required_items: z.array(requiredItemCreateSchema).optional(),
+  offer_id: z.string().nullable().optional(),
 });
 
 export async function GET(req: Request) {
@@ -55,6 +56,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const q = searchParams.get("q")?.trim();
     const contactId = searchParams.get("contact_id")?.trim();
+    const offerId = searchParams.get("offer_id")?.trim();
     const includeArchived = searchParams.get("include_archived") === "true";
     return await withDb(async () => {
       const filter: Record<string, unknown> = { tenantId: actor.tenantId };
@@ -63,6 +65,9 @@ export async function GET(req: Request) {
       }
       if (contactId) {
         filter.contact_id = contactId;
+      }
+      if (offerId) {
+        filter.offer_id = offerId;
       }
       if (q) {
         filter.$or = [
@@ -139,6 +144,7 @@ export async function POST(req: Request) {
         })),
         notes: b.notes ?? null,
         contract_warning_dismissed: false,
+        offer_id: b.offer_id ?? null,
       });
       return NextResponse.json(serializeForJson(doc.toObject()), { status: 201 });
     });

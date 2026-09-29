@@ -32,6 +32,12 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     { module: "deployment_billing", action: "admin", scope: "global" },
     { module: "integration", action: "admin", scope: "global" },
     { module: "partner_team", action: "admin", scope: "global" },
+    // SIROTECH ERP additions
+    { module: "lead", action: "admin", scope: "global" },
+    { module: "audit_log", action: "admin", scope: "global" },
+    { module: "sales_dashboard", action: "admin", scope: "global" },
+    { module: "financial_margin", action: "admin", scope: "global" },
+    { module: "document", action: "admin", scope: "global" },
   ],
   "crm.staff": [
     { module: "dashboard", action: "view", scope: "global" },
@@ -76,6 +82,10 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     { module: "deployment_billing", action: "write", scope: "global" },
     { module: "integration", action: "view", scope: "global" },
     { module: "partner_team", action: "view", scope: "global" },
+    // SIROTECH ERP additions
+    { module: "lead", action: "write", scope: "global" },
+    { module: "sales_dashboard", action: "view", scope: "global" },
+    { module: "document", action: "write", scope: "global" },
   ],
 
   "partner.admin": [

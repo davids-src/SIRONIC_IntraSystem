@@ -41,6 +41,11 @@ const projectSchema = defineSchema(
     is_archived: { type: Boolean, default: false },
     archived_at: { type: Date, default: null },
     archive_reason: { type: String, default: null },
+    offer_id: { type: String, default: null, index: true },
+    next_action: { type: String, default: null },
+    next_action_at: { type: Date, default: null, index: true },
+    next_action_assigned_to: { type: String, default: null },
+    business_unit: { type: String, default: null },
   },
   ts,
 );

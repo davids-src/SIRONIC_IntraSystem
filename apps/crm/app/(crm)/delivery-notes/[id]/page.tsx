@@ -415,59 +415,58 @@ export default function DeliveryNoteDetailPage({
       </Card>
 
       {/* Hidden PDF template */}
-      <div
-        ref={printRef}
-        style={{
-          position: "fixed",
-          left: "-9999px",
-          top: "0px",
-          width: "210mm",
-          backgroundColor: "#ffffff",
-          color: "#000000",
-          zIndex: 99999,
-        }}
-      >
-        <UnifiedPdfTemplate
-          documentTitle="Szállítólevél"
-          documentId={note.delivery_number}
-          date={new Date(note.issue_date)}
-          provider={companyDetails}
-          client={contact}
+      <div style={{ height: 0, overflow: "hidden" }}>
+        <div
+          ref={printRef}
+          style={{
+            width: "210mm",
+            backgroundColor: "#ffffff",
+            color: "#000000",
+            padding: "20px",
+          }}
         >
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              fontSize: "13px",
-              marginTop: "8px",
-            }}
+          <UnifiedPdfTemplate
+            documentTitle="Szállítólevél"
+            documentId={note.delivery_number}
+            date={new Date(note.issue_date)}
+            provider={companyDetails}
+            client={contact}
           >
-            <thead>
-              <tr style={{ borderBottom: "2px solid #000" }}>
-                <th style={{ textAlign: "left", padding: "8px" }}>Megnevezés</th>
-                <th style={{ textAlign: "right", padding: "8px" }}>Mennyiség</th>
-                <th style={{ textAlign: "left", padding: "8px" }}>Mértékegység</th>
-              </tr>
-            </thead>
-            <tbody>
-              {note.lines.map((line, i) => (
-                <tr key={i} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                  <td style={{ padding: "7px 8px", fontWeight: 600 }}>{line.name}</td>
-                  <td style={{ padding: "7px 8px", textAlign: "center" }}>
-                    {line.quantity}
-                  </td>
-                  <td style={{ padding: "7px 8px" }}>{line.unit}</td>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: "13px",
+                marginTop: "8px",
+              }}
+            >
+              <thead>
+                <tr style={{ borderBottom: "2px solid #000" }}>
+                  <th style={{ textAlign: "left", padding: "8px" }}>Megnevezés</th>
+                  <th style={{ textAlign: "right", padding: "8px" }}>Mennyiség</th>
+                  <th style={{ textAlign: "left", padding: "8px" }}>Mértékegység</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {note.lines.map((line, i) => (
+                  <tr key={i} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                    <td style={{ padding: "7px 8px", fontWeight: 600 }}>{line.name}</td>
+                    <td style={{ padding: "7px 8px", textAlign: "center" }}>
+                      {line.quantity}
+                    </td>
+                    <td style={{ padding: "7px 8px" }}>{line.unit}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
-          {note.notes && (
-            <div style={{ marginTop: "16px", fontSize: "12px", color: "#6b7280" }}>
-              <strong>Megjegyzés:</strong> {note.notes}
-            </div>
-          )}
-        </UnifiedPdfTemplate>
+            {note.notes && (
+              <div style={{ marginTop: "16px", fontSize: "12px", color: "#6b7280" }}>
+                <strong>Megjegyzés:</strong> {note.notes}
+              </div>
+            )}
+          </UnifiedPdfTemplate>
+        </div>
       </div>
 
       {/* PDF Előnézet Modal */}

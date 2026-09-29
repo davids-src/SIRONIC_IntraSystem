@@ -27,6 +27,12 @@ import {
   Trash2,
   Printer,
   ShoppingCart,
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  ArrowUpRight,
+  ArrowDownRight,
+  Receipt,
 } from "lucide-react";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 
@@ -94,6 +100,12 @@ export default function ProjectDetailPage({
   const [reservingStock, setReservingStock] = useState(false);
   const [generatingPOs, setGeneratingPOs] = useState(false);
 
+  // Financials tab state
+  const [linkedOffer, setLinkedOffer] = useState<any | null>(null);
+  const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
+  const [projectExpenses, setProjectExpenses] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<any[]>([]);
+
   const reload = useCallback(async () => {
     try {
       const raw = await apiJson<unknown>(`/api/projects/${id}`);
@@ -123,18 +135,45 @@ export default function ProjectDetailPage({
         setContactName("—");
         setContactObj(null);
       }
-      const [tickets, worklogs, certs, contracts] = await Promise.all([
+
+      // Fetch related documents & financial entities
+      const [tickets, worklogs, certs, contracts, pos, exps, invs] = await Promise.all([
         apiJson<unknown[]>(`/api/tickets?project_id=${encodeURIComponent(id)}`),
         apiJson<unknown[]>(`/api/worklogs?project_id=${encodeURIComponent(id)}`),
         apiJson<unknown[]>(
           `/api/completion-certificates?project_id=${encodeURIComponent(id)}`,
         ),
         apiJson<unknown[]>(`/api/contracts?project_id=${encodeURIComponent(id)}`),
+        apiJson<unknown[]>(
+          `/api/purchase-orders?project_id=${encodeURIComponent(id)}`,
+        ).catch(() => []),
+        apiJson<unknown[]>(
+          `/api/project-expenses?project_id=${encodeURIComponent(id)}`,
+        ).catch(() => []),
+        apiJson<unknown[]>(`/api/invoices?project_id=${encodeURIComponent(id)}`).catch(
+          () => [],
+        ),
       ]);
+
       setTicketCount(tickets.length);
       setWorklogCount(worklogs.length);
       setCertCount(certs.length);
       setContractCount(contracts.length);
+      setPurchaseOrders(pos as any[]);
+      setProjectExpenses(exps as any[]);
+      setInvoices(invs as any[]);
+
+      if (pr.offer_id) {
+        try {
+          const off = await apiJson<any>(`/api/offers/${pr.offer_id}`);
+          setLinkedOffer(off);
+        } catch {
+          setLinkedOffer(null);
+        }
+      } else {
+        setLinkedOffer(null);
+      }
+
       let hours = 0;
       for (const w of worklogs) {
         const row = w as { items?: { quantity: number; unit: string }[] };
@@ -478,6 +517,7 @@ export default function ProjectDetailPage({
 
   const tabs = [
     { id: "overview", label: "Áttekintés", icon: <FolderKanban size={15} /> },
+    { id: "financials", label: "Pénzügy & P&L", icon: <DollarSign size={15} /> },
     { id: "shopping_list", label: "Bevásárlólista", icon: <ClipboardList size={15} /> },
     { id: "checklist", label: "Anyaggyűjtés", icon: <CheckCircle2 size={15} /> },
     { id: "staging", label: "Staging linkek", icon: <LinkIcon size={15} /> },
@@ -952,6 +992,298 @@ export default function ProjectDetailPage({
             </div>
           </div>
         )}
+
+        {/* Financials & P&L Tab */}
+        {activeTab === "financials" &&
+          (() => {
+            const originalNetRevenue = linkedOffer ? linkedOffer.net_total || 0 : 0;
+            const originalCalculatedCost = linkedOffer
+              ? linkedOffer.summary_direct_cost || 0
+              : 0;
+            const originalCalculatedMargin = linkedOffer
+              ? linkedOffer.summary_calculated_margin ||
+                originalNetRevenue - originalCalculatedCost
+              : 0;
+            const originalMarginPercent =
+              originalNetRevenue > 0
+                ? (originalCalculatedMargin / originalNetRevenue) * 100
+                : 0;
+
+            const actualPOsTotal = purchaseOrders
+              .filter((po) => po.status !== "cancelled")
+              .reduce((sum, po) => sum + (po.total_amount || 0), 0);
+            const actualExpensesTotal = projectExpenses.reduce(
+              (sum, exp) => sum + (exp.amount || 0),
+              0,
+            );
+            const hourlyRate = 6500;
+            const actualLaborCost = totalLoggedHours * hourlyRate;
+            const actualTotalCost =
+              actualPOsTotal + actualExpensesTotal + actualLaborCost;
+            const actualProjectResult =
+              originalNetRevenue > 0
+                ? originalNetRevenue - actualTotalCost
+                : -actualTotalCost;
+            const actualMarginPercent =
+              originalNetRevenue > 0
+                ? (actualProjectResult / originalNetRevenue) * 100
+                : 0;
+
+            const varianceCost = actualTotalCost - originalCalculatedCost;
+            const varianceResult = actualProjectResult - originalCalculatedMargin;
+
+            return (
+              <div className="flex flex-col gap-6">
+                {/* Top Banner if no linked offer */}
+                {!linkedOffer && (
+                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-300 text-sm flex items-center justify-between">
+                    <div>
+                      <span className="font-semibold">Figyelem:</span> Ehhez a projekthez
+                      nincs közvetlenül csatolt ajánlat. Az ajánlati tervezett értékek nem
+                      állnak rendelkezésre, de a tényleges ráfordítások nyomon követhetők.
+                    </div>
+                  </div>
+                )}
+
+                {/* KPI Summary Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Card className="p-4 flex flex-col gap-2">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                      Szerződött nettó bevétel
+                    </span>
+                    <div className="text-2xl font-bold text-white">
+                      {originalNetRevenue.toLocaleString("hu-HU")} Ft
+                    </div>
+                    <span className="text-xs text-slate-500">
+                      {linkedOffer
+                        ? `Ajánlat: ${linkedOffer.offer_number}`
+                        : "Nincs csatolt ajánlat"}
+                    </span>
+                  </Card>
+
+                  <Card className="p-4 flex flex-col gap-2">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                      Kalkulált ajánlati költség
+                    </span>
+                    <div className="text-2xl font-bold text-slate-300">
+                      {originalCalculatedCost.toLocaleString("hu-HU")} Ft
+                    </div>
+                    <span className="text-xs text-slate-500">
+                      Tervezett fedezet: {originalMarginPercent.toFixed(1)}% (
+                      {originalCalculatedMargin.toLocaleString("hu-HU")} Ft)
+                    </span>
+                  </Card>
+
+                  <Card className="p-4 flex flex-col gap-2">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                      Tényleges összes költség
+                    </span>
+                    <div
+                      className={`text-2xl font-bold ${varianceCost > 0 && originalCalculatedCost > 0 ? "text-rose-400" : "text-white"}`}
+                    >
+                      {actualTotalCost.toLocaleString("hu-HU")} Ft
+                    </div>
+                    <span className="text-xs text-slate-400">
+                      {varianceCost > 0 && originalCalculatedCost > 0
+                        ? `+${varianceCost.toLocaleString("hu-HU")} Ft túllépés`
+                        : originalCalculatedCost > 0
+                          ? `${varianceCost.toLocaleString("hu-HU")} Ft maradvány`
+                          : "Beszerzés + Munkaidő + Egyéb"}
+                    </span>
+                  </Card>
+
+                  <Card
+                    className={`p-4 flex flex-col gap-2 border ${actualProjectResult >= 0 ? "border-emerald-500/30 bg-emerald-950/20" : "border-rose-500/30 bg-rose-950/20"}`}
+                  >
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                      Tényleges projekt eredmény
+                    </span>
+                    <div
+                      className={`text-2xl font-bold ${actualProjectResult >= 0 ? "text-emerald-400" : "text-rose-400"}`}
+                    >
+                      {actualProjectResult.toLocaleString("hu-HU")} Ft
+                    </div>
+                    <span
+                      className={`text-xs font-medium ${actualProjectResult >= 0 ? "text-emerald-400" : "text-rose-400"}`}
+                    >
+                      Tényleges margin: {actualMarginPercent.toFixed(1)}%{" "}
+                      {linkedOffer
+                        ? `(Eltérés: ${(actualMarginPercent - originalMarginPercent).toFixed(1)}%)`
+                        : ""}
+                    </span>
+                  </Card>
+                </div>
+
+                {/* Cost Breakdown & Comparison Table */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card className="p-5 flex flex-col gap-4">
+                    <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-2">
+                      Költségnemek és Tény ráfordítások
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-slate-900/60 border border-slate-800">
+                        <div>
+                          <div className="font-semibold text-sm text-slate-200">
+                            1. Beszerzések & Megrendelők
+                          </div>
+                          <div className="text-xs text-slate-400">
+                            {
+                              purchaseOrders.filter((p) => p.status !== "cancelled")
+                                .length
+                            }{" "}
+                            db aktív megrendelőlap
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-sm text-white">
+                            {actualPOsTotal.toLocaleString("hu-HU")} Ft
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-slate-900/60 border border-slate-800">
+                        <div>
+                          <div className="font-semibold text-sm text-slate-200">
+                            2. Munkaerő belső költség
+                          </div>
+                          <div className="text-xs text-slate-400">
+                            {totalLoggedHours} óra @ {hourlyRate.toLocaleString("hu-HU")}{" "}
+                            Ft/óra kalkulált belső díj
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-sm text-white">
+                            {actualLaborCost.toLocaleString("hu-HU")} Ft
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-slate-900/60 border border-slate-800">
+                        <div>
+                          <div className="font-semibold text-sm text-slate-200">
+                            3. Egyéb projekt költségek & Kiszállás
+                          </div>
+                          <div className="text-xs text-slate-400">
+                            {projectExpenses.length} db rögzített költségtétel (üzemanyag,
+                            szállítás, szállás stb.)
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-sm text-white">
+                            {actualExpensesTotal.toLocaleString("hu-HU")} Ft
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800/80 border border-slate-700 font-bold">
+                        <span className="text-slate-100">
+                          Összes felmerült projektköltség
+                        </span>
+                        <span className="text-white text-base">
+                          {actualTotalCost.toLocaleString("hu-HU")} Ft
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
+
+                  {/* Variance Matrix */}
+                  <Card className="p-5 flex flex-col gap-4">
+                    <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-2">
+                      Ajánlati Terv vs. Tény Összehasonlítás
+                    </h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-slate-800 text-slate-400 font-semibold uppercase">
+                            <th className="py-2.5 px-2">Kategória</th>
+                            <th className="py-2.5 px-2 text-right">
+                              Tervezett (Ajánlat)
+                            </th>
+                            <th className="py-2.5 px-2 text-right">Tény</th>
+                            <th className="py-2.5 px-2 text-right">Eltérés</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                          <tr>
+                            <td className="py-3 px-2 font-medium text-white">
+                              Nettó bevétel
+                            </td>
+                            <td className="py-3 px-2 text-right font-mono">
+                              {originalNetRevenue.toLocaleString("hu-HU")} Ft
+                            </td>
+                            <td className="py-3 px-2 text-right font-mono">
+                              {originalNetRevenue.toLocaleString("hu-HU")} Ft
+                            </td>
+                            <td className="py-3 px-2 text-right text-slate-500 font-mono">
+                              —
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="py-3 px-2 font-medium text-white">
+                              Közvetlen költségek
+                            </td>
+                            <td className="py-3 px-2 text-right font-mono">
+                              {originalCalculatedCost.toLocaleString("hu-HU")} Ft
+                            </td>
+                            <td className="py-3 px-2 text-right font-mono">
+                              {actualTotalCost.toLocaleString("hu-HU")} Ft
+                            </td>
+                            <td
+                              className={`py-3 px-2 text-right font-mono font-semibold ${varianceCost > 0 ? "text-rose-400" : "text-emerald-400"}`}
+                            >
+                              {varianceCost > 0
+                                ? `+${varianceCost.toLocaleString("hu-HU")}`
+                                : varianceCost.toLocaleString("hu-HU")}{" "}
+                              Ft
+                            </td>
+                          </tr>
+                          <tr className="font-bold bg-slate-900/40">
+                            <td className="py-3 px-2 text-white">Fedezet / Eredmény</td>
+                            <td className="py-3 px-2 text-right font-mono text-slate-200">
+                              {originalCalculatedMargin.toLocaleString("hu-HU")} Ft
+                            </td>
+                            <td
+                              className={`py-3 px-2 text-right font-mono ${actualProjectResult >= 0 ? "text-emerald-400" : "text-rose-400"}`}
+                            >
+                              {actualProjectResult.toLocaleString("hu-HU")} Ft
+                            </td>
+                            <td
+                              className={`py-3 px-2 text-right font-mono ${varianceResult >= 0 ? "text-emerald-400" : "text-rose-400"}`}
+                            >
+                              {varianceResult >= 0
+                                ? `+${varianceResult.toLocaleString("hu-HU")}`
+                                : varianceResult.toLocaleString("hu-HU")}{" "}
+                              Ft
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="py-3 px-2 font-medium text-white">
+                              Fedezeti hányad (%)
+                            </td>
+                            <td className="py-3 px-2 text-right font-mono">
+                              {originalMarginPercent.toFixed(1)}%
+                            </td>
+                            <td className="py-3 px-2 text-right font-mono font-semibold">
+                              {actualMarginPercent.toFixed(1)}%
+                            </td>
+                            <td
+                              className={`py-3 px-2 text-right font-mono font-semibold ${actualMarginPercent - originalMarginPercent >= 0 ? "text-emerald-400" : "text-rose-400"}`}
+                            >
+                              {(actualMarginPercent - originalMarginPercent >= 0
+                                ? "+"
+                                : "") +
+                                (actualMarginPercent - originalMarginPercent).toFixed(1)}
+                              %
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </Card>
+                </div>
+              </div>
+            );
+          })()}
 
         {/* Shopping List */}
         {activeTab === "shopping_list" && (

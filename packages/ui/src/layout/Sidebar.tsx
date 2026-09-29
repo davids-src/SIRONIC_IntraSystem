@@ -8,6 +8,8 @@ export interface NavItem {
   label: string;
   href: string;
   icon: React.ReactNode;
+  section?: string;
+  badge?: number | string;
 }
 
 export interface SidebarUser {
@@ -48,6 +50,8 @@ export function Sidebar({
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [mobileOpen, onMobileClose]);
+
+  let currentSection = "";
 
   const sidebarContent = (
     <>
@@ -125,17 +129,39 @@ export function Sidebar({
           overflowY: "auto",
         }}
       >
-        {navItems.map((item) => (
-          <SidebarNavItem
-            key={item.key}
-            item={item}
-            isActive={
-              currentPath === item.href ||
-              (item.href !== "/" && currentPath.startsWith(item.href))
-            }
-            onNavigate={onMobileClose}
-          />
-        ))}
+        {navItems.map((item, idx) => {
+          const showSection = item.section && item.section !== currentSection;
+          if (showSection) {
+            currentSection = item.section!;
+          }
+
+          return (
+            <React.Fragment key={item.key}>
+              {showSection && (
+                <div
+                  style={{
+                    fontSize: "0.6875rem",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    color: colors.text.muted,
+                    padding: `${idx === 0 ? "4px" : "12px"} 10px 4px 10px`,
+                  }}
+                >
+                  {item.section}
+                </div>
+              )}
+              <SidebarNavItem
+                item={item}
+                isActive={
+                  currentPath === item.href ||
+                  (item.href !== "/" && currentPath.startsWith(item.href))
+                }
+                onNavigate={onMobileClose}
+              />
+            </React.Fragment>
+          );
+        })}
       </nav>
 
       {/* User footer */}
