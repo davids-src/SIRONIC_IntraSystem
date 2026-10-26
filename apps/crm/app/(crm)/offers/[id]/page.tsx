@@ -40,6 +40,192 @@ const fmt = (n: number) =>
     maximumFractionDigits: 0,
   }).format(n || 0);
 
+// ─── PDF tétel szekció helper ─────────────────────────────────────────────────
+function OfferLinesSection({ lines }: { lines: any[] }) {
+  const tableHead = (
+    <thead>
+      <tr style={{ borderBottom: "2px solid #c41230", backgroundColor: "#f8fafc" }}>
+        <th
+          style={{
+            textAlign: "left",
+            padding: "8px 10px",
+            fontSize: "11px",
+            fontWeight: 700,
+            color: "#334155",
+          }}
+        >
+          Megnevezés
+        </th>
+        <th
+          style={{
+            textAlign: "right",
+            padding: "8px 10px",
+            fontSize: "11px",
+            fontWeight: 700,
+            color: "#334155",
+          }}
+        >
+          Menny.
+        </th>
+        <th
+          style={{
+            textAlign: "right",
+            padding: "8px 10px",
+            fontSize: "11px",
+            fontWeight: 700,
+            color: "#334155",
+          }}
+        >
+          Nettó egységár
+        </th>
+        <th
+          style={{
+            textAlign: "right",
+            padding: "8px 10px",
+            fontSize: "11px",
+            fontWeight: 700,
+            color: "#334155",
+          }}
+        >
+          Nettó összesen
+        </th>
+      </tr>
+    </thead>
+  );
+
+  const renderRow = (l: any, i: number) => {
+    const discountedPrice = l.net_unit_price * (1 - (l.discount_percent ?? 0) / 100);
+    const isParent = l.is_group_parent;
+    const children = isParent
+      ? lines.filter((cl: any) => cl.group_id === l.group_id && !cl.is_group_parent)
+      : [];
+    return (
+      <tr key={i} style={{ borderBottom: "1px solid #e2e8f0" }}>
+        <td style={{ padding: "7px 10px", fontWeight: 600, fontSize: "12px" }}>
+          {l.description}
+          {l.discount_percent ? (
+            <span
+              style={{
+                marginLeft: "6px",
+                color: "#16a34a",
+                fontSize: "10px",
+                fontWeight: 400,
+              }}
+            >
+              (-{l.discount_percent}%)
+            </span>
+          ) : null}
+          {isParent && children.length > 0 && (
+            <div
+              style={{
+                fontWeight: 400,
+                color: "#64748b",
+                fontSize: "10px",
+                marginTop: "2px",
+              }}
+            >
+              {children.map((cl: any) => cl.description).join(" • ")}
+            </div>
+          )}
+        </td>
+        <td
+          style={{
+            textAlign: "right",
+            padding: "7px 10px",
+            fontSize: "12px",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {l.quantity} {l.unit}
+        </td>
+        <td
+          style={{
+            textAlign: "right",
+            padding: "7px 10px",
+            fontSize: "12px",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {fmt(discountedPrice)}
+        </td>
+        <td
+          style={{
+            textAlign: "right",
+            padding: "7px 10px",
+            fontSize: "12px",
+            fontWeight: 700,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {fmt(l.quantity * discountedPrice)}
+        </td>
+      </tr>
+    );
+  };
+
+  // Szétválasztjuk a tételeket típus szerint
+  const topLevel = lines.filter((l: any) => !l.group_id || l.is_group_parent);
+  const products = topLevel.filter((l: any) => !l.line_type || l.line_type === "product");
+  const services = topLevel.filter(
+    (l: any) => l.line_type === "labor" || l.line_type === "service",
+  );
+  const hasProducts = products.length > 0;
+  const hasServices = services.length > 0;
+  const hasBoth = hasProducts && hasServices;
+
+  const sectionLabel = (text: string, color: string) => (
+    <tr>
+      <td
+        colSpan={4}
+        style={{
+          padding: "10px 10px 4px",
+          fontSize: "10px",
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "0.6px",
+          color,
+          borderBottom: `1px solid ${color}33`,
+        }}
+      >
+        {text}
+      </td>
+    </tr>
+  );
+
+  return (
+    <table
+      style={{
+        width: "100%",
+        borderCollapse: "collapse",
+        fontSize: "12px",
+        marginBottom: "24px",
+      }}
+    >
+      {tableHead}
+      <tbody>
+        {hasBoth ? (
+          <>
+            {sectionLabel("🔧 Termékek", "#0f172a")}
+            {products.map((l: any, i: number) => renderRow(l, i))}
+            {sectionLabel("⚙️ Munkadíj / Szolgáltatások", "#0f172a")}
+            {services.map((l: any, i: number) => renderRow(l, i + products.length))}
+          </>
+        ) : hasProducts ? (
+          <>
+            {sectionLabel("🔧 Termékek", "#0f172a")}
+            {products.map((l: any, i: number) => renderRow(l, i))}
+          </>
+        ) : (
+          <>
+            {sectionLabel("⚙️ Munkadíj / Szolgáltatások", "#0f172a")}
+            {services.map((l: any, i: number) => renderRow(l, i))}
+          </>
+        )}
+      </tbody>
+    </table>
+  );
+}
+
 const statusVariant: Record<string, "default" | "success" | "error" | "warning"> = {
   draft: "default",
   sent: "warning",
@@ -756,131 +942,102 @@ export default function OfferDetailsPage() {
       )}
 
       {/* Hidden PDF Container */}
-      <div style={{ height: 0, overflow: "hidden" }}>
-        <div
-          ref={printRef}
-          style={{
-            width: "210mm",
-            backgroundColor: "#ffffff",
-            color: "#000000",
-            padding: "20px", // add some padding just in case
-          }}
+      <div
+        ref={printRef}
+        style={{
+          position: "fixed",
+          left: "-9999px",
+          top: 0,
+          width: "210mm",
+          backgroundColor: "#ffffff",
+          color: "#000000",
+          zIndex: -1,
+        }}
+      >
+        <UnifiedPdfTemplate
+          documentTitle="ÁRAJÁNLAT"
+          documentId={offer.offer_number}
+          date={new Date(offer.created_at)}
+          validUntil={offer.valid_until || null}
+          provider={provider}
+          client={contact}
+          showSignatures={false}
         >
-          <UnifiedPdfTemplate
-            documentTitle="ÁRAJÁNLAT"
-            documentId={offer.offer_number}
-            date={new Date(offer.created_at)}
-            provider={provider}
-            client={contact}
-            showSignatures={false}
-          >
-            <div style={{ marginBottom: "30px" }}>
-              <h3 style={{ fontSize: "16px", marginBottom: "10px", color: "#333" }}>
-                {offer.title}
-              </h3>
-              {offer.notes && (
-                <p
-                  style={{
-                    fontSize: "12px",
-                    color: "#666",
-                    marginBottom: "20px",
-                    whiteSpace: "pre-wrap",
-                  }}
-                >
-                  {offer.notes}
-                </p>
-              )}
-            </div>
-
-            <table
+          <div style={{ marginBottom: "16px" }}>
+            <h3
               style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                fontSize: "12px",
-                marginBottom: "30px",
+                fontSize: "15px",
+                marginBottom: "8px",
+                color: "#0f172a",
+                fontWeight: 700,
               }}
             >
-              <thead>
-                <tr style={{ borderBottom: "2px solid #000" }}>
-                  <th style={{ textAlign: "left", padding: "8px" }}>Megnevezés</th>
-                  <th style={{ textAlign: "right", padding: "8px" }}>Mennyiség</th>
-                  <th style={{ textAlign: "right", padding: "8px" }}>Nettó egységár</th>
-                  <th style={{ textAlign: "right", padding: "8px" }}>Nettó összesen</th>
-                </tr>
-              </thead>
-              <tbody>
-                {offer.lines.map((l: any, i: number) => {
-                  const discountedPrice =
-                    l.net_unit_price * (1 - (l.discount_percent ?? 0) / 100);
-                  return (
-                    <tr key={i} style={{ borderBottom: "1px solid #eee" }}>
-                      <td style={{ padding: "8px", fontWeight: 600 }}>
-                        {l.description}
-                        {l.discount_percent ? (
-                          <span
-                            style={{
-                              marginLeft: "6px",
-                              color: "#22c55e",
-                              fontSize: "10px",
-                            }}
-                          >
-                            (-{l.discount_percent}%)
-                          </span>
-                        ) : null}
-                      </td>
-                      <td style={{ textAlign: "right", padding: "8px" }}>
-                        {l.quantity} {l.unit}
-                      </td>
-                      <td style={{ textAlign: "right", padding: "8px" }}>
-                        {fmt(discountedPrice)}
-                      </td>
-                      <td style={{ textAlign: "right", padding: "8px" }}>
-                        {fmt(l.quantity * discountedPrice)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+              {offer.title}
+            </h3>
+            {offer.notes && (
+              <p
+                style={{
+                  fontSize: "11px",
+                  color: "#475569",
+                  marginBottom: "16px",
+                  whiteSpace: "pre-wrap",
+                  lineHeight: 1.5,
+                }}
+              >
+                {offer.notes}
+              </p>
+            )}
+          </div>
 
-            <div style={{ width: "250px", marginLeft: "auto", fontSize: "12px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: "4px",
-                }}
-              >
-                <span>Nettó összesen:</span>
-                <span>{fmt(totalNet)}</span>
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: "4px",
-                }}
-              >
-                <span>ÁFA:</span>
-                <span>{fmt(totalVat)}</span>
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontWeight: 700,
-                  fontSize: "14px",
-                  marginTop: "8px",
-                  paddingTop: "8px",
-                  borderTop: "2px solid #000",
-                }}
-              >
-                <span>Fizetendő:</span>
-                <span>{fmt(totalNet + totalVat)}</span>
-              </div>
+          <OfferLinesSection lines={offer.lines} />
+
+          <div
+            style={{
+              width: "260px",
+              marginLeft: "auto",
+              fontSize: "12px",
+              borderTop: "1px solid #e2e8f0",
+              paddingTop: "12px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "4px",
+                color: "#475569",
+              }}
+            >
+              <span>Nettó összesen:</span>
+              <span>{fmt(totalNet)}</span>
             </div>
-          </UnifiedPdfTemplate>
-        </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "8px",
+                color: "#475569",
+              }}
+            >
+              <span>ÁFA (27%):</span>
+              <span>{fmt(totalVat)}</span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontWeight: 700,
+                fontSize: "14px",
+                paddingTop: "8px",
+                borderTop: "2px solid #c41230",
+                color: "#0f172a",
+              }}
+            >
+              <span>Fizetendő (bruttó):</span>
+              <span style={{ color: "#c41230" }}>{fmt(totalNet + totalVat)}</span>
+            </div>
+          </div>
+        </UnifiedPdfTemplate>
       </div>
 
       {/* PDF Előnézet Modal */}
@@ -894,21 +1051,30 @@ export default function OfferDetailsPage() {
           documentTitle="ÁRAJÁNLAT"
           documentId={offer.offer_number}
           date={new Date(offer.created_at)}
+          validUntil={offer.valid_until || null}
           provider={provider}
           client={contact}
           showSignatures={false}
         >
-          <div style={{ marginBottom: "30px" }}>
-            <h3 style={{ fontSize: "16px", marginBottom: "10px", color: "#333" }}>
+          <div style={{ marginBottom: "16px" }}>
+            <h3
+              style={{
+                fontSize: "15px",
+                marginBottom: "8px",
+                color: "#0f172a",
+                fontWeight: 700,
+              }}
+            >
               {offer.title}
             </h3>
             {offer.notes && (
               <p
                 style={{
-                  fontSize: "12px",
-                  color: "#666",
-                  marginBottom: "20px",
+                  fontSize: "11px",
+                  color: "#475569",
+                  marginBottom: "16px",
                   whiteSpace: "pre-wrap",
+                  lineHeight: 1.5,
                 }}
               >
                 {offer.notes}
@@ -916,90 +1082,23 @@ export default function OfferDetailsPage() {
             )}
           </div>
 
-          <table
+          <OfferLinesSection lines={offer.lines} />
+
+          <div
             style={{
-              width: "100%",
-              borderCollapse: "collapse",
+              width: "260px",
+              marginLeft: "auto",
               fontSize: "12px",
-              marginBottom: "30px",
+              borderTop: "1px solid #e2e8f0",
+              paddingTop: "12px",
             }}
           >
-            <thead>
-              <tr style={{ borderBottom: "2px solid #000" }}>
-                <th style={{ textAlign: "left", padding: "8px" }}>Megnevezés</th>
-                <th style={{ textAlign: "right", padding: "8px" }}>Mennyiség</th>
-                <th style={{ textAlign: "right", padding: "8px" }}>Nettó egységár</th>
-                <th style={{ textAlign: "right", padding: "8px" }}>Nettó összesen</th>
-              </tr>
-            </thead>
-            <tbody>
-              {offer.lines.map((l, i) => {
-                if ((l as any).group_id && !(l as any).is_group_parent) return null;
-                const isParent = (l as any).is_group_parent;
-                const children = isParent
-                  ? offer.lines.filter(
-                      (cl) =>
-                        (cl as any).group_id === (l as any).group_id &&
-                        !(cl as any).is_group_parent,
-                    )
-                  : [];
-                const discountedPrice =
-                  l.net_unit_price * (1 - (l.discount_percent ?? 0) / 100);
-                return (
-                  <tr key={i} style={{ borderBottom: "1px solid #eee" }}>
-                    <td style={{ padding: "8px", fontWeight: 600 }}>
-                      {l.description}
-                      {l.discount_percent ? (
-                        <span
-                          style={{
-                            marginLeft: "6px",
-                            color: "#22c55e",
-                            fontSize: "10px",
-                          }}
-                        >
-                          (-{l.discount_percent}%)
-                        </span>
-                      ) : null}
-                      {isParent && children.length > 0 && (
-                        <div
-                          style={{
-                            fontWeight: 400,
-                            color: "#3b82f6",
-                            fontSize: "11px",
-                            marginTop: "4px",
-                          }}
-                        >
-                          {children.map((cl) => cl.description).join(", ")}
-                        </div>
-                      )}
-                    </td>
-                    <td
-                      style={{ textAlign: "right", padding: "8px", verticalAlign: "top" }}
-                    >
-                      {l.quantity} {l.unit}
-                    </td>
-                    <td
-                      style={{ textAlign: "right", padding: "8px", verticalAlign: "top" }}
-                    >
-                      {fmt(discountedPrice)}
-                    </td>
-                    <td
-                      style={{ textAlign: "right", padding: "8px", verticalAlign: "top" }}
-                    >
-                      {fmt(l.quantity * discountedPrice)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-
-          <div style={{ width: "250px", marginLeft: "auto", fontSize: "12px" }}>
             <div
               style={{
                 display: "flex",
                 justifyContent: "space-between",
                 marginBottom: "4px",
+                color: "#475569",
               }}
             >
               <span>Nettó összesen:</span>
@@ -1009,10 +1108,11 @@ export default function OfferDetailsPage() {
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                marginBottom: "4px",
+                marginBottom: "8px",
+                color: "#475569",
               }}
             >
-              <span>ÁFA:</span>
+              <span>ÁFA (27%):</span>
               <span>{fmt(totalVat)}</span>
             </div>
             <div
@@ -1021,13 +1121,13 @@ export default function OfferDetailsPage() {
                 justifyContent: "space-between",
                 fontWeight: 700,
                 fontSize: "14px",
-                marginTop: "8px",
                 paddingTop: "8px",
-                borderTop: "2px solid #000",
+                borderTop: "2px solid #c41230",
+                color: "#0f172a",
               }}
             >
-              <span>Fizetendő:</span>
-              <span>{fmt(totalNet + totalVat)}</span>
+              <span>Fizetendő (bruttó):</span>
+              <span style={{ color: "#c41230" }}>{fmt(totalNet + totalVat)}</span>
             </div>
           </div>
         </UnifiedPdfTemplate>

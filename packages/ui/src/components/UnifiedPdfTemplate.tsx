@@ -45,7 +45,6 @@ export function UnifiedPdfTemplate({
       className="pdf-container sirotech-document-shell"
       style={{
         width: "210mm",
-        minHeight: "297mm",
         padding: "16mm 18mm 20mm 18mm",
         margin: "0 auto",
         backgroundColor: "#ffffff",
@@ -53,9 +52,6 @@ export function UnifiedPdfTemplate({
         fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
         boxSizing: "border-box",
         position: "relative",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
       }}
     >
       <style>{`
@@ -103,24 +99,51 @@ export function UnifiedPdfTemplate({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <div
-              style={{
-                width: "44px",
-                height: "44px",
-                borderRadius: "8px",
-                backgroundColor: "#c41230",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#ffffff",
-                fontWeight: 900,
-                fontSize: "20px",
-                letterSpacing: "-0.5px",
-                flexShrink: 0,
-              }}
-            >
-              S
-            </div>
+            {provider?.logo_url ? (
+              <div
+                style={{
+                  height: "46px",
+                  maxWidth: "180px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-start",
+                  flexShrink: 0,
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={provider.logo_url}
+                  alt={brandName}
+                  style={{
+                    maxHeight: "46px",
+                    maxWidth: "180px",
+                    width: "auto",
+                    height: "auto",
+                    objectFit: "contain",
+                    display: "block",
+                  }}
+                />
+              </div>
+            ) : (
+              <div
+                style={{
+                  width: "44px",
+                  height: "44px",
+                  borderRadius: "8px",
+                  backgroundColor: "#c41230",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#ffffff",
+                  fontWeight: 900,
+                  fontSize: "20px",
+                  letterSpacing: "-0.5px",
+                  flexShrink: 0,
+                }}
+              >
+                S
+              </div>
+            )}
             <div>
               <h1
                 style={{
@@ -291,7 +314,7 @@ export function UnifiedPdfTemplate({
       </div>
 
       {/* Signatures & Standard Document Footer */}
-      <div className="avoid-break" style={{ marginTop: "auto", paddingTop: "20px" }}>
+      <div className="avoid-break" style={{ paddingTop: "20px" }}>
         {showSignatures && (
           <div
             style={{

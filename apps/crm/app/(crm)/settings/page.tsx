@@ -15,9 +15,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import type { Settings, CompanyDetails } from "@crm/types";
 import { apiJsonBody } from "@/lib/api-client";
+import { Upload, Image as ImageIcon } from "lucide-react";
 
 type Operation = "add" | "rename" | "delete" | "reorder";
 
@@ -175,6 +176,7 @@ export default function SettingsPage() {
               bank_account: null,
               iban: null,
               website: null,
+              logo_url: null,
             },
           );
         }
@@ -191,9 +193,70 @@ export default function SettingsPage() {
     bank_account: null,
     iban: null,
     website: null,
+    logo_url: null,
   });
   const [editingCompany, setEditingCompany] = useState(false);
   const [savingCompany, setSavingCompany] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Csak képfájlt lehet feltölteni (PNG, JPG, SVG, WebP)!");
+      return;
+    }
+
+    setLogoUploading(true);
+
+    if (file.type === "image/svg+xml") {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result as string;
+        setCompanyData((prev) => ({ ...prev, logo_url: result }));
+        setLogoUploading(false);
+      };
+      reader.onerror = () => setLogoUploading(false);
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 800;
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const format = file.type === "image/png" ? "image/png" : "image/jpeg";
+          const resizedDataUrl = canvas.toDataURL(format, 0.9);
+          setCompanyData((prev) => ({ ...prev, logo_url: resizedDataUrl }));
+        }
+        setLogoUploading(false);
+      };
+      img.onerror = () => setLogoUploading(false);
+      img.src = event.target?.result as string;
+    };
+    reader.onerror = () => setLogoUploading(false);
+    reader.readAsDataURL(file);
+  };
 
   const saveCompanyDetails = async () => {
     setSavingCompany(true);
@@ -250,6 +313,142 @@ export default function SettingsPage() {
               </Button>
             </div>
           )}
+        </div>
+
+        {/* Céglogó szekció */}
+        <div
+          style={{
+            padding: "16px",
+            borderRadius: "8px",
+            backgroundColor: "var(--bg-subtle, rgba(0, 0, 0, 0.02))",
+            border: "1px solid var(--border-subtle, #e2e8f0)",
+            marginBottom: "20px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "16px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <div
+              style={{
+                width: "160px",
+                height: "64px",
+                borderRadius: "8px",
+                border: "1px dashed var(--border-subtle, #cbd5e1)",
+                backgroundColor: "#ffffff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                overflow: "hidden",
+                padding: "6px",
+                flexShrink: 0,
+              }}
+            >
+              {companyData.logo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={companyData.logo_url}
+                  alt="Céglogó"
+                  style={{
+                    maxHeight: "52px",
+                    maxWidth: "148px",
+                    width: "auto",
+                    height: "auto",
+                    objectFit: "contain",
+                    display: "block",
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "4px",
+                    color: "var(--text-muted, #94a3b8)",
+                  }}
+                >
+                  <ImageIcon size={20} />
+                  <span style={{ fontSize: "11px", fontWeight: 500 }}>Nincs logó</span>
+                </div>
+              )}
+            </div>
+            <div>
+              <div
+                style={{
+                  fontSize: "0.9375rem",
+                  fontWeight: 600,
+                  color: "var(--text-primary)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                Hivatalos céglogó
+                {companyData.logo_url && (
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      color: "#16a34a",
+                      backgroundColor: "#dcfce7",
+                      padding: "2px 8px",
+                      borderRadius: "12px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Aktív a PDF bizonylatokon
+                  </span>
+                )}
+              </div>
+              <div
+                style={{
+                  fontSize: "0.8125rem",
+                  color: "var(--text-muted)",
+                  marginTop: "3px",
+                  maxWidth: "520px",
+                  lineHeight: 1.4,
+                }}
+              >
+                A feltöltött logó automatikusan beillesztésre és méretre igazításra kerül
+                az árajánlatok, munkalapok és bizonylatok fejlécében.
+              </div>
+            </div>
+          </div>
+
+          {editingCompany ? (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <input
+                type="file"
+                ref={fileInputRef}
+                style={{ display: "none" }}
+                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                onChange={handleLogoFileChange}
+              />
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={logoUploading || savingCompany}
+              >
+                <Upload size={14} style={{ marginRight: "6px" }} />
+                {companyData.logo_url ? "Logó cseréje" : "Logó feltöltése"}
+              </Button>
+              {companyData.logo_url && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  style={{ color: "#ef4444" }}
+                  onClick={() => setCompanyData({ ...companyData, logo_url: null })}
+                  disabled={logoUploading || savingCompany}
+                >
+                  <Trash2 size={14} style={{ marginRight: "6px" }} />
+                  Törlés
+                </Button>
+              )}
+            </div>
+          ) : null}
         </div>
 
         {editingCompany ? (

@@ -25,7 +25,7 @@ export async function generatePdfFromElement(
       logging: false,
       backgroundColor: "#ffffff",
       scrollX: 0,
-      scrollY: 0,
+      scrollY: -window.scrollY,
       windowWidth: 1024,
     },
     jsPDF: {
@@ -34,8 +34,8 @@ export async function generatePdfFromElement(
       orientation: "portrait" as const,
     },
     pagebreak: {
-      mode: ["avoid-all", "css", "legacy"],
-      avoid: ["tr", "td", "h1", "h2", "h3", "h4", "div", "p"],
+      mode: ["css", "legacy"],
+      avoid: ["tr", "thead"],
     },
   };
 
