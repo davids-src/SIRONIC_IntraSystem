@@ -8,6 +8,7 @@ import {
   UnifiedPdfTemplate,
   PdfPreviewModal,
   generatePdfFromElement,
+  OfferLinesTable,
 } from "@crm/ui";
 import { Download, ChevronLeft, Check, X, Eye } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
@@ -36,175 +37,6 @@ const fmt = (n: number) =>
     currency: "HUF",
     maximumFractionDigits: 0,
   }).format(n);
-
-// ─── PDF tétel szekció helper ───────────────────────────────────────────────
-function OfferLinesSection({ lines }: { lines: any[] }) {
-  const tableHead = (
-    <thead>
-      <tr style={{ borderBottom: "2px solid #c41230", backgroundColor: "#f8fafc" }}>
-        <th
-          style={{
-            textAlign: "left",
-            padding: "8px 10px",
-            fontSize: "11px",
-            fontWeight: 700,
-            color: "#334155",
-          }}
-        >
-          Megnevezés
-        </th>
-        <th
-          style={{
-            textAlign: "right",
-            padding: "8px 10px",
-            fontSize: "11px",
-            fontWeight: 700,
-            color: "#334155",
-          }}
-        >
-          Menny.
-        </th>
-        <th
-          style={{
-            textAlign: "right",
-            padding: "8px 10px",
-            fontSize: "11px",
-            fontWeight: 700,
-            color: "#334155",
-          }}
-        >
-          Nettó egységár
-        </th>
-        <th
-          style={{
-            textAlign: "right",
-            padding: "8px 10px",
-            fontSize: "11px",
-            fontWeight: 700,
-            color: "#334155",
-          }}
-        >
-          Nettó összesen
-        </th>
-      </tr>
-    </thead>
-  );
-
-  const renderRow = (l: any, i: number) => {
-    const discountedPrice = l.net_unit_price * (1 - (l.discount_percent ?? 0) / 100);
-    return (
-      <tr key={i} style={{ borderBottom: "1px solid #e2e8f0" }}>
-        <td style={{ padding: "7px 10px", fontWeight: 600, fontSize: "12px" }}>
-          {l.description}
-          {l.discount_percent ? (
-            <span
-              style={{
-                marginLeft: "6px",
-                color: "#16a34a",
-                fontSize: "10px",
-                fontWeight: 400,
-              }}
-            >
-              (-{l.discount_percent}%)
-            </span>
-          ) : null}
-        </td>
-        <td
-          style={{
-            textAlign: "right",
-            padding: "7px 10px",
-            fontSize: "12px",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {l.quantity} {l.unit}
-        </td>
-        <td
-          style={{
-            textAlign: "right",
-            padding: "7px 10px",
-            fontSize: "12px",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {fmt(discountedPrice)}
-        </td>
-        <td
-          style={{
-            textAlign: "right",
-            padding: "7px 10px",
-            fontSize: "12px",
-            fontWeight: 700,
-            whiteSpace: "nowrap",
-          }}
-        >
-          {fmt(l.quantity * discountedPrice)}
-        </td>
-      </tr>
-    );
-  };
-
-  const topLevel = lines.filter((l: any) => !l.group_id || l.is_group_parent);
-  const products = topLevel.filter((l: any) => !l.line_type || l.line_type === "product");
-  const services = topLevel.filter(
-    (l: any) => l.line_type === "labor" || l.line_type === "service",
-  );
-  const hasProducts = products.length > 0;
-  const hasServices = services.length > 0;
-  const hasBoth = hasProducts && hasServices;
-
-  const sectionLabel = (text: string) => (
-    <tr>
-      <td
-        colSpan={4}
-        style={{
-          padding: "10px 10px 4px",
-          fontSize: "10px",
-          fontWeight: 700,
-          textTransform: "uppercase",
-          letterSpacing: "0.6px",
-          color: "#0f172a",
-          borderBottom: "1px solid #0f172a33",
-        }}
-      >
-        {text}
-      </td>
-    </tr>
-  );
-
-  return (
-    <table
-      style={{
-        width: "100%",
-        borderCollapse: "collapse",
-        fontSize: "12px",
-        marginBottom: "24px",
-      }}
-    >
-      {tableHead}
-      <tbody>
-        {hasBoth ? (
-          <>
-            {sectionLabel("🔧 Termékek")}
-            {products.map((l: any, i: number) => renderRow(l, i))}
-            {sectionLabel("⚙️ Munkadíj / Szolgáltatások")}
-            {services.map((l: any, i: number) => renderRow(l, i + products.length))}
-          </>
-        ) : hasProducts ? (
-          <>
-            {sectionLabel("🔧 Termékek")}
-            {products.map((l: any, i: number) => renderRow(l, i))}
-          </>
-        ) : (
-          <>
-            {sectionLabel("⚙️ Munkadíj / Szolgáltatások")}
-            {services.map((l: any, i: number) => renderRow(l, i))}
-          </>
-        )}
-      </tbody>
-    </table>
-  );
-}
 
 export default function PartnerOfferDetailsPage() {
   const router = useRouter();
@@ -488,7 +320,7 @@ export default function PartnerOfferDetailsPage() {
             )}
           </div>
 
-          <OfferLinesSection lines={offer.lines} />
+          <OfferLinesTable lines={offer.lines} />
 
           <div
             style={{
@@ -581,7 +413,7 @@ export default function PartnerOfferDetailsPage() {
             )}
           </div>
 
-          <OfferLinesSection lines={offer.lines} />
+          <OfferLinesTable lines={offer.lines} />
 
           <div
             style={{

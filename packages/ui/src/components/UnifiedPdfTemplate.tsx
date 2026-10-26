@@ -73,16 +73,24 @@ export function UnifiedPdfTemplate({
             min-height: auto !important;
           }
         }
+        .sirotech-document-shell table {
+          page-break-inside: auto !important;
+          break-inside: auto !important;
+        }
+        .sirotech-document-shell thead {
+          display: table-header-group !important;
+        }
         .sirotech-document-shell tr,
-        .sirotech-document-shell table,
-        .sirotech-document-shell p,
-        .sirotech-document-shell h1,
-        .sirotech-document-shell h2,
-        .sirotech-document-shell h3,
-        .sirotech-document-shell h4,
         .sirotech-document-shell .avoid-break {
           page-break-inside: avoid !important;
           break-inside: avoid !important;
+        }
+        .sirotech-document-shell h1,
+        .sirotech-document-shell h2,
+        .sirotech-document-shell h3,
+        .sirotech-document-shell h4 {
+          page-break-after: avoid !important;
+          break-after: avoid !important;
         }
       `}</style>
 

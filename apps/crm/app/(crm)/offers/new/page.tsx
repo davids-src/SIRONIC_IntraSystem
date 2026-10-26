@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
   ContactSelect,
+  isServiceItem,
 } from "@crm/ui";
 import {
   Plus,
@@ -525,6 +526,12 @@ export default function NewOfferPage() {
         price_snapshot: c.price_snapshot ?? null,
         is_group_parent: c.is_group_parent || false,
         group_id: c.group_id || null,
+        line_type:
+          c.item.service_price_list_item_id ||
+          c.item.category === "service" ||
+          isServiceItem({ description: c.item.name, unit: c.item.unit })
+            ? ("service" as const)
+            : ("product" as const),
       };
     });
     return {

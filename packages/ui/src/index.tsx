@@ -98,3 +98,7 @@ export type { SupplierSelectProps } from "./components/SupplierSelect";
 
 // Tokens
 export { colors, radius, spacing } from "./tokens";
+
+export { OfferLinesTable } from "./components/OfferLinesTable";
+export type { OfferLinesTableProps, OfferLineItem } from "./components/OfferLinesTable";
+export { isServiceItem } from "./lib/item-classifier";

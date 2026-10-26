@@ -25,7 +25,7 @@ export async function generatePdfFromElement(
       logging: false,
       backgroundColor: "#ffffff",
       scrollX: 0,
-      scrollY: -window.scrollY,
+      scrollY: 0,
       windowWidth: 1024,
     },
     jsPDF: {
@@ -35,7 +35,7 @@ export async function generatePdfFromElement(
     },
     pagebreak: {
       mode: ["css", "legacy"],
-      avoid: ["tr", "thead"],
+      avoid: ["tr", ".avoid-break"],
     },
   };
 
