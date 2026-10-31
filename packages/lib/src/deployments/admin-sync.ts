@@ -119,7 +119,9 @@ export async function syncDeploymentAdmins(params: {
           authorization: `Bearer ${token}`,
         },
         body: { deploymentId, admins },
-        retry: false,
+        // Site rate-limits to 10 req/min and returns 429 with Retry-After — honor it instead
+        // of failing the sync outright. PUT is a full idempotent sync, safe to retry.
+        retry: true,
       });
       response = { status: res.status, json: res.json };
     } catch (e) {
@@ -208,7 +210,7 @@ export async function getDeploymentAdminsDrift(
       provider: "deployment",
       method: "GET",
       headers: { authorization: `Bearer ${token}` },
-      retry: false,
+      retry: true,
     });
     return { ok: true, admins: res.json };
   } catch (e) {
