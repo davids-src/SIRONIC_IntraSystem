@@ -22,6 +22,7 @@ import {
   FileSignature,
   Receipt,
   Server,
+  Users,
 } from "lucide-react";
 
 const allPartnerNavItems: NavItem[] = [
@@ -87,6 +88,18 @@ const allPartnerNavItems: NavItem[] = [
     href: "/settings",
     icon: <Settings size={16} />,
   },
+  {
+    key: "deployments",
+    label: "Szolgáltatások",
+    href: "/deployments",
+    icon: <Server size={16} />,
+  },
+  {
+    key: "team",
+    label: "Csapat",
+    href: "/team",
+    icon: <Users size={16} />,
+  },
 ];
 
 const defaultPerms: PortalPermissions = {
@@ -99,6 +112,8 @@ const defaultPerms: PortalPermissions = {
   menu_invoices: true,
   menu_company_profile: true,
   menu_settings: true,
+  menu_deployments: false,
+  menu_team: false,
 };
 
 function filterNav(perms: PortalPermissions) {
@@ -114,6 +129,8 @@ function filterNav(perms: PortalPermissions) {
     if (item.key === "completion_certificates") return perms.menu_completion_certificates;
     if (item.key === "company-profile") return perms.menu_company_profile;
     if (item.key === "settings") return perms.menu_settings;
+    if (item.key === "deployments") return perms.menu_deployments;
+    if (item.key === "team") return perms.menu_team;
     return true;
   });
 }

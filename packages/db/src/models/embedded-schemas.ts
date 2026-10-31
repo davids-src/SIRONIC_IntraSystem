@@ -32,6 +32,8 @@ export const portalPermissionsSchema = defineSchema(
     menu_invoices: { type: Boolean, required: true },
     menu_company_profile: { type: Boolean, required: true },
     menu_settings: { type: Boolean, required: true },
+    menu_deployments: { type: Boolean, default: false },
+    menu_team: { type: Boolean, default: false },
   },
   { _id: false },
 );

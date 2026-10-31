@@ -43,6 +43,8 @@ const createSchema = z.object({
       menu_invoices: z.boolean(),
       menu_company_profile: z.boolean(),
       menu_settings: z.boolean(),
+      menu_deployments: z.boolean().optional(),
+      menu_team: z.boolean().optional(),
     })
     .optional(),
   active_services: z.array(z.string()).optional(),
@@ -122,6 +124,8 @@ export async function POST(req: Request) {
           menu_invoices: true,
           menu_company_profile: true,
           menu_settings: true,
+          menu_deployments: false,
+          menu_team: false,
         },
         active_services: b.active_services ?? [],
         contract_type: b.contract_type ?? null,

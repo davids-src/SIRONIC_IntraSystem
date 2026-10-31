@@ -824,6 +824,8 @@ export default function CompletionCertificateFormPage({
                         menu_invoices: false,
                         menu_company_profile: false,
                         menu_settings: false,
+                        menu_deployments: false,
+                        menu_team: false,
                       },
                       active_services: [],
                       contract_type: null,

@@ -35,8 +35,17 @@ const TABS = [
   { id: "dns", label: "DNS" },
   { id: "ssl", label: "SSL & Proxy" },
   { id: "stack", label: "Stack" },
+  { id: "partner", label: "Partner hozzáférés" },
   { id: "events", label: "Események" },
 ] as const;
+
+type PartnerAccessRow = {
+  _id: string;
+  portal_user_id: string;
+  portal_user_email: string | null;
+  portal_user_display_name: string | null;
+  access_level: "view" | "manage";
+};
 
 type TabId = (typeof TABS)[number]["id"];
 
@@ -49,6 +58,10 @@ export default function DeploymentDetailPage() {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  const [accessRows, setAccessRows] = useState<PartnerAccessRow[]>([]);
+  const [tokenBusy, setTokenBusy] = useState(false);
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [newToken, setNewToken] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -73,6 +86,50 @@ export default function DeploymentDetailPage() {
       .then((res) => setEvents(res.items))
       .catch(() => setEvents([]));
   }, [activeTab, deployment]);
+
+  useEffect(() => {
+    if (activeTab !== "partner" || !deployment) return;
+    apiJson<PartnerAccessRow[]>(`/api/deployments/${deployment._id}/access`)
+      .then(setAccessRows)
+      .catch(() => setAccessRows([]));
+  }, [activeTab, deployment]);
+
+  const generateToken = async (action: "generate" | "rotate") => {
+    if (!deployment) return;
+    setTokenBusy(true);
+    try {
+      const res = await apiJsonBody<{ token: string; deployment: Deployment }>(
+        `/api/deployments/${deployment._id}/provision-token`,
+        "POST",
+        { action },
+      );
+      setDeployment(res.deployment);
+      setNewToken(res.token);
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Token generálása sikertelen.");
+    } finally {
+      setTokenBusy(false);
+    }
+  };
+
+  const syncAdminsNow = async () => {
+    if (!deployment) return;
+    setSyncBusy(true);
+    try {
+      const res = await apiJsonBody<{
+        ok: boolean;
+        error?: string;
+        deployment: Deployment;
+      }>(`/api/deployments/${deployment._id}/sync-admins`, "POST", {});
+      setDeployment(res.deployment);
+      if (res.ok) toast.success("Admin szinkron sikeres.");
+      else toast.warning(res.error ?? "Admin szinkron sikertelen.");
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Admin szinkron sikertelen.");
+    } finally {
+      setSyncBusy(false);
+    }
+  };
 
   const runPipeline = async () => {
     if (!deployment) return;
@@ -332,6 +389,169 @@ export default function DeploymentDetailPage() {
             </div>
           ) : null}
         </Card>
+      )}
+
+      {activeTab === "partner" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <Card className="p-6">
+            <h3 style={{ fontSize: "0.875rem", fontWeight: 700, marginBottom: "12px" }}>
+              Provisioning token
+            </h3>
+            <p
+              style={{
+                fontSize: "0.8rem",
+                color: "var(--color-text-muted, #555)",
+                marginBottom: "12px",
+              }}
+            >
+              A site ezzel a tokennel hitelesíti magát, amikor lekéri az admin listát (
+              <code>SIRONIC_PROVISION_TOKEN</code> env). Csak generáláskor/rotáláskor
+              látható egyszer.
+            </p>
+            <p style={{ fontSize: "0.8rem", marginBottom: "12px" }}>
+              Állapot:{" "}
+              <strong>
+                {deployment.provision_token_encrypted ? "generálva" : "nincs generálva"}
+              </strong>
+            </p>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  generateToken(
+                    deployment.provision_token_encrypted ? "rotate" : "generate",
+                  )
+                }
+                style={{ opacity: tokenBusy ? 0.6 : 1 }}
+              >
+                {deployment.provision_token_encrypted ? "Rotálás" : "Generálás"}
+              </Button>
+            </div>
+            {newToken ? (
+              <div
+                style={{
+                  marginTop: "16px",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  background: "var(--color-surface-input, #111)",
+                  border: "1px solid var(--color-border-subtle, #222)",
+                }}
+              >
+                <p style={{ fontSize: "0.78rem", marginBottom: "8px" }}>
+                  Ez csak most jelenik meg — mentsd el a stack env-be (
+                  <code>SIRONIC_PROVISION_TOKEN</code>), majd redeploy szükséges:
+                </p>
+                <code
+                  style={{
+                    display: "block",
+                    fontSize: "0.78rem",
+                    wordBreak: "break-all",
+                    marginBottom: "8px",
+                  }}
+                >
+                  {newToken}
+                </code>
+                <Button variant="ghost" onClick={() => setNewToken(null)}>
+                  Bezárás
+                </Button>
+              </div>
+            ) : null}
+          </Card>
+
+          <Card className="p-6">
+            <h3 style={{ fontSize: "0.875rem", fontWeight: 700, marginBottom: "12px" }}>
+              Admin szinkron
+            </h3>
+            <dl
+              style={{
+                display: "grid",
+                gridTemplateColumns: "200px 1fr",
+                rowGap: "10px",
+                fontSize: "0.875rem",
+                marginBottom: "12px",
+              }}
+            >
+              <dt style={{ color: "var(--color-text-muted, #555)" }}>Állapot</dt>
+              <dd>{deployment.admin_sync.status}</dd>
+              <dt style={{ color: "var(--color-text-muted, #555)" }}>Utolsó szinkron</dt>
+              <dd>
+                {deployment.admin_sync.last_synced_at
+                  ? new Date(deployment.admin_sync.last_synced_at).toLocaleString("hu-HU")
+                  : "—"}
+              </dd>
+              <dt style={{ color: "var(--color-text-muted, #555)" }}>Admin darabszám</dt>
+              <dd>{deployment.admin_sync.last_admins_count ?? "—"}</dd>
+              {deployment.admin_sync.last_error ? (
+                <>
+                  <dt style={{ color: "var(--color-text-muted, #555)" }}>Hiba</dt>
+                  <dd style={{ color: "var(--color-status-error, #f87171)" }}>
+                    {deployment.admin_sync.last_error}
+                  </dd>
+                </>
+              ) : null}
+            </dl>
+            <Button
+              variant="secondary"
+              onClick={syncAdminsNow}
+              style={{ opacity: syncBusy ? 0.6 : 1 }}
+            >
+              Szinkronizálás most
+            </Button>
+          </Card>
+
+          <Card className="p-0 overflow-hidden">
+            <h3
+              style={{
+                fontSize: "0.875rem",
+                fontWeight: 700,
+                padding: "16px 20px 0 20px",
+              }}
+            >
+              Partner hozzáférések (csak olvasható)
+            </h3>
+            <p
+              style={{
+                fontSize: "0.78rem",
+                color: "var(--color-text-muted, #555)",
+                padding: "4px 20px 16px 20px",
+              }}
+            >
+              A hozzáférések kezelése a Partner Portál "Csapat" oldalán történik.
+            </p>
+            {accessRows.length === 0 ? (
+              <p
+                style={{
+                  padding: "0 20px 24px 20px",
+                  color: "var(--color-text-muted, #555)",
+                }}
+              >
+                Nincs partner hozzáférés ehhez a deploymenthez.
+              </p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {accessRows.map((row) => (
+                  <div
+                    key={row._id}
+                    style={{
+                      padding: "12px 20px",
+                      borderTop: "1px solid var(--color-border-subtle, #222)",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    <span>
+                      {row.portal_user_display_name ?? row.portal_user_email ?? "—"}
+                    </span>
+                    <Badge variant={row.access_level === "manage" ? "info" : "default"}>
+                      {row.access_level}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
       )}
 
       {activeTab === "events" && (

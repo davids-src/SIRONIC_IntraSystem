@@ -98,6 +98,14 @@ const deploymentSchema = defineSchema(
     last_paid_at: { type: Date, default: null },
     billing_notes: { type: String, default: null },
 
+    provision_token_encrypted: { type: String, default: null },
+    admin_sync: {
+      status: { type: String, enum: ["idle", "ok", "error"], default: "idle" },
+      last_synced_at: { type: Date, default: null },
+      last_error: { type: String, default: null },
+      last_admins_count: { type: Number, default: null },
+    },
+
     steps: { type: [deploymentStepSchema], default: [] },
 
     external_ids: {

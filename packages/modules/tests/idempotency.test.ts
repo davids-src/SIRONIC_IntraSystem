@@ -37,6 +37,13 @@ function baseDeployment(overrides: Partial<Deployment> = {}): Deployment {
     next_billing_at: null,
     last_paid_at: null,
     billing_notes: null,
+    provision_token_encrypted: null,
+    admin_sync: {
+      status: "idle",
+      last_synced_at: null,
+      last_error: null,
+      last_admins_count: null,
+    },
     steps: [],
     external_ids: {
       cloudflare_zone_id: null,

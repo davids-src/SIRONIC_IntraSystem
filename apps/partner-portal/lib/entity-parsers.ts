@@ -9,6 +9,27 @@ import type {
   TicketComment,
   Worklog,
 } from "@crm/types";
+import type { PartnerSafeDeployment } from "./deployment-redact";
+
+export function parseDeployment(raw: unknown): PartnerSafeDeployment {
+  const r = raw as Record<string, unknown>;
+  const stepsRaw = Array.isArray(r.steps) ? r.steps : [];
+  return {
+    ...(r as unknown as PartnerSafeDeployment),
+    next_billing_at: r.next_billing_at ? new Date(String(r.next_billing_at)) : null,
+    last_paid_at: r.last_paid_at ? new Date(String(r.last_paid_at)) : null,
+    created_at: new Date(String(r.created_at)),
+    updated_at: new Date(String(r.updated_at)),
+    steps: stepsRaw.map((s) => {
+      const x = s as Record<string, unknown>;
+      return {
+        ...(x as unknown as PartnerSafeDeployment["steps"][number]),
+        started_at: x.started_at ? new Date(String(x.started_at)) : null,
+        finished_at: x.finished_at ? new Date(String(x.finished_at)) : null,
+      };
+    }),
+  };
+}
 
 export function parseTicket(raw: unknown): Ticket {
   const r = raw as Record<string, unknown>;

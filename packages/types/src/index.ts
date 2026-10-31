@@ -333,6 +333,13 @@ export interface Deployment {
   next_billing_at: Date | null;
   last_paid_at: Date | null;
   billing_notes: string | null;
+  provision_token_encrypted: string | null;
+  admin_sync: {
+    status: "idle" | "ok" | "error";
+    last_synced_at: Date | null;
+    last_error: string | null;
+    last_admins_count: number | null;
+  };
   steps: DeploymentStep[];
   external_ids: DeploymentExternalIds;
   source: "created" | "imported";
@@ -355,6 +362,7 @@ export type DeploymentEventKind =
   | "redeploy"
   | "billing"
   | "import"
+  | "admin_sync"
   | "note";
 
 export interface DeploymentEvent {
@@ -657,6 +665,8 @@ export interface PortalPermissions {
   menu_invoices: boolean;
   menu_company_profile: boolean;
   menu_settings: boolean;
+  menu_deployments: boolean;
+  menu_team: boolean;
 }
 
 export type ProjectContractType = "project" | "ongoing" | "mixed" | "one_time" | null;

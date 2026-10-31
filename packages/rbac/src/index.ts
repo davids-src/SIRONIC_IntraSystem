@@ -103,8 +103,9 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     { module: "project", action: "manage_checklist", scope: "contact" },
     { module: "project", action: "sign", scope: "contact" }, // reusing 'sign' for approval
     { module: "warranty", action: "view", scope: "contact" },
-    // Deployments program (P3 portal work not built yet; grants reserved for it)
+    // Deployments program (P3 portal work — view/manage live now; redeploy UI deferred)
     { module: "deployment", action: "view", scope: "contact" },
+    { module: "deployment", action: "manage", scope: "contact" },
     { module: "deployment_billing", action: "view", scope: "contact" },
     { module: "partner_team", action: "manage", scope: "contact" },
   ],
@@ -118,7 +119,7 @@ const rolePermissions: Record<RoleKey, Permission[]> = {
     { module: "contract", action: "view", scope: "contact" },
     { module: "project", action: "view", scope: "contact" },
     { module: "warranty", action: "view", scope: "contact" },
-    // Deployments program (P3 portal work not built yet; grants reserved for it)
+    // Deployments program (P3 portal work — view only; no team visibility for viewers)
     { module: "deployment", action: "view", scope: "contact" },
     { module: "deployment_billing", action: "view", scope: "contact" },
   ],

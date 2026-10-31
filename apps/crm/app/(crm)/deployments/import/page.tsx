@@ -21,7 +21,18 @@ import { useEffect, useState } from "react";
 import type { Contact } from "@crm/types";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 
-const STEPS = ["Alapadatok", "Infrastruktúra azonosítók", "Áttekintés"];
+const STEPS = ["Keresés", "Alapadatok", "Infrastruktúra azonosítók", "Áttekintés"];
+
+type ImportCandidate = {
+  domain: string;
+  cloudflare_zone_id?: string;
+  npm_proxy_host_id?: number;
+  npm_certificate_id?: number;
+  portainer_stack_id?: number;
+  suggested_stack_name?: string;
+  already_imported_deployment_id?: string;
+  confidence: "high" | "medium" | "low";
+};
 
 export default function ImportDeploymentPage() {
   const router = useRouter();
@@ -30,6 +41,12 @@ export default function ImportDeploymentPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [contacts, setContacts] = useState<Contact[]>([]);
+
+  // ── Step 0: Keresés (automated scan)
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [scanResults, setScanResults] = useState<ImportCandidate[] | null>(null);
+  const [scanWarnings, setScanWarnings] = useState<string[]>([]);
 
   // ── Step 0: Alapadatok
   const [contactId, setContactId] = useState("");
@@ -61,6 +78,34 @@ export default function ImportDeploymentPage() {
       .catch(() => {});
     return () => ac.abort();
   }, []);
+
+  const runScan = async () => {
+    setScanning(true);
+    setScanError(null);
+    try {
+      const res = await apiJsonBody<{
+        candidates: ImportCandidate[];
+        warnings: string[];
+      }>("/api/deployments/import/scan", "POST", {});
+      setScanResults(res.candidates);
+      setScanWarnings(res.warnings);
+    } catch (e) {
+      setScanError(e instanceof ApiError ? e.message : "A keresés sikertelen.");
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const applyCandidate = (c: ImportCandidate) => {
+    setDomain(c.domain);
+    if (!name.trim()) setName(c.domain);
+    if (c.cloudflare_zone_id) setCfZoneId(c.cloudflare_zone_id);
+    if (c.npm_certificate_id != null) setNpmCertId(String(c.npm_certificate_id));
+    if (c.npm_proxy_host_id != null) setNpmProxyHostId(String(c.npm_proxy_host_id));
+    if (c.portainer_stack_id != null) setPortainerStackId(String(c.portainer_stack_id));
+    if (c.suggested_stack_name) setStackName(c.suggested_stack_name.toLowerCase());
+    setStep(1);
+  };
 
   const canProceedStep0 =
     contactId.length > 0 && name.trim().length > 0 && domain.trim().length > 2;
@@ -246,8 +291,119 @@ export default function ImportDeploymentPage() {
         </p>
       ) : null}
 
-      {/* ── STEP 0: Alapadatok ───────────────────────────────────────────────── */}
+      {/* ── STEP 0: Keresés (automatikus scan) ──────────────────────────────── */}
       {step === 0 && (
+        <Card className="p-8">
+          <p
+            style={{
+              fontSize: "0.82rem",
+              color: "var(--color-text-muted, #777)",
+              marginBottom: "20px",
+            }}
+          >
+            Lekérdezi az aktív Cloudflare / Nginx Proxy Manager / Portainer integrációkat,
+            és a domainek alapján javaslatokat ad. A kiválasztott javaslat előre kitölti
+            az alábbi lépéseket — minden mező utána is szerkeszthető.
+          </p>
+          <Button
+            variant="primary"
+            onClick={runScan}
+            style={{ opacity: scanning ? 0.6 : 1 }}
+          >
+            {scanning ? "Keresés..." : "Integrációk átvizsgálása"}
+          </Button>
+
+          {scanError ? (
+            <p
+              style={{
+                marginTop: "16px",
+                color: "var(--color-status-error, #f87171)",
+                fontSize: "0.85rem",
+              }}
+            >
+              {scanError}
+            </p>
+          ) : null}
+
+          {scanWarnings.length > 0 ? (
+            <p
+              style={{
+                marginTop: "16px",
+                fontSize: "0.78rem",
+                color: "var(--color-text-muted, #777)",
+              }}
+            >
+              Figyelmeztetés: {scanWarnings.join("; ")}
+            </p>
+          ) : null}
+
+          {scanResults ? (
+            <div
+              style={{
+                marginTop: "20px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+              }}
+            >
+              {scanResults.length === 0 ? (
+                <p
+                  style={{ color: "var(--color-text-muted, #777)", fontSize: "0.85rem" }}
+                >
+                  Nincs találat.
+                </p>
+              ) : (
+                scanResults.map((c) => (
+                  <div
+                    key={c.domain}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "10px 14px",
+                      borderRadius: "6px",
+                      border: "1px solid var(--color-border-default, #333)",
+                      opacity: c.already_imported_deployment_id ? 0.5 : 1,
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 600, fontFamily: "monospace" }}>
+                        {c.domain}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "var(--color-text-muted, #777)",
+                        }}
+                      >
+                        {c.confidence} megbízhatóság
+                        {c.already_imported_deployment_id ? " · már importálva" : ""}
+                      </div>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      disabled={!!c.already_imported_deployment_id}
+                      onClick={() => applyCandidate(c)}
+                    >
+                      Kiválasztás
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+          ) : null}
+
+          <div style={{ marginTop: "28px" }}>
+            <Button variant="ghost" onClick={() => setStep(1)}>
+              Kihagyás – kézi kitöltés
+              <ChevronRight size={16} style={{ marginLeft: "6px" }} />
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* ── STEP 1: Alapadatok ───────────────────────────────────────────────── */}
+      {step === 1 && (
         <Card className="p-8">
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             <ContactSelect
@@ -341,7 +497,7 @@ export default function ImportDeploymentPage() {
           <div style={{ marginTop: "28px" }}>
             <Button
               variant="primary"
-              onClick={() => setStep(1)}
+              onClick={() => setStep(2)}
               style={{ opacity: canProceedStep0 ? 1 : 0.5 }}
             >
               Tovább: Azonosítók
@@ -351,8 +507,8 @@ export default function ImportDeploymentPage() {
         </Card>
       )}
 
-      {/* ── STEP 1: Infrastruktúra azonosítók ───────────────────────────────── */}
-      {step === 1 && (
+      {/* ── STEP 2: Infrastruktúra azonosítók ───────────────────────────────── */}
+      {step === 2 && (
         <Card className="p-8">
           <p
             style={{
@@ -450,11 +606,11 @@ export default function ImportDeploymentPage() {
             </div>
           </div>
           <div style={{ marginTop: "28px", display: "flex", gap: "8px" }}>
-            <Button variant="secondary" onClick={() => setStep(0)}>
+            <Button variant="secondary" onClick={() => setStep(1)}>
               <ChevronLeft size={16} style={{ marginRight: "6px" }} />
               Vissza
             </Button>
-            <Button variant="primary" onClick={() => setStep(2)}>
+            <Button variant="primary" onClick={() => setStep(3)}>
               Tovább: Áttekintés
               <ChevronRight size={16} style={{ marginLeft: "6px" }} />
             </Button>
@@ -462,8 +618,8 @@ export default function ImportDeploymentPage() {
         </Card>
       )}
 
-      {/* ── STEP 2: Áttekintés ───────────────────────────────────────────────── */}
-      {step === 2 && (
+      {/* ── STEP 3: Áttekintés ───────────────────────────────────────────────── */}
+      {step === 3 && (
         <Card className="p-8">
           <h2 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "16px" }}>
             Áttekintés
@@ -545,7 +701,7 @@ export default function ImportDeploymentPage() {
           </div>
 
           <div style={{ marginTop: "28px", display: "flex", gap: "8px" }}>
-            <Button variant="secondary" onClick={() => setStep(1)}>
+            <Button variant="secondary" onClick={() => setStep(2)}>
               <ChevronLeft size={16} style={{ marginRight: "6px" }} />
               Vissza
             </Button>

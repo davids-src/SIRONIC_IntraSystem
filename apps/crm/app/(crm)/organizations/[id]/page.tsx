@@ -72,6 +72,8 @@ const PORTAL_PERM_LABELS: Record<keyof PortalPermissions, string> = {
   menu_invoices: "Számlák",
   menu_company_profile: "Cégprofil",
   menu_settings: "Beállítások",
+  menu_deployments: "Szolgáltatások",
+  menu_team: "Csapat",
 };
 
 function parseContact(raw: unknown): Contact {

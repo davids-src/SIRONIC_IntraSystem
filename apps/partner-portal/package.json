@@ -13,6 +13,7 @@
   "dependencies": {
     "@crm/auth": "workspace:*",
     "@crm/db": "workspace:*",
+    "@crm/lib": "workspace:*",
     "@crm/modules": "workspace:*",
     "@crm/rbac": "workspace:*",
     "@crm/types": "workspace:*",

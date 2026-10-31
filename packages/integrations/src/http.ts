@@ -1,6 +1,5 @@
 import { Agent } from "undici";
-import type { IntegrationProvider } from "@crm/types";
-import { IntegrationError, ProviderHttpError } from "./errors";
+import { IntegrationError, ProviderHttpError, type HttpProviderLabel } from "./errors";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 const MAX_RETRIES = 3;
@@ -17,7 +16,7 @@ function getInsecureAgent(): Agent {
 }
 
 export interface HttpRequestOptions {
-  provider: IntegrationProvider;
+  provider: HttpProviderLabel;
   method?: string;
   headers?: Record<string, string>;
   /** JSON-serializable body. Pass a string directly to send as-is (e.g. pre-built form bodies). */

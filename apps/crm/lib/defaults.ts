@@ -10,4 +10,6 @@ export const defaultPortalPermissions: PortalPermissions = {
   menu_invoices: true,
   menu_company_profile: true,
   menu_settings: true,
+  menu_deployments: false,
+  menu_team: false,
 };

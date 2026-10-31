@@ -1,9 +1,12 @@
 import type { IntegrationProvider } from "@crm/types";
 
+/** Label for error/log attribution — includes non-settings-page callers of `httpRequest` like the admin-sync caller. */
+export type HttpProviderLabel = IntegrationProvider | "deployment";
+
 /** Thrown by every integration client. Never carries secrets — only `safeMessage` reaches the UI. */
 export class IntegrationError extends Error {
   constructor(
-    public provider: IntegrationProvider,
+    public provider: HttpProviderLabel,
     public code: string,
     public safeMessage: string,
     public httpStatus?: number,
@@ -17,7 +20,7 @@ export class IntegrationError extends Error {
 
 export class ProviderHttpError extends IntegrationError {
   constructor(
-    provider: IntegrationProvider,
+    provider: HttpProviderLabel,
     httpStatus: number,
     safeMessage: string,
     retryable = false,

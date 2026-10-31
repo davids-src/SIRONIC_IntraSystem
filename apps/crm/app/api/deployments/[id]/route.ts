@@ -13,6 +13,8 @@ const IMMUTABLE_FIELDS = [
   "created_at",
   "steps",
   "external_ids",
+  "provision_token_encrypted",
+  "admin_sync",
 ];
 
 function hasAnyExternalId(deployment: Deployment): boolean {

@@ -34,6 +34,7 @@ const deploymentEventSchema = defineSchema(
         "redeploy",
         "billing",
         "import",
+        "admin_sync",
         "note",
       ],
       required: true,
