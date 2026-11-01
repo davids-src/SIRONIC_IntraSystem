@@ -10,7 +10,9 @@ import type { StepClients } from "../src/deployments/types";
 let mongod: MongoMemoryServer;
 
 beforeAll(async () => {
-  mongod = await MongoMemoryServer.create();
+  // Default mongod boot timeout (10s) is tight on a loaded machine (concurrent builds/sessions);
+  // this only gives the binary more time to start — it doesn't change what the tests assert.
+  mongod = await MongoMemoryServer.create({ instance: { launchTimeout: 60_000 } });
   process.env.MONGODB_URI = mongod.getUri();
   process.env.SECRETS_ENCRYPTION_KEY = "0".repeat(64);
   await connectDb();
@@ -59,21 +61,17 @@ async function createDeployment(): Promise<string> {
 function fakeCloudflare(overrides: Partial<Record<string, jest.Mock>> = {}) {
   return {
     listZones: jest.fn().mockResolvedValue([]),
-    createZone: jest
-      .fn()
-      .mockResolvedValue({
-        id: "zone-1",
-        nameServers: ["ns1.cf", "ns2.cf"],
-        status: "pending",
-      }),
-    getZone: jest
-      .fn()
-      .mockResolvedValue({
-        id: "zone-1",
-        name: "example-1.com",
-        status: "active",
-        name_servers: [],
-      }),
+    createZone: jest.fn().mockResolvedValue({
+      id: "zone-1",
+      nameServers: ["ns1.cf", "ns2.cf"],
+      status: "pending",
+    }),
+    getZone: jest.fn().mockResolvedValue({
+      id: "zone-1",
+      name: "example-1.com",
+      status: "active",
+      name_servers: [],
+    }),
     triggerActivationCheck: jest.fn().mockResolvedValue(undefined),
     upsertDnsRecord: jest.fn().mockResolvedValue({ id: "rec-1" }),
     listDnsRecords: jest.fn().mockResolvedValue([]),
@@ -250,14 +248,12 @@ describe("adoptStep", () => {
     const existing = await DeploymentModel.findById(id).lean<any>();
     const domain = existing?.domain as string;
     const cf = fakeCloudflare({
-      getZone: jest
-        .fn()
-        .mockResolvedValue({
-          id: "zone-9",
-          name: domain,
-          status: "active",
-          name_servers: [],
-        }),
+      getZone: jest.fn().mockResolvedValue({
+        id: "zone-9",
+        name: domain,
+        status: "active",
+        name_servers: [],
+      }),
     });
     const clients = { cloudflare: cf } as unknown as StepClients;
 
