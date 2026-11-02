@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectAuthDb, getJwks } from "@crm/auth-core";
+import { connectAuthDb, getJwks } from "@crm/auth-core/server";
 
 export async function GET() {
   await connectAuthDb();

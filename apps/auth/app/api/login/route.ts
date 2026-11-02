@@ -10,7 +10,7 @@ import {
   isLockedOut,
   recordFailedAttemptAtomic,
   resetLockout,
-} from "@crm/auth-core";
+} from "@crm/auth-core/server";
 import { setSessionCookie } from "@/lib/session-cookie";
 
 const bodySchema = z.object({

@@ -5,7 +5,7 @@ import {
   PlatformUserModel,
   hashToken,
   resetLockout,
-} from "@crm/auth-core";
+} from "@crm/auth-core/server";
 import { setSessionCookie } from "@/lib/session-cookie";
 
 const bodySchema = z.object({ email: z.string().email(), token: z.string().min(1) });

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { connectAuthDb, PlatformUserModel, isSafeReturnTo } from "@crm/auth-core";
+import { isSafeReturnTo } from "@crm/auth-core";
+import { connectAuthDb, PlatformUserModel } from "@crm/auth-core/server";
 import { getSession } from "@/lib/session-cookie";
 import { issuer } from "@/lib/issuer";
 import { LoginForm } from "./login-form";

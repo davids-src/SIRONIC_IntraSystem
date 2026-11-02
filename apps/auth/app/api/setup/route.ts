@@ -5,7 +5,7 @@ import {
   PlatformUserModel,
   hashPassword,
   claimSetupLock,
-} from "@crm/auth-core";
+} from "@crm/auth-core/server";
 
 const bodySchema = z.object({
   email: z.string().email(),

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { connectAuthDb, PlatformUserModel } from "@crm/auth-core";
+import { connectAuthDb, PlatformUserModel } from "@crm/auth-core/server";
 import { SetupForm } from "./setup-form";
 
 export const dynamic = "force-dynamic";

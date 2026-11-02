@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { connectAuthDb, PlatformUserModel } from "@crm/auth-core";
+import { connectAuthDb, PlatformUserModel } from "@crm/auth-core/server";
 import { getSession } from "@/lib/session-cookie";
 
 export const dynamic = "force-dynamic";

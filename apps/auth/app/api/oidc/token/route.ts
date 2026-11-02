@@ -7,7 +7,7 @@ import {
   verifyPassword,
   verifyPkce,
   signIdToken,
-} from "@crm/auth-core";
+} from "@crm/auth-core/server";
 import { issuer } from "@/lib/issuer";
 
 function oauthError(error: string, status = 400) {

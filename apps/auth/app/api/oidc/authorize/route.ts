@@ -3,7 +3,7 @@ import {
   connectAuthDb,
   findActiveOidcClient,
   createAuthorizationCode,
-} from "@crm/auth-core";
+} from "@crm/auth-core/server";
 import { getSession } from "@/lib/session-cookie";
 
 function errorPage(message: string, status = 400) {

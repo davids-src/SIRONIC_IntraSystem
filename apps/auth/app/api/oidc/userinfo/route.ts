@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectAuthDb, verifyIssuedToken } from "@crm/auth-core";
+import { connectAuthDb, verifyIssuedToken } from "@crm/auth-core/server";
 import { issuer } from "@/lib/issuer";
 
 export async function GET(req: Request) {

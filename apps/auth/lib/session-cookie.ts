@@ -5,7 +5,7 @@ import {
   SESSION_COOKIE_NAME,
   SESSION_TTL_SECONDS,
   type SessionPayload,
-} from "@crm/auth-core";
+} from "@crm/auth-core/server";
 
 export async function setSessionCookie(payload: SessionPayload): Promise<void> {
   const token = await createSessionToken(payload);

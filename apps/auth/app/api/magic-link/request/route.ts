@@ -6,7 +6,7 @@ import {
   PlatformUserModel,
   generateVerificationToken,
   MAGIC_LINK_TTL_MS,
-} from "@crm/auth-core";
+} from "@crm/auth-core/server";
 import { sendEmail } from "@sironic/emails";
 
 const bodySchema = z.object({ email: z.string().email() });
