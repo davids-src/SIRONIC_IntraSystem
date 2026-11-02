@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { guard, handleApiError, requireCrmAuth, withDb } from "@/lib/api-helpers";
-import { runImportScan } from "@/lib/deployments/import-scan";
+import { normalizeDomain, runImportScan } from "@/lib/deployments/import-scan";
 import { bulkImportCandidates } from "@/lib/deployments/bulk-import";
 
 const bodySchema = z.object({
@@ -21,8 +21,10 @@ export async function POST(req: Request) {
 
     return await withDb(async () => {
       const { candidates } = await runImportScan(actor.tenantId);
+      // Normalize the same way candidate.domain is keyed (strips "www.", trailing dot,
+      // lowercases) so a caller passing e.g. "www.example.com" still matches.
       const wanted = parsed.data.domains
-        ? new Set(parsed.data.domains.map((d) => d.toLowerCase()))
+        ? new Set(parsed.data.domains.map((d) => normalizeDomain(d)))
         : null;
       const targets = candidates.filter(
         (c) => !c.already_imported_deployment_id && (!wanted || wanted.has(c.domain)),

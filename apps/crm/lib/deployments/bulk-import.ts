@@ -1,6 +1,6 @@
 import { DeploymentModel, formatNumber, nextCounterValue } from "@crm/db";
 import { DEPLOYMENT_STEP_ORDER } from "@crm/modules";
-import type { ImportCandidate } from "./import-scan";
+import { normalizeDomain, type ImportCandidate } from "./import-scan";
 
 export type BulkImportResult = {
   created: Array<{ domain: string; deployment_id: string }>;
@@ -30,8 +30,13 @@ export async function bulkImportCandidates(
     try {
       const n = await nextCounterValue(tenantId, "deployment");
       const deployment_number = formatNumber("DEP", n);
+      // Compare normalized, not raw — c.domain already had "www."/trailing-dot stripped,
+      // so a candidate whose only record is literally named "www.<domain>" still counts
+      // as its apex record instead of falling through to an arbitrary dns_records[0].
       const apexRecord =
-        c.dns_records?.find((r) => r.name === c.domain) ?? c.dns_records?.[0] ?? null;
+        c.dns_records?.find((r) => normalizeDomain(r.name) === c.domain) ??
+        c.dns_records?.[0] ??
+        null;
       // The single-create route enforces stack_name against /^[a-z0-9-]+$/ (it names real
       // Portainer resources on later steps) — a real compose project name can contain
       // characters that regex rejects, so sanitize instead of persisting it verbatim.
