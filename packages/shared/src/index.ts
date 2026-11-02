@@ -1,3 +1,5 @@
+export { defineSchema, getModel, ts } from "./mongoose-model";
+
 export const APPS = {
   crm: "crm",
   partnerPortal: "partner-portal",

@@ -10,5 +10,8 @@
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "lint": "echo \"No lint configured for @crm/shared\"",
     "test": "echo \"No tests for @crm/shared\""
+  },
+  "dependencies": {
+    "mongoose": "^8.15.1"
   }
 }
