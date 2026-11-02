@@ -34,3 +34,24 @@ export {
 } from "./lockout";
 export { recordFailedAttemptAtomic } from "./lockout-store";
 export { claimSetupLock } from "./setup-lock";
+export { verifyPkce } from "./pkce";
+export { isSafeReturnTo } from "./safe-return-to";
+export {
+  signIdToken,
+  verifyIssuedToken,
+  getJwks,
+  generateOidcSigningKeyJwk,
+  type VerifiedIdToken,
+} from "./oidc-keys";
+export {
+  createAuthorizationCode,
+  consumeAuthorizationCode,
+  type ConsumedAuthorizationCode,
+} from "./oidc-code-store";
+export {
+  findActiveOidcClient,
+  createOidcClient,
+  type OidcClientLean,
+} from "./oidc-client-store";
+export { OidcClientModel } from "./models/oidc-client";
+export { OidcAuthorizationCodeModel } from "./models/oidc-authorization-code";

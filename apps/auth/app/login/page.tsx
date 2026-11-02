@@ -1,17 +1,29 @@
 import { redirect } from "next/navigation";
-import { connectAuthDb, PlatformUserModel } from "@crm/auth-core";
+import { connectAuthDb, PlatformUserModel, isSafeReturnTo } from "@crm/auth-core";
 import { getSession } from "@/lib/session-cookie";
+import { issuer } from "@/lib/issuer";
 import { LoginForm } from "./login-form";
 
 export const dynamic = "force-dynamic";
 
-export default async function LoginPage() {
+function safeReturnTo(value: string | string[] | undefined): string | null {
+  const v = Array.isArray(value) ? value[0] : value;
+  if (v && isSafeReturnTo(v, issuer())) return v;
+  return null;
+}
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   await connectAuthDb();
   if ((await PlatformUserModel.estimatedDocumentCount()) === 0) {
     redirect("/setup");
   }
   if (await getSession()) {
-    redirect("/me");
+    const params = await searchParams;
+    redirect(safeReturnTo(params.return_to) ?? "/me");
   }
   return (
     <div

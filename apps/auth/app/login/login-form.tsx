@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { isSafeReturnTo } from "@crm/auth-core";
 
 type Mode = "password" | "magic";
 
 export function LoginForm() {
   const router = useRouter();
+  const [returnTo, setReturnTo] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("password");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,9 +19,18 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const goToDestination = () => {
+    // /api/oidc/authorize is a backend route (not a Next.js page) that issues a further
+    // redirect — a full navigation follows that; router.push wouldn't.
+    if (returnTo) window.location.href = returnTo;
+    else router.push("/me");
+  };
+
   // Auto-consume a magic link opened from the email (?email=&magicToken=).
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const rt = params.get("return_to");
+    if (rt && isSafeReturnTo(rt, window.location.origin)) setReturnTo(rt);
     const linkEmail = params.get("email");
     const magicToken = params.get("magicToken");
     if (!linkEmail || !magicToken) return;
@@ -34,7 +45,10 @@ export function LoginForm() {
           const body = await res.json().catch(() => ({}));
           throw new Error(body.error ?? "A link érvénytelen vagy lejárt.");
         }
-        router.push("/me");
+        // Use the locally-parsed `rt`, not the `returnTo` state — this effect's closure
+        // was created at mount, before the setReturnTo() call above could re-render.
+        if (rt && isSafeReturnTo(rt, window.location.origin)) window.location.href = rt;
+        else router.push("/me");
       })
       .catch((e: unknown) => {
         setError(e instanceof Error ? e.message : "A link érvénytelen vagy lejárt.");
@@ -59,7 +73,7 @@ export function LoginForm() {
         setTotpRequired(true);
         return;
       }
-      router.push("/me");
+      goToDestination();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Bejelentkezés sikertelen.");
     } finally {
