@@ -318,6 +318,31 @@ export default function ImportDeploymentPage() {
         </span>
       </div>
 
+      <div
+        style={{
+          padding: "12px 16px",
+          borderRadius: "8px",
+          background: "rgba(34,197,94,0.08)",
+          border: "1px solid rgba(34,197,94,0.2)",
+          fontSize: "0.82rem",
+          color: "var(--color-text-muted, #aaa)",
+          display: "flex",
+          gap: "10px",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+        }}
+      >
+        <span>
+          30+ domain egyszerre? Ne egyesével — a{" "}
+          <strong style={{ color: "#e2e8f0" }}>Domainek</strong> nézetben egy gombbal az
+          összes fel nem vett domaint importálhatod, a felismert azonosítókkal.
+        </span>
+        <Button variant="secondary" onClick={() => router.push("/deployments/domains")}>
+          Ugrás a Domainekhez
+        </Button>
+      </div>
+
       <StepBar />
 
       {error ? (

@@ -1,9 +1,10 @@
 "use client";
 
 import { PageHeader, Card, Button, Badge, Input } from "@crm/ui";
-import { RefreshCw, Search, ExternalLink, Plus, Globe } from "lucide-react";
+import { RefreshCw, Search, ExternalLink, Plus, Globe, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { apiJsonBody, ApiError } from "@/lib/api-client";
 
 type DnsRecordInfo = {
@@ -40,6 +41,7 @@ export default function DomainsOverviewPage() {
   const [error, setError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [scannedAt, setScannedAt] = useState<Date | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const runScan = async () => {
     setLoading(true);
@@ -70,6 +72,34 @@ export default function DomainsOverviewPage() {
     router.push("/deployments/import");
   };
 
+  const importAll = async () => {
+    const pending = rows.filter((r) => !r.already_imported_deployment_id);
+    if (pending.length === 0) return;
+    // Server re-scans fresh right before creating anything, so the actual count can differ
+    // slightly from this client-side snapshot — framed as "approximately" rather than exact.
+    const ok = window.confirm(
+      `Kb. ${pending.length} deployment jön létre automatikusan, a felismert Cloudflare/NPM/Portainer azonosítókkal (adopted lépésekkel, "live" státusszal, partner nélkül). A pontos szám a futás után jelenik meg. Folytatod?`,
+    );
+    if (!ok) return;
+    setBulkBusy(true);
+    try {
+      const res = await apiJsonBody<{
+        created: { domain: string; deployment_id: string }[];
+        skipped: { domain: string; reason: string }[];
+      }>("/api/deployments/import/bulk-apply", "POST", {});
+      toast.success(
+        `${res.created.length} deployment importálva${
+          res.skipped.length ? `, ${res.skipped.length} kihagyva` : ""
+        }.`,
+      );
+      await runScan();
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "A tömeges importálás sikertelen.");
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   const needle = search.trim().toLowerCase();
   const filtered = needle
     ? rows.filter((r) => r.domain.toLowerCase().includes(needle))
@@ -83,14 +113,26 @@ export default function DomainsOverviewPage() {
         title="Domainek"
         subtitle="Minden Cloudflare / Nginx Proxy Manager / Portainer domain egy helyen — függetlenül attól, van-e hozzá deployment"
         actions={
-          <Button
-            variant="secondary"
-            onClick={runScan}
-            style={{ opacity: loading ? 0.6 : 1 }}
-          >
-            <RefreshCw size={16} style={{ marginRight: "6px" }} />
-            {loading ? "Frissítés..." : "Frissítés"}
-          </Button>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <Button
+              variant="secondary"
+              onClick={runScan}
+              style={{ opacity: loading ? 0.6 : 1 }}
+            >
+              <RefreshCw size={16} style={{ marginRight: "6px" }} />
+              {loading ? "Frissítés..." : "Frissítés"}
+            </Button>
+            {withoutDeployment > 0 && (
+              <Button
+                variant="primary"
+                onClick={importAll}
+                style={{ opacity: bulkBusy ? 0.6 : 1 }}
+              >
+                <Zap size={16} style={{ marginRight: "6px" }} />
+                {bulkBusy ? "Importálás..." : `Mindent importál (${withoutDeployment})`}
+              </Button>
+            )}
+          </div>
         }
       />
 
