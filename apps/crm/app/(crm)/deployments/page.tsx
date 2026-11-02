@@ -3,7 +3,7 @@
 import { PageHeader, Card, Table, Badge, Button, Input } from "@crm/ui";
 import type { Column } from "@crm/ui";
 import type { Contact, Deployment, DeploymentStatus } from "@crm/types";
-import { Plus, Search, Rocket, Download } from "lucide-react";
+import { Plus, Search, Rocket, Download, Globe } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiJson } from "@/lib/api-client";
@@ -49,7 +49,9 @@ export default function DeploymentsPage() {
         setRows(
           deployments.map((d) => ({
             ...d,
-            contact_name: nameById.get(d.contact_id) ?? d.contact_id,
+            contact_name: d.contact_id
+              ? (nameById.get(d.contact_id) ?? d.contact_id)
+              : "— Nincs partner",
           })),
         );
       } catch {
@@ -141,6 +143,13 @@ export default function DeploymentsPage() {
         subtitle="Partner site-ok provisioning, DNS, SSL, stack és számlázás egy helyen"
         actions={
           <div style={{ display: "flex", gap: "8px" }}>
+            <Button
+              variant="secondary"
+              onClick={() => router.push("/deployments/domains")}
+            >
+              <Globe size={16} style={{ marginRight: "6px" }} />
+              Domainek
+            </Button>
             <Button
               variant="secondary"
               onClick={() => router.push("/deployments/import")}

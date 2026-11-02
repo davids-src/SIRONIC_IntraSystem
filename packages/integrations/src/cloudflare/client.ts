@@ -171,24 +171,30 @@ export class CloudflareClient {
     return { id: parsed.result.id };
   }
 
+  /** Pages through the full record set (Cloudflare caps a single page at 100) so callers never silently see a truncated list. Hard-capped at 20 pages (2000 records) as a sanity bound. */
   async listDnsRecords(
     zoneId: string,
     filter?: { type?: string; name?: string },
   ): Promise<DnsRecord[]> {
-    const params = new URLSearchParams();
-    if (filter?.type) params.set("type", filter.type);
-    if (filter?.name) params.set("name", filter.name);
-    const qs = params.toString();
-    const res = await httpRequest(
-      this.url(`/zones/${zoneId}/dns_records${qs ? `?${qs}` : ""}`),
-      {
-        provider: "cloudflare",
-        headers: this.headers(),
-      },
-    );
-    this.throwIfError(res.json, "Cloudflare DNS rekordok listázása sikertelen.");
-    const parsed = zCfEnvelope(zDnsRecordListResult).parse(res.json);
-    return parsed.result ?? [];
+    const all: DnsRecord[] = [];
+    for (let page = 1; page <= 20; page += 1) {
+      const params = new URLSearchParams({ per_page: "100", page: String(page) });
+      if (filter?.type) params.set("type", filter.type);
+      if (filter?.name) params.set("name", filter.name);
+      const res = await httpRequest(
+        this.url(`/zones/${zoneId}/dns_records?${params.toString()}`),
+        {
+          provider: "cloudflare",
+          headers: this.headers(),
+        },
+      );
+      this.throwIfError(res.json, "Cloudflare DNS rekordok listázása sikertelen.");
+      const parsed = zCfEnvelope(zDnsRecordListResult).parse(res.json);
+      const batch = parsed.result ?? [];
+      all.push(...batch);
+      if (batch.length < 100) break;
+    }
+    return all;
   }
 
   async deleteDnsRecord(zoneId: string, recordId: string): Promise<void> {

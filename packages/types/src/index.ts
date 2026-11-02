@@ -291,7 +291,7 @@ export interface DeploymentExternalIds {
 export interface Deployment {
   _id: string;
   tenantId: string;
-  contact_id: string;
+  contact_id: string | null;
   /** Auto-generated: DEP-000001 */
   deployment_number: string;
   name: string;

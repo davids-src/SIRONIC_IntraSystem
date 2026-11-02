@@ -258,9 +258,7 @@ export default function NewDeploymentPage() {
 
   // ─── Validáció
   const canProceedStep0 =
-    contactId.length > 0 &&
-    name.trim().length > 0 &&
-    (mode === "multi" || domain.trim().length > 2);
+    name.trim().length > 0 && (mode === "multi" || domain.trim().length > 2);
 
   // ─── Multi host segédek
   const updateHost = (id: string, patch: Partial<HostEntry>) =>
@@ -276,7 +274,7 @@ export default function NewDeploymentPage() {
     setError(null);
     try {
       const created = await apiJsonBody<{ _id: string }>("/api/deployments", "POST", {
-        contact_id: contactId,
+        contact_id: contactId || null,
         name: name.trim(),
         domain: domain.trim().toLowerCase(),
         www_redirect: wwwRedirect,
@@ -334,7 +332,7 @@ export default function NewDeploymentPage() {
     try {
       for (const h of hosts) {
         const created = await apiJsonBody<{ _id: string }>("/api/deployments", "POST", {
-          contact_id: contactId,
+          contact_id: contactId || null,
           name: `${name.trim()} — ${h.domain}`,
           domain: h.domain.trim().toLowerCase(),
           www_redirect: h.wwwRedirect,
@@ -525,7 +523,8 @@ export default function NewDeploymentPage() {
         <Card className="p-8">
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             <ContactSelect
-              label="Partner *"
+              label="Partner (opcionális)"
+              placeholder="Válassz partnert... (kihagyható, később is hozzárendelhető)"
               value={contactId}
               onChange={(id) => setContactId(id)}
               contacts={contacts}

@@ -23,13 +23,26 @@ import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
 
 const STEPS = ["Keresés", "Alapadatok", "Infrastruktúra azonosítók", "Áttekintés"];
 
+type DnsRecordInfo = {
+  id: string;
+  type: string;
+  name: string;
+  content: string;
+  proxied?: boolean;
+};
+
 type ImportCandidate = {
   domain: string;
   cloudflare_zone_id?: string;
+  cloudflare_zone_status?: string;
+  dns_records?: DnsRecordInfo[];
   npm_proxy_host_id?: number;
   npm_certificate_id?: number;
+  npm_forward_host?: string;
+  npm_forward_port?: number;
   portainer_stack_id?: number;
   suggested_stack_name?: string;
+  stack_match_method?: "container" | "fuzzy_name";
   already_imported_deployment_id?: string;
   confidence: "high" | "medium" | "low";
 };
@@ -104,18 +117,40 @@ export default function ImportDeploymentPage() {
     if (c.npm_proxy_host_id != null) setNpmProxyHostId(String(c.npm_proxy_host_id));
     if (c.portainer_stack_id != null) setPortainerStackId(String(c.portainer_stack_id));
     if (c.suggested_stack_name) setStackName(c.suggested_stack_name.toLowerCase());
+    if (c.npm_forward_host) setForwardHost(c.npm_forward_host);
+    if (c.npm_forward_port != null) setForwardPort(String(c.npm_forward_port));
+    const apex = c.dns_records?.find((r) => r.name === c.domain || r.name === "@");
+    if (apex) {
+      setDnsRecordType(apex.type === "CNAME" ? "CNAME" : "A");
+      setDnsTarget(apex.content);
+      setDnsProxied(apex.proxied ?? false);
+      setCfDnsRecordIds(apex.id);
+    }
     setStep(1);
   };
 
-  const canProceedStep0 =
-    contactId.length > 0 && name.trim().length > 0 && domain.trim().length > 2;
+  // Handoff from the /deployments/domains overview: it stashes the picked candidate here
+  // instead of a query string, since the row is a full scan result object.
+  useEffect(() => {
+    const raw = sessionStorage.getItem("sironic_import_candidate");
+    if (!raw) return;
+    sessionStorage.removeItem("sironic_import_candidate");
+    try {
+      applyCandidate(JSON.parse(raw) as ImportCandidate);
+    } catch {
+      // ignore malformed handoff payload — user just falls back to manual scan
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const canProceedStep0 = name.trim().length > 0 && domain.trim().length > 2;
 
   const save = async () => {
     setSaving(true);
     setError(null);
     try {
       const created = await apiJsonBody<{ _id: string }>("/api/deployments", "POST", {
-        contact_id: contactId,
+        contact_id: contactId || null,
         name: name.trim(),
         domain: domain.trim().toLowerCase(),
         www_redirect: wwwRedirect,
@@ -377,6 +412,14 @@ export default function ImportDeploymentPage() {
                         }}
                       >
                         {c.confidence} megbízhatóság
+                        {c.stack_match_method === "container"
+                          ? " · stack: container-egyezés"
+                          : c.stack_match_method === "fuzzy_name"
+                            ? " · stack: név-egyezés (ellenőrizd)"
+                            : ""}
+                        {c.dns_records?.length
+                          ? ` · ${c.dns_records.length} DNS rekord`
+                          : ""}
                         {c.already_imported_deployment_id ? " · már importálva" : ""}
                       </div>
                     </div>
@@ -407,7 +450,8 @@ export default function ImportDeploymentPage() {
         <Card className="p-8">
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             <ContactSelect
-              label="Partner *"
+              label="Partner (opcionális)"
+              placeholder="Válassz partnert... (kihagyható, később is hozzárendelhető)"
               value={contactId}
               onChange={(id) => setContactId(id)}
               contacts={contacts}

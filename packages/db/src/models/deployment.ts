@@ -43,7 +43,7 @@ const deploymentStepSchema = {
 const deploymentSchema = defineSchema(
   {
     tenantId: { type: String, required: true, index: true },
-    contact_id: { type: String, required: true, index: true },
+    contact_id: { type: String, default: null, index: true },
     deployment_number: { type: String, required: true },
     name: { type: String, required: true },
     domain: { type: String, required: true, lowercase: true },

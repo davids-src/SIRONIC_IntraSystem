@@ -10,7 +10,7 @@ import { DEPLOYMENT_STEP_ORDER } from "@crm/modules";
 import { guard, handleApiError, requireCrmAuth, withDb } from "@/lib/api-helpers";
 
 const createSchema = z.object({
-  contact_id: z.string().min(1),
+  contact_id: z.string().min(1).nullable().optional(),
   name: z.string().min(1).max(200),
   domain: z
     .string()
@@ -146,7 +146,7 @@ export async function POST(req: Request) {
 
       const doc = await DeploymentModel.create({
         tenantId: actor.tenantId,
-        contact_id: b.contact_id,
+        contact_id: b.contact_id ?? null,
         deployment_number,
         name: b.name,
         domain: b.domain,

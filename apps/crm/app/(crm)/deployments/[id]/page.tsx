@@ -1,6 +1,6 @@
 "use client";
 
-import { PageHeader, Badge, Button, Card } from "@crm/ui";
+import { PageHeader, Badge, Button, Card, ContactSelect } from "@crm/ui";
 import type { Contact, Deployment, DeploymentEvent, DeploymentStatus } from "@crm/types";
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -62,14 +62,17 @@ export default function DeploymentDetailPage() {
   const [tokenBusy, setTokenBusy] = useState(false);
   const [syncBusy, setSyncBusy] = useState(false);
   const [newToken, setNewToken] = useState<string | null>(null);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [editingPartner, setEditingPartner] = useState(false);
+  const [partnerSaving, setPartnerSaving] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const dep = await apiJson<Deployment>(`/api/deployments/${params.id}`);
       setDeployment(dep);
-      const c = await apiJson<Contact>(`/api/contacts/${dep.contact_id}`).catch(
-        () => null,
-      );
+      const c = dep.contact_id
+        ? await apiJson<Contact>(`/api/contacts/${dep.contact_id}`).catch(() => null)
+        : null;
       setContact(c);
     } catch {
       setLoadError("A deployment nem található vagy nincs jogosultságod hozzá.");
@@ -79,6 +82,28 @@ export default function DeploymentDetailPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const assignPartner = async (contactId: string) => {
+    setPartnerSaving(true);
+    try {
+      await apiJsonBody(`/api/deployments/${params.id}`, "PATCH", {
+        contact_id: contactId || null,
+      });
+      setEditingPartner(false);
+      await load();
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Partner mentése sikertelen.");
+    } finally {
+      setPartnerSaving(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!editingPartner || contacts.length > 0) return;
+    apiJson<Contact[]>("/api/contacts")
+      .then(setContacts)
+      .catch(() => {});
+  }, [editingPartner, contacts.length]);
 
   useEffect(() => {
     if (activeTab !== "events" || !deployment) return;
@@ -229,17 +254,59 @@ export default function DeploymentDetailPage() {
         }
       />
 
-      {contact ? (
+      {editingPartner ? (
+        <div
+          style={{
+            maxWidth: "420px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+          }}
+        >
+          <ContactSelect
+            label="Partner (opcionális)"
+            placeholder="Válassz partnert... (kihagyható)"
+            value={deployment?.contact_id ?? ""}
+            contacts={contacts}
+            disabled={partnerSaving}
+            onChange={(id) => assignPartner(id)}
+          />
+          <Button
+            variant="ghost"
+            onClick={() => setEditingPartner(false)}
+            disabled={partnerSaving}
+          >
+            Mégse
+          </Button>
+        </div>
+      ) : (
         <p style={{ fontSize: "0.875rem", color: "var(--color-text-muted, #555)" }}>
           Partner:{" "}
-          <Link
-            href={`/organizations/${contact._id}`}
-            style={{ color: "var(--color-accent-primary, #e53935)" }}
+          {contact ? (
+            <Link
+              href={`/organizations/${contact._id}`}
+              style={{ color: "var(--color-accent-primary, #e53935)" }}
+            >
+              {contact.name}
+            </Link>
+          ) : (
+            <span>Nincs hozzárendelve</span>
+          )}{" "}
+          <button
+            onClick={() => setEditingPartner(true)}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--color-accent-primary, #e53935)",
+              fontSize: "0.8rem",
+              textDecoration: "underline",
+            }}
           >
-            {contact.name}
-          </Link>
+            {contact ? "Módosítás" : "Partner hozzárendelése"}
+          </button>
         </p>
-      ) : null}
+      )}
 
       <div
         className="flex items-center gap-2 border-b overflow-x-auto pb-[1px]"
