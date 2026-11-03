@@ -88,6 +88,22 @@ export const stackCreateStep: StepHandler = {
     const { compose } = await renderStack(ctx);
     const client = portainer(ctx);
     const stackName = ctx.deployment.stack.stack_name as string;
+
+    // Re-running this step (e.g. after editing stack.env or compose_yaml) must update the
+    // stack already running under portainer_stack_id, not try to create a second one —
+    // Portainer rejects a duplicate name, and even if it didn't, a sibling stack would
+    // fight the original for the same container_name/proxy target.
+    const existingId = ctx.deployment.external_ids.portainer_stack_id;
+    if (existingId) {
+      await client.updateStack(existingId, compose, ctx.deployment.stack.env);
+      return {
+        status: "done",
+        external_id: String(existingId),
+        message: "Stack frissítve.",
+        external_ids_patch: { portainer_stack_id: existingId },
+      };
+    }
+
     const created = await client.createStackStandalone(
       stackName,
       compose,

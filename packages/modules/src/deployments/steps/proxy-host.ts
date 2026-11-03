@@ -53,6 +53,28 @@ export const proxyHostStep: StepHandler = {
       );
     }
     const client = npm(ctx);
+
+    // Re-running this step (e.g. to force NPM to regenerate nginx config for a host whose
+    // vhost never got reloaded) must update the existing proxy host, not try to create a
+    // second one for the same domain — NPM rejects that outright.
+    const existingId = ctx.deployment.external_ids.npm_proxy_host_id;
+    if (existingId) {
+      await client.updateProxyHost(Number(existingId), {
+        domainNames: domainNames(ctx),
+        forwardScheme: forward_scheme,
+        forwardHost: forward_host,
+        forwardPort: forward_port,
+        certificateId: certificateId(ctx),
+        allowWebsocketUpgrade: websocket_support,
+      });
+      return {
+        status: "done",
+        external_id: String(existingId),
+        message: "Proxy host frissítve.",
+        external_ids_patch: { npm_proxy_host_id: existingId },
+      };
+    }
+
     const host = await client.createProxyHost({
       domainNames: domainNames(ctx),
       forwardScheme: forward_scheme,
