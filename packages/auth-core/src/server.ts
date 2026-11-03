@@ -1,5 +1,10 @@
-export { PlatformUserModel } from "./models/platform-user";
+export { PlatformUserModel, platformUserModelFor } from "./models/platform-user";
 export { connectAuthDb } from "./connection";
+export { connectSecondaryAuthDb } from "./secondary-connection";
+export {
+  findOrCreatePlatformUserByEmail,
+  type PlatformUserRef,
+} from "./platform-user-store";
 export { hashPassword, verifyPassword } from "./password";
 export {
   createSessionToken,
@@ -49,8 +54,10 @@ export {
 } from "./oidc-code-store";
 export {
   findActiveOidcClient,
+  findOidcClientByDeployment,
   createOidcClient,
+  rotateOidcClientSecret,
   type OidcClientLean,
 } from "./oidc-client-store";
-export { OidcClientModel } from "./models/oidc-client";
+export { OidcClientModel, oidcClientModelFor } from "./models/oidc-client";
 export { OidcAuthorizationCodeModel } from "./models/oidc-authorization-code";

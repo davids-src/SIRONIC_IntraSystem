@@ -9,12 +9,23 @@ export function defineSchema(
 }
 
 /**
- * Registers on whichever mongoose connection the consuming app establishes — safe to reuse
- * across packages that target different databases (e.g. `@crm/db`'s `crm` vs
- * `@crm/auth-core`'s `sironic_auth`), since each app process has its own connection.
+ * Registers on the given mongoose connection, defaulting to the global default connection
+ * (`mongoose.connection`) when none is passed — this is what every existing caller gets,
+ * unchanged. Pass an explicit `connection` when a single process needs two independent
+ * database connections at once (e.g. the CRM's own `crm` database on the default connection,
+ * plus a second `mongoose.createConnection(...)` to `sironic_auth`) — reusing the default
+ * connection for both would silently point one of them at the wrong database, since
+ * `mongoose.connect()` on an already-connected default connection is a no-op that returns
+ * whichever URI connected first.
  */
-export function getModel(name: string, schema: Schema): mongoose.Model<any> {
-  return (mongoose.models[name] as mongoose.Model<any>) || mongoose.model(name, schema);
+export function getModel(
+  name: string,
+  schema: Schema,
+  connection: mongoose.Connection = mongoose.connection,
+): mongoose.Model<any> {
+  return (
+    (connection.models[name] as mongoose.Model<any>) || connection.model(name, schema)
+  );
 }
 
 /** Shared mongoose `created_at` / `updated_at` field config */

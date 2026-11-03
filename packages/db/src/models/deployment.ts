@@ -118,6 +118,7 @@ const deploymentSchema = defineSchema(
       portainer_webhook_id: { type: String, default: null },
       github_last_run_id: { type: Number, default: null },
       image_digest: { type: String, default: null },
+      oidc_client_id: { type: String, default: null },
     },
 
     source: {

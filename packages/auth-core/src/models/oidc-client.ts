@@ -1,3 +1,4 @@
+import type { Connection } from "mongoose";
 import { defineSchema, getModel, ts } from "@crm/shared";
 
 const oidcClientSchema = defineSchema(
@@ -31,3 +32,9 @@ const oidcClientSchema = defineSchema(
 );
 
 export const OidcClientModel = getModel("OidcClient", oidcClientSchema);
+
+/** For a process that already owns its own default connection (e.g. CRM's `crm` db) and
+ * needs a second, independent connection to sironic_auth instead. */
+export function oidcClientModelFor(connection: Connection) {
+  return getModel("OidcClient", oidcClientSchema, connection);
+}

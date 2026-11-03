@@ -88,6 +88,7 @@ export interface PortalUser {
   email: string;
   display_name: string | null;
   roleKeys: RoleKey[];
+  platform_user_id: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -286,6 +287,7 @@ export interface DeploymentExternalIds {
   portainer_webhook_id: string | null;
   github_last_run_id: number | null;
   image_digest: string | null;
+  oidc_client_id: string | null;
 }
 
 export interface Deployment {

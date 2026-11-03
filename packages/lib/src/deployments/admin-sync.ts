@@ -6,6 +6,11 @@ import {
 } from "@crm/db";
 import { httpRequest } from "@crm/integrations";
 import type { ActorContext, Deployment, RoleKey } from "@crm/types";
+import {
+  connectSecondaryAuthDb,
+  platformUserModelFor,
+  findOrCreatePlatformUserByEmail,
+} from "@crm/auth-core/server";
 import { decryptSecret } from "../secret-crypto";
 
 type SyncAdmin = {
@@ -38,16 +43,38 @@ async function buildAdminsPayload(
   }).lean();
   const byId = new Map(portalUsers.map((u) => [String(u._id), u]));
 
+  // The deployed site's own login is now OIDC — its `sub` claim is PlatformUser._id, not
+  // this PortalUser's own _id. Resolve (or create, first time) the real PlatformUser per
+  // admin so the id this push tells the site to expect is the same one OIDC login produces,
+  // and cache it on the PortalUser row so repeat syncs don't re-resolve it every time.
+  const authConnection = await connectSecondaryAuthDb();
+  const platformUserModel = platformUserModelFor(authConnection);
+
   const admins: SyncAdmin[] = [];
   for (const row of accessRows) {
     const user = byId.get(row.portal_user_id);
     if (!user) continue;
     const roleKeys = (user.roleKeys ?? []) as string[];
+
+    let platformUserId = (user as { platform_user_id?: string | null }).platform_user_id;
+    if (!platformUserId) {
+      const platformUser = await findOrCreatePlatformUserByEmail(
+        user.email,
+        user.display_name ?? null,
+        platformUserModel,
+      );
+      platformUserId = String(platformUser._id);
+      await PortalUserModel.updateOne(
+        { _id: user._id, platform_user_id: null },
+        { $set: { platform_user_id: platformUserId } },
+      );
+    }
+
     admins.push({
       email: user.email,
       displayName: user.display_name ?? null,
       role: roleKeys.includes("partner.admin") ? "admin" : "viewer",
-      platformUserId: String(user._id),
+      platformUserId,
     });
   }
   return admins;

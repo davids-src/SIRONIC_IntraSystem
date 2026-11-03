@@ -14,6 +14,10 @@ const portalUserSchema = defineSchema(
     invite_token_expires: { type: Date, default: null },
     magic_token_hash: { type: String, default: null, index: true, sparse: true },
     magic_token_expires: { type: Date, default: null },
+    /** PlatformUser._id in the central auth DB (sironic_auth) — resolved/created lazily on
+     * first admin-sync, so it's the same identity OIDC login on a deployed site produces
+     * as its `sub` claim. null until that first resolution happens. */
+    platform_user_id: { type: String, default: null, index: true, sparse: true },
   },
   ts,
 );

@@ -64,6 +64,7 @@ function makeDeployment(
       portainer_webhook_id: null,
       github_last_run_id: null,
       image_digest: null,
+      oidc_client_id: null,
     },
     source: "created",
     group_id: null,

@@ -19,6 +19,8 @@ const nextConfig: NextConfig = {
     "@crm/rbac",
     "@crm/modules",
     "@crm/auth",
+    "@crm/auth-core",
+    "@crm/shared",
     "@crm/db",
     "@crm/lib",
   ],

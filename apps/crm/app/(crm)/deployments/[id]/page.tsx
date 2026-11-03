@@ -65,6 +65,18 @@ export default function DeploymentDetailPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [editingPartner, setEditingPartner] = useState(false);
   const [partnerSaving, setPartnerSaving] = useState(false);
+  const [oidcStatus, setOidcStatus] = useState<{
+    registered: boolean;
+    client_id?: string;
+    redirect_uris?: string[];
+    issuer?: string;
+  } | null>(null);
+  const [oidcBusy, setOidcBusy] = useState(false);
+  const [newOidcSecret, setNewOidcSecret] = useState<{
+    client_id: string;
+    client_secret: string;
+    issuer: string;
+  } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -118,6 +130,42 @@ export default function DeploymentDetailPage() {
       .then(setAccessRows)
       .catch(() => setAccessRows([]));
   }, [activeTab, deployment]);
+
+  useEffect(() => {
+    if (activeTab !== "partner" || !deployment) return;
+    apiJson<{
+      registered: boolean;
+      client_id?: string;
+      redirect_uris?: string[];
+      issuer?: string;
+    }>(`/api/deployments/${deployment._id}/oidc-client`)
+      .then(setOidcStatus)
+      .catch(() => setOidcStatus(null));
+  }, [activeTab, deployment]);
+
+  const manageOidcClient = async (action: "generate" | "rotate") => {
+    if (!deployment) return;
+    setOidcBusy(true);
+    try {
+      const res = await apiJsonBody<{
+        client_id: string;
+        client_secret: string;
+        issuer: string;
+      }>(`/api/deployments/${deployment._id}/oidc-client`, "POST", { action });
+      setNewOidcSecret(res);
+      const status = await apiJson<{
+        registered: boolean;
+        client_id?: string;
+        redirect_uris?: string[];
+        issuer?: string;
+      }>(`/api/deployments/${deployment._id}/oidc-client`);
+      setOidcStatus(status);
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "OIDC kliens kezelése sikertelen.");
+    } finally {
+      setOidcBusy(false);
+    }
+  };
 
   const generateToken = async (action: "generate" | "rotate") => {
     if (!deployment) return;
@@ -519,6 +567,93 @@ export default function DeploymentDetailPage() {
                   {newToken}
                 </code>
                 <Button variant="ghost" onClick={() => setNewToken(null)}>
+                  Bezárás
+                </Button>
+              </div>
+            ) : null}
+          </Card>
+
+          <Card className="p-6">
+            <h3 style={{ fontSize: "0.875rem", fontWeight: 700, marginBottom: "12px" }}>
+              Sironic SSO (OIDC)
+            </h3>
+            <p
+              style={{
+                fontSize: "0.8rem",
+                color: "var(--color-text-muted, #555)",
+                marginBottom: "12px",
+              }}
+            >
+              Ezzel tud a site &quot;Belépés Sironic fiókkal&quot; gombot adni — a
+              felhasználó a Sironic (apps/auth) fiókjával jelentkezik be, nem helyi
+              jelszóval. Működik akkor is, ha a site nem a mi infrastruktúránkon fut, csak
+              a sironic-platform alapra épül.
+            </p>
+            {oidcStatus?.registered ? (
+              <dl
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "140px 1fr",
+                  rowGap: "8px",
+                  fontSize: "0.8rem",
+                  marginBottom: "12px",
+                }}
+              >
+                <dt style={{ color: "var(--color-text-muted, #555)" }}>Client ID</dt>
+                <dd style={{ fontFamily: "monospace", wordBreak: "break-all" }}>
+                  {oidcStatus.client_id}
+                </dd>
+                <dt style={{ color: "var(--color-text-muted, #555)" }}>Redirect URI</dt>
+                <dd style={{ fontFamily: "monospace", wordBreak: "break-all" }}>
+                  {oidcStatus.redirect_uris?.[0] ?? "—"}
+                </dd>
+                <dt style={{ color: "var(--color-text-muted, #555)" }}>Issuer</dt>
+                <dd style={{ fontFamily: "monospace", wordBreak: "break-all" }}>
+                  {oidcStatus.issuer}
+                </dd>
+              </dl>
+            ) : (
+              <p style={{ fontSize: "0.8rem", marginBottom: "12px" }}>
+                Állapot: <strong>nincs regisztrálva</strong>
+              </p>
+            )}
+            <div style={{ display: "flex", gap: "8px" }}>
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  manageOidcClient(oidcStatus?.registered ? "rotate" : "generate")
+                }
+                disabled={oidcBusy}
+                style={{ opacity: oidcBusy ? 0.6 : 1 }}
+              >
+                {oidcStatus?.registered ? "Secret rotálása" : "Regisztrálás"}
+              </Button>
+            </div>
+            {newOidcSecret ? (
+              <div
+                style={{
+                  marginTop: "16px",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  background: "var(--color-surface-input, #111)",
+                  border: "1px solid var(--color-border-subtle, #222)",
+                }}
+              >
+                <p style={{ fontSize: "0.78rem", marginBottom: "8px" }}>
+                  A secret csak most jelenik meg — mentsd el a site env-jébe:
+                </p>
+                <dl style={{ fontSize: "0.78rem", marginBottom: "8px" }}>
+                  <code style={{ display: "block", wordBreak: "break-all" }}>
+                    PLATFORM_AUTH_ISSUER={newOidcSecret.issuer}
+                  </code>
+                  <code style={{ display: "block", wordBreak: "break-all" }}>
+                    PLATFORM_AUTH_CLIENT_ID={newOidcSecret.client_id}
+                  </code>
+                  <code style={{ display: "block", wordBreak: "break-all" }}>
+                    PLATFORM_AUTH_CLIENT_SECRET={newOidcSecret.client_secret}
+                  </code>
+                </dl>
+                <Button variant="ghost" onClick={() => setNewOidcSecret(null)}>
                   Bezárás
                 </Button>
               </div>

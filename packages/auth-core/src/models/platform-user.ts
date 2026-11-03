@@ -1,3 +1,4 @@
+import type { Connection } from "mongoose";
 import { defineSchema, getModel, ts } from "@crm/shared";
 
 const platformUserSchema = defineSchema(
@@ -30,3 +31,9 @@ const platformUserSchema = defineSchema(
 );
 
 export const PlatformUserModel = getModel("PlatformUser", platformUserSchema);
+
+/** For a process that already owns its own default connection (e.g. CRM's `crm` db) and
+ * needs a second, independent connection to sironic_auth instead. */
+export function platformUserModelFor(connection: Connection) {
+  return getModel("PlatformUser", platformUserSchema, connection);
+}

@@ -24,6 +24,7 @@
     "test": "jest --config jest.config.mjs --passWithNoTests"
   },
   "dependencies": {
+    "@crm/auth-core": "workspace:*",
     "@crm/db": "workspace:*",
     "@crm/integrations": "workspace:*",
     "@crm/types": "workspace:*",

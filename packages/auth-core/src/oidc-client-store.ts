@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import type { Model } from "mongoose";
 import { OidcClientModel } from "./models/oidc-client";
 import { hashPassword } from "./password";
 
@@ -17,13 +18,26 @@ export type OidcClientLean = {
   is_active: boolean;
 };
 
+/**
+ * Every function here takes the model as its last, optional argument (defaulting to the
+ * one bound to this package's own default connection) rather than hard-coding
+ * `OidcClientModel` — CRM calls these with `oidcClientModelFor(itsOwnSecondaryConnection)`
+ * instead, since it can't share a connection with apps/auth (see models/oidc-client.ts).
+ */
 export async function findActiveOidcClient(
   clientId: string,
+  model: Model<any> = OidcClientModel,
 ): Promise<OidcClientLean | null> {
-  return OidcClientModel.findOne({
-    client_id: clientId,
-    is_active: true,
-  }).lean<OidcClientLean | null>();
+  return model
+    .findOne({ client_id: clientId, is_active: true })
+    .lean<OidcClientLean | null>();
+}
+
+export async function findOidcClientByDeployment(
+  deploymentId: string,
+  model: Model<any> = OidcClientModel,
+): Promise<OidcClientLean | null> {
+  return model.findOne({ deployment_id: deploymentId }).lean<OidcClientLean | null>();
 }
 
 /**
@@ -35,16 +49,19 @@ export async function findActiveOidcClient(
  * deploymentId is optional and unrelated to where the site is actually hosted — a site we
  * build but don't operate still gets a client registered the same way.
  */
-export async function createOidcClient(input: {
-  name: string;
-  type: "crm" | "portal" | "deployment" | "other";
-  redirectUris: string[];
-  postLogoutRedirectUris?: string[];
-  confidential: boolean;
-  deploymentId?: string | null;
-  contactId?: string | null;
-  tenantId?: string | null;
-}): Promise<{ client_id: string; client_secret: string | null }> {
+export async function createOidcClient(
+  input: {
+    name: string;
+    type: "crm" | "portal" | "deployment" | "other";
+    redirectUris: string[];
+    postLogoutRedirectUris?: string[];
+    confidential: boolean;
+    deploymentId?: string | null;
+    contactId?: string | null;
+    tenantId?: string | null;
+  },
+  model: Model<any> = OidcClientModel,
+): Promise<{ client_id: string; client_secret: string | null }> {
   const client_id = `oidc_${randomBytes(12).toString("hex")}`;
   let client_secret: string | null = null;
   let client_secret_hash: string | null = null;
@@ -52,7 +69,7 @@ export async function createOidcClient(input: {
     client_secret = randomBytes(24).toString("base64url");
     client_secret_hash = await hashPassword(client_secret);
   }
-  await OidcClientModel.create({
+  await model.create({
     client_id,
     client_secret_hash,
     name: input.name,
@@ -65,4 +82,18 @@ export async function createOidcClient(input: {
     tenantId: input.tenantId ?? null,
   });
   return { client_id, client_secret };
+}
+
+/** Generates and stores a fresh secret, returned once — the old secret stops working
+ * immediately (no grace-period overlap, matching the provision-token rotate flow). */
+export async function rotateOidcClientSecret(
+  clientId: string,
+  model: Model<any> = OidcClientModel,
+): Promise<string | null> {
+  const client = await model.findOne({ client_id: clientId });
+  if (!client) return null;
+  const client_secret = randomBytes(24).toString("base64url");
+  client.client_secret_hash = await hashPassword(client_secret);
+  await client.save();
+  return client_secret;
 }
