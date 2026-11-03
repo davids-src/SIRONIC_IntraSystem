@@ -20,6 +20,8 @@ jobs:
             image: sironic-crm
           - app: partner-portal
             image: sironic-partner-portal
+          - app: auth
+            image: sironic-auth
     steps:
       - uses: actions/checkout@v4
 
