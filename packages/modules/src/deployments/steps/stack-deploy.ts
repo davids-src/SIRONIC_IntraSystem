@@ -8,6 +8,17 @@ import type {
 } from "../types";
 import { getStep, portainer } from "../util";
 
+// A compose service can set an explicit `container_name:` (often required so the reverse
+// proxy can reach it by a stable Docker DNS name) — then the running container's name no
+// longer contains the Portainer stack name at all. Match on either.
+function matchesThisStack(ctx: StepContext, containerNames: string[]): boolean {
+  const stackName = ctx.deployment.stack.stack_name ?? "\0";
+  const forwardHost = ctx.deployment.proxy.forward_host ?? "\0";
+  return containerNames.some(
+    (name) => name.includes(stackName) || name.includes(forwardHost),
+  );
+}
+
 function stackId(ctx: StepContext): number {
   const stackStep = getStep(ctx.deployment, "stack_create");
   if (!stackStep.external_id) {
@@ -55,11 +66,9 @@ export const stackDeployStep: StepHandler = {
 
   async adopt(ctx: StepContext): Promise<StepResult> {
     const client = portainer(ctx);
-    const stackName = ctx.deployment.stack.stack_name;
     const containers = await client.listContainers();
     const running = containers.some(
-      (c) =>
-        c.State === "running" && c.Names.some((name) => name.includes(stackName ?? "\0")),
+      (c) => c.State === "running" && matchesThisStack(ctx, c.Names),
     );
     if (!running) {
       throw new OrchestratorError(
@@ -72,11 +81,9 @@ export const stackDeployStep: StepHandler = {
 
   async verify(ctx: StepContext): Promise<StepVerifyResult> {
     const client = portainer(ctx);
-    const stackName = ctx.deployment.stack.stack_name;
     const containers = await client.listContainers();
     const running = containers.some(
-      (c) =>
-        c.State === "running" && c.Names.some((name) => name.includes(stackName ?? "\0")),
+      (c) => c.State === "running" && matchesThisStack(ctx, c.Names),
     );
     return {
       ok: running,
