@@ -1,4 +1,5 @@
 import {
+  CrmUserModel,
   DeploymentEventModel,
   DeploymentModel,
   PartnerDeploymentAccessModel,
@@ -35,22 +36,38 @@ async function buildAdminsPayload(
     tenantId,
     deployment_id: deploymentId,
   }).lean();
-  if (accessRows.length === 0) return [];
 
-  const portalUsers = await PortalUserModel.find({
-    tenantId,
-    _id: { $in: accessRows.map((r) => r.portal_user_id) },
-  }).lean();
+  const portalUsers = accessRows.length
+    ? await PortalUserModel.find({
+        tenantId,
+        _id: { $in: accessRows.map((r) => r.portal_user_id) },
+      }).lean()
+    : [];
   const byId = new Map(portalUsers.map((u) => [String(u._id), u]));
 
+  // Every ERP admin gets standing access to every deployed site — the agency hosts and
+  // operates these sites on the partner's behalf, so access can't be something a partner's
+  // own admin screen can revoke. `source: "erp"` rows are protected from removal/edits by
+  // the site's own admin-management UI (sironic-platform packages/auth/admin-management.ts
+  // loadTarget()); a full idempotent sync here means any attempt to delete one is undone on
+  // the next sync.
+  const crmAdmins = await CrmUserModel.find({
+    tenantId,
+    roleKeys: "crm.admin",
+  }).lean();
+
   // The deployed site's own login is now OIDC — its `sub` claim is PlatformUser._id, not
-  // this PortalUser's own _id. Resolve (or create, first time) the real PlatformUser per
-  // admin so the id this push tells the site to expect is the same one OIDC login produces,
-  // and cache it on the PortalUser row so repeat syncs don't re-resolve it every time.
+  // this PortalUser's/CrmUser's own _id. Resolve (or create, first time) the real
+  // PlatformUser per admin so the id this push tells the site to expect is the same one
+  // OIDC login produces, and cache it on the PortalUser row so repeat syncs don't re-resolve
+  // it every time. CrmUserModel has no such cache field, so it's resolved fresh each sync —
+  // findOrCreatePlatformUserByEmail is idempotent, so that's just a (cheap) read in practice.
   const authConnection = await connectSecondaryAuthDb();
   const platformUserModel = platformUserModelFor(authConnection);
 
   const admins: SyncAdmin[] = [];
+  const seenEmails = new Set<string>();
+
   for (const row of accessRows) {
     const user = byId.get(row.portal_user_id);
     if (!user) continue;
@@ -70,6 +87,7 @@ async function buildAdminsPayload(
       );
     }
 
+    seenEmails.add(user.email);
     admins.push({
       email: user.email,
       displayName: user.display_name ?? null,
@@ -77,6 +95,23 @@ async function buildAdminsPayload(
       platformUserId,
     });
   }
+
+  for (const user of crmAdmins) {
+    if (seenEmails.has(user.email)) continue; // already pushed via partner access, don't duplicate
+    seenEmails.add(user.email);
+    const platformUser = await findOrCreatePlatformUserByEmail(
+      user.email,
+      user.display_name ?? null,
+      platformUserModel,
+    );
+    admins.push({
+      email: user.email,
+      displayName: user.display_name ?? null,
+      role: "admin",
+      platformUserId: String(platformUser._id),
+    });
+  }
+
   return admins;
 }
 
