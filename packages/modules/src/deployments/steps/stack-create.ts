@@ -22,21 +22,33 @@ async function renderStack(ctx: StepContext): Promise<RenderedStack> {
       "Nincs megadva Portainer stack neve.",
     );
   }
-  if (!stack.template_id) {
-    throw new OrchestratorError(
-      "TEMPLATE_MISSING",
-      "Nincs kiválasztva stack sablon (StackTemplate).",
-    );
-  }
-  const template = await StackTemplateModel.findOne({
-    _id: stack.template_id,
-    tenantId: ctx.tenantId,
-  }).lean<{ compose_yaml: string; required_networks: string[] } | null>();
-  if (!template) {
-    throw new OrchestratorError(
-      "TEMPLATE_NOT_FOUND",
-      "A megadott stack sablon nem található.",
-    );
+
+  // The deployment's own compose_yaml (set/edited in the New deployment wizard) wins when
+  // present — it's what the UI visually implies you're configuring. Falls back to the
+  // referenced StackTemplate only for deployments that never customized it.
+  let composeTemplate: string;
+  let requiredNetworks: string[] = [];
+  if (stack.compose_yaml) {
+    composeTemplate = stack.compose_yaml;
+  } else {
+    if (!stack.template_id) {
+      throw new OrchestratorError(
+        "TEMPLATE_MISSING",
+        "Nincs kiválasztva stack sablon (StackTemplate), és a deploymentnek sincs saját compose_yaml-ja.",
+      );
+    }
+    const template = await StackTemplateModel.findOne({
+      _id: stack.template_id,
+      tenantId: ctx.tenantId,
+    }).lean<{ compose_yaml: string; required_networks: string[] } | null>();
+    if (!template) {
+      throw new OrchestratorError(
+        "TEMPLATE_NOT_FOUND",
+        "A megadott stack sablon nem található.",
+      );
+    }
+    composeTemplate = template.compose_yaml;
+    requiredNetworks = template.required_networks;
   }
 
   const values: Record<string, string> = {
@@ -47,11 +59,11 @@ async function renderStack(ctx: StepContext): Promise<RenderedStack> {
   };
   for (const env of stack.env) values[env.name] = env.value;
 
-  const compose = template.compose_yaml.replace(
+  const compose = composeTemplate.replace(
     /{{\s*([A-Z0-9_]+)\s*}}/g,
     (match, key: string) => (key in values ? (values[key] as string) : match),
   );
-  return { compose, requiredNetworks: template.required_networks };
+  return { compose, requiredNetworks };
 }
 
 export const stackCreateStep: StepHandler = {

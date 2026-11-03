@@ -64,10 +64,14 @@ export const sslCertificateStep: StepHandler = {
     const certs = await client.listCertificates();
     const id = Number(input.external_id);
     const match = certs.find((c) => c.id === id);
-    if (!match || !match.domain_names.includes(ctx.deployment.domain)) {
+    const domain = ctx.deployment.domain;
+    const covers = (certDomain: string) =>
+      certDomain === domain ||
+      (certDomain.startsWith("*.") && domain.endsWith(certDomain.slice(1)));
+    if (!match || !match.domain_names.some(covers)) {
       throw new OrchestratorError(
         "CERT_MISMATCH",
-        "A megadott tanúsítvány nem tartalmazza a deployment domainjét.",
+        "A megadott tanúsítvány nem fedi le a deployment domainjét.",
       );
     }
     return {
@@ -97,7 +101,12 @@ export const sslCertificateStep: StepHandler = {
           drift: ["certificate_not_found"],
           message: "A tanúsítvány nem található.",
         };
-      const ok = match.domain_names.includes(ctx.deployment.domain);
+      const domain = ctx.deployment.domain;
+      const ok = match.domain_names.some(
+        (certDomain) =>
+          certDomain === domain ||
+          (certDomain.startsWith("*.") && domain.endsWith(certDomain.slice(1))),
+      );
       return {
         ok,
         drift: ok ? [] : ["certificate.domain_mismatch"],

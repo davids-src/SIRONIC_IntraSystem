@@ -48,10 +48,12 @@ export const cloudflareZoneStep: StepHandler = {
   async adopt(ctx: StepContext, input): Promise<StepResult> {
     const cf = cloudflare(ctx);
     const zone = await cf.getZone(input.external_id);
-    if (zone.name !== ctx.deployment.domain) {
+    const domain = ctx.deployment.domain;
+    const coversDomain = domain === zone.name || domain.endsWith(`.${zone.name}`);
+    if (!coversDomain) {
       throw new OrchestratorError(
         "DOMAIN_MISMATCH",
-        `A zóna ("${zone.name}") nem egyezik a deployment domainjével ("${ctx.deployment.domain}").`,
+        `A zóna ("${zone.name}") nem fedi le a deployment domainjét ("${domain}").`,
       );
     }
     return {
