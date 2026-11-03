@@ -5,6 +5,7 @@ import {
   createAuthorizationCode,
 } from "@crm/auth-core/server";
 import { getSession } from "@/lib/session-cookie";
+import { issuer } from "@/lib/issuer";
 
 function errorPage(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
@@ -54,7 +55,13 @@ export async function GET(req: Request) {
 
   const session = await getSession();
   if (!session) {
-    const returnTo = new URL("/login", url.origin);
+    // url.origin is NOT reliable here — this app runs behind a reverse proxy, and depending
+    // on what Host it forwards, `new URL(req.url).origin` can resolve to the container's
+    // own internal bind address instead of the public issuer address. issuer() is the same
+    // AUTH_URL-backed value already used for discovery/token/userinfo, so this redirect
+    // lands on the real public login page every time, not just when the proxy forwards Host
+    // faithfully.
+    const returnTo = new URL("/login", issuer());
     returnTo.searchParams.set("return_to", url.pathname + url.search);
     return NextResponse.redirect(returnTo.toString());
   }
