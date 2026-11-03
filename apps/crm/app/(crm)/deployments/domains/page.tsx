@@ -1,6 +1,6 @@
 "use client";
 
-import { PageHeader, Card, Button, Badge, Input } from "@crm/ui";
+import { PageHeader, Card, Button, Badge, Input, colors, radius } from "@crm/ui";
 import { RefreshCw, Search, ExternalLink, Plus, Globe, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -42,6 +42,7 @@ export default function DomainsOverviewPage() {
   const [warnings, setWarnings] = useState<string[]>([]);
   const [scannedAt, setScannedAt] = useState<Date | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [confirmImportAll, setConfirmImportAll] = useState(false);
 
   const runScan = async () => {
     setLoading(true);
@@ -75,12 +76,7 @@ export default function DomainsOverviewPage() {
   const importAll = async () => {
     const pending = rows.filter((r) => !r.already_imported_deployment_id);
     if (pending.length === 0) return;
-    // Server re-scans fresh right before creating anything, so the actual count can differ
-    // slightly from this client-side snapshot — framed as "approximately" rather than exact.
-    const ok = window.confirm(
-      `Kb. ${pending.length} deployment jön létre automatikusan, a felismert Cloudflare/NPM/Portainer azonosítókkal (adopted lépésekkel, "live" státusszal, partner nélkül). A pontos szám a futás után jelenik meg. Folytatod?`,
-    );
-    if (!ok) return;
+    setConfirmImportAll(false);
     setBulkBusy(true);
     try {
       const res = await apiJsonBody<{
@@ -125,7 +121,7 @@ export default function DomainsOverviewPage() {
             {withoutDeployment > 0 && (
               <Button
                 variant="primary"
-                onClick={importAll}
+                onClick={() => setConfirmImportAll(true)}
                 style={{ opacity: bulkBusy ? 0.6 : 1 }}
               >
                 <Zap size={16} style={{ marginRight: "6px" }} />
@@ -135,6 +131,57 @@ export default function DomainsOverviewPage() {
           </div>
         }
       />
+
+      {confirmImportAll && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "rgba(0, 0, 0, 0.75)",
+            backdropFilter: "blur(4px)",
+            padding: "16px",
+          }}
+          onClick={() => setConfirmImportAll(false)}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "460px",
+              backgroundColor: colors.bg.card,
+              border: `1px solid ${colors.border.subtle}`,
+              borderRadius: radius.lg,
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+              padding: "20px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "14px",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700 }}>
+              Mindent importál
+            </h3>
+            <p style={{ margin: 0, fontSize: "0.85rem", color: colors.text.muted }}>
+              Kb. {rows.filter((r) => !r.already_imported_deployment_id).length}{" "}
+              deployment jön létre automatikusan, a felismert Cloudflare/NPM/Portainer
+              azonosítókkal (adopted lépésekkel, &quot;live&quot; státusszal, partner
+              nélkül). A pontos szám a futás után jelenik meg. Folytatod?
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <Button variant="secondary" onClick={() => setConfirmImportAll(false)}>
+                Mégse
+              </Button>
+              <Button variant="primary" onClick={importAll}>
+                Importálás
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div
         style={{

@@ -399,12 +399,13 @@ export async function skipStep(
       `A(z) "${params.stepKey}" lépés nem hagyható ki.`,
     );
   }
+  const reason = params.reason?.trim() || undefined;
   await DeploymentModel.updateOne(
     { _id: params.deploymentId, tenantId: params.tenantId, "steps.key": params.stepKey },
     {
       $set: {
         "steps.$.status": "skipped",
-        "steps.$.message": params.reason ?? null,
+        "steps.$.message": reason ?? null,
         "steps.$.finished_at": new Date(),
       },
     },
@@ -416,7 +417,7 @@ export async function skipStep(
     kind: "step_skip",
     actor: params.actor,
     actorType: params.actorType ?? "crm_user",
-    message: params.reason ?? `"${params.stepKey}" kihagyva.`,
+    message: reason ?? `"${params.stepKey}" kihagyva.`,
   });
   const deployment = await recomputeStatus(params.tenantId, params.deploymentId);
   return { deployment, result: { ok: true } };

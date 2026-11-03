@@ -1,6 +1,6 @@
 "use client";
 
-import { PageHeader, Badge, Button, Card, ContactSelect } from "@crm/ui";
+import { PageHeader, Badge, Button, Card, ContactSelect, colors, radius } from "@crm/ui";
 import type { Contact, Deployment, DeploymentEvent, DeploymentStatus } from "@crm/types";
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -58,6 +58,7 @@ export default function DeploymentDetailPage() {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  const [confirmArchive, setConfirmArchive] = useState(false);
   const [accessRows, setAccessRows] = useState<PartnerAccessRow[]>([]);
   const [tokenBusy, setTokenBusy] = useState(false);
   const [syncBusy, setSyncBusy] = useState(false);
@@ -241,7 +242,7 @@ export default function DeploymentDetailPage() {
 
   const archive = async () => {
     if (!deployment) return;
-    if (!confirm("Biztosan archiválod ezt a deploymentet?")) return;
+    setConfirmArchive(false);
     try {
       const updated = await apiJsonBody<Deployment>(
         `/api/deployments/${deployment._id}`,
@@ -294,13 +295,58 @@ export default function DeploymentDetailPage() {
               Redeploy
             </Button>
             {deployment.status !== "archived" && (
-              <Button variant="ghost" onClick={archive}>
+              <Button variant="ghost" onClick={() => setConfirmArchive(true)}>
                 Archiválás
               </Button>
             )}
           </div>
         }
       />
+
+      {confirmArchive && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "rgba(0, 0, 0, 0.75)",
+            backdropFilter: "blur(4px)",
+            padding: "16px",
+          }}
+          onClick={() => setConfirmArchive(false)}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "420px",
+              backgroundColor: colors.bg.card,
+              border: `1px solid ${colors.border.subtle}`,
+              borderRadius: radius.lg,
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+              padding: "20px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "14px",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700 }}>
+              Biztosan archiválod ezt a deploymentet?
+            </h3>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <Button variant="secondary" onClick={() => setConfirmArchive(false)}>
+                Mégse
+              </Button>
+              <Button variant="primary" onClick={archive}>
+                Archiválás
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {editingPartner ? (
         <div

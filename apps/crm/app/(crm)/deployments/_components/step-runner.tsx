@@ -1,13 +1,13 @@
 "use client";
 
-import { Badge, Button, Card } from "@crm/ui";
+import { Badge, Button, Card, Input, colors, radius } from "@crm/ui";
 import type {
   Deployment,
   DeploymentStep,
   DeploymentStepKey,
   DeploymentStepStatus,
 } from "@crm/types";
-import { useState } from "react";
+import { useState, type ChangeEvent, type KeyboardEvent } from "react";
 import { toast } from "sonner";
 import { apiJsonBody, ApiError } from "@/lib/api-client";
 
@@ -53,11 +53,43 @@ export function StepRunner({
   onChanged: (updated: Deployment) => void;
 }) {
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [inputPrompt, setInputPrompt] = useState<{
+    key: DeploymentStepKey;
+    action: "adopt" | "skip";
+    required: boolean;
+    title: string;
+    label: string;
+    value: string;
+  } | null>(null);
 
   async function run(
     key: DeploymentStepKey,
     action: "plan" | "execute" | "adopt" | "verify" | "skip" | "unskip",
+    inputValue?: string,
   ) {
+    if (action === "adopt" && inputValue === undefined) {
+      setInputPrompt({
+        key,
+        action: "adopt",
+        required: true,
+        title: `"${STEP_LABELS[key]}" adoptálása`,
+        label: "Meglévő erőforrás azonosítója (external ID)",
+        value: "",
+      });
+      return;
+    }
+    if (action === "skip" && inputValue === undefined) {
+      setInputPrompt({
+        key,
+        action: "skip",
+        required: false,
+        title: `"${STEP_LABELS[key]}" kihagyása`,
+        label: "Kihagyás oka (opcionális)",
+        value: "",
+      });
+      return;
+    }
+
     setBusyKey(`${key}:${action}`);
     try {
       if (action === "plan") {
@@ -82,15 +114,12 @@ export function StepRunner({
         return;
       }
       if (action === "adopt") {
-        const externalId = window.prompt(
-          "Add meg a meglévő erőforrás azonosítóját (external ID):",
-        );
-        if (!externalId) return;
+        if (!inputValue) return;
         const updated = await apiJsonBody<Deployment>(
           `/api/deployments/${deployment._id}/steps/${key}/adopt`,
           "POST",
           {
-            external_id: externalId,
+            external_id: inputValue,
           },
         );
         toast.success(`"${STEP_LABELS[key]}" adoptálva.`);
@@ -113,12 +142,11 @@ export function StepRunner({
         return;
       }
       if (action === "skip") {
-        const reason = window.prompt("Kihagyás oka (opcionális):") ?? undefined;
         const updated = await apiJsonBody<Deployment>(
           `/api/deployments/${deployment._id}/steps/${key}/skip`,
           "POST",
           {
-            reason,
+            reason: inputValue || undefined,
           },
         );
         toast.success(`"${STEP_LABELS[key]}" kihagyva.`);
@@ -139,6 +167,14 @@ export function StepRunner({
     } finally {
       setBusyKey(null);
     }
+  }
+
+  function submitInputPrompt() {
+    if (!inputPrompt) return;
+    if (inputPrompt.required && !inputPrompt.value.trim()) return;
+    const { key, action, value } = inputPrompt;
+    setInputPrompt(null);
+    void run(key, action, value.trim());
   }
 
   return (
@@ -244,6 +280,72 @@ export function StepRunner({
           ) : null}
         </Card>
       ))}
+      {inputPrompt && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "rgba(0, 0, 0, 0.75)",
+            backdropFilter: "blur(4px)",
+            padding: "16px",
+          }}
+          onClick={() => setInputPrompt(null)}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "420px",
+              backgroundColor: colors.bg.card,
+              border: `1px solid ${colors.border.subtle}`,
+              borderRadius: radius.lg,
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+              padding: "20px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "14px",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700 }}>
+              {inputPrompt.title}
+            </h3>
+            <Input
+              label={inputPrompt.label}
+              autoFocus
+              value={inputPrompt.value}
+              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                setInputPrompt({ ...inputPrompt, value: e.target.value })
+              }
+              onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
+                if (e.key === "Enter") submitInputPrompt();
+                if (e.key === "Escape") setInputPrompt(null);
+              }}
+            />
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "10px",
+              }}
+            >
+              <Button variant="secondary" onClick={() => setInputPrompt(null)}>
+                Mégse
+              </Button>
+              <Button
+                variant="primary"
+                onClick={submitInputPrompt}
+                disabled={inputPrompt.required && !inputPrompt.value.trim()}
+              >
+                {inputPrompt.action === "skip" ? "Kihagyás" : "Adoptálás"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
