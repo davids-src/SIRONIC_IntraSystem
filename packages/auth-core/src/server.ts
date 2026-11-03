@@ -57,6 +57,7 @@ export {
   findOidcClientByDeployment,
   createOidcClient,
   rotateOidcClientSecret,
+  updateOidcClientRedirectUris,
   type OidcClientLean,
 } from "./oidc-client-store";
 export { OidcClientModel, oidcClientModelFor } from "./models/oidc-client";

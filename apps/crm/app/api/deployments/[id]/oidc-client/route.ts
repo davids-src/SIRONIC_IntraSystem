@@ -7,14 +7,18 @@ import {
   oidcClientModelFor,
   createOidcClient,
   rotateOidcClientSecret,
+  updateOidcClientRedirectUris,
   findActiveOidcClient,
 } from "@crm/auth-core/server";
 import { guard, handleApiError, requireCrmAuth, withDb } from "@/lib/api-helpers";
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
+// Every site's admin login is its own separate Auth.js instance, mounted at
+// ADMIN_AUTH_BASE_PATH ("/api/admin-auth") — sironic-platform packages/auth/admin.ts —
+// never the framework-default "/api/auth" a generic NextAuth setup would use.
 function redirectUriFor(domain: string): string {
-  return `https://${domain}/api/auth/callback/sironic`;
+  return `https://${domain}/api/admin-auth/callback/sironic`;
 }
 
 // Deliberately NOT process.env.AUTH_URL — that name is already taken by CRM's own NextAuth
@@ -62,7 +66,7 @@ export async function GET(_req: Request, ctx: RouteCtx) {
   }
 }
 
-const bodySchema = z.object({ action: z.enum(["generate", "rotate"]) });
+const bodySchema = z.object({ action: z.enum(["generate", "rotate", "resync"]) });
 
 export async function POST(req: Request, ctx: RouteCtx) {
   try {
@@ -86,6 +90,28 @@ export async function POST(req: Request, ctx: RouteCtx) {
       const authConnection = await connectSecondaryAuthDb();
       const model = oidcClientModelFor(authConnection);
       const existingClientId = deployment.external_ids?.oidc_client_id ?? null;
+
+      if (parsed.data.action === "resync") {
+        if (!existingClientId) {
+          return NextResponse.json(
+            { error: "Nincs még regisztrált OIDC kliens — előbb generálj egyet." },
+            { status: 409 },
+          );
+        }
+        const ok = await updateOidcClientRedirectUris(
+          existingClientId,
+          [redirectUriFor(deployment.domain)],
+          model,
+        );
+        if (!ok) {
+          return NextResponse.json({ error: "A kliens nem található." }, { status: 404 });
+        }
+        return NextResponse.json({
+          client_id: existingClientId,
+          redirect_uris: [redirectUriFor(deployment.domain)],
+          issuer: issuer(),
+        });
+      }
 
       if (parsed.data.action === "rotate") {
         if (!existingClientId) {

@@ -84,6 +84,22 @@ export async function createOidcClient(
   return { client_id, client_secret };
 }
 
+/** Corrects a previously-registered client's redirect_uris (e.g. the deployment's own
+ * callback path changed, or was computed wrong at registration time) without touching the
+ * secret — rotating would require re-entering a new secret into the site's own env too,
+ * which this doesn't need. */
+export async function updateOidcClientRedirectUris(
+  clientId: string,
+  redirectUris: string[],
+  model: Model<any> = OidcClientModel,
+): Promise<boolean> {
+  const res = await model.updateOne(
+    { client_id: clientId },
+    { $set: { redirect_uris: redirectUris } },
+  );
+  return res.matchedCount > 0;
+}
+
 /** Generates and stores a fresh secret, returned once — the old secret stops working
  * immediately (no grace-period overlap, matching the provision-token rotate flow). */
 export async function rotateOidcClientSecret(
