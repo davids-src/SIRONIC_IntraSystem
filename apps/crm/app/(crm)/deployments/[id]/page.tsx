@@ -1,9 +1,19 @@
 "use client";
 
 import { PageHeader, Badge, Button, Card, ContactSelect, colors, radius } from "@crm/ui";
-import type { Contact, Deployment, DeploymentEvent, DeploymentStatus } from "@crm/types";
+import { hasPermission } from "@crm/rbac";
+import { toActorContext } from "@crm/auth";
+import type {
+  Contact,
+  Deployment,
+  DeploymentEvent,
+  DeploymentStatus,
+  RoleKey,
+} from "@crm/types";
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
+import type { Session } from "next-auth";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { apiJson, apiJsonBody, ApiError } from "@/lib/api-client";
@@ -36,6 +46,7 @@ const TABS = [
   { id: "ssl", label: "SSL & Proxy" },
   { id: "stack", label: "Stack" },
   { id: "partner", label: "Partner hozzáférés" },
+  { id: "platform", label: "ERP hozzáférés" },
   { id: "events", label: "Események" },
 ] as const;
 
@@ -52,6 +63,28 @@ type TabId = (typeof TABS)[number]["id"];
 export default function DeploymentDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { data: session } = useSession();
+  const sessionUser = session?.user as Session["user"] | undefined;
+  const sessionActor =
+    sessionUser?.id && sessionUser.tenantId && sessionUser.roleKeys
+      ? toActorContext({
+          userId: sessionUser.id,
+          tenantId: sessionUser.tenantId,
+          roleKeys: sessionUser.roleKeys as RoleKey[],
+        })
+      : null;
+  const isCrmAdmin = sessionActor
+    ? hasPermission(sessionActor, {
+        module: "deployment",
+        action: "admin",
+        scope: "global",
+      })
+    : false;
+  const [platformAccess, setPlatformAccess] = useState<{
+    admins: { _id: string; email: string; display_name: string | null }[];
+    admin_sync: Deployment["admin_sync"] | null;
+  } | null>(null);
+  const [platformAccessErr, setPlatformAccessErr] = useState<string | null>(null);
   const [deployment, setDeployment] = useState<Deployment | null>(null);
   const [contact, setContact] = useState<Contact | null>(null);
   const [events, setEvents] = useState<DeploymentEvent[]>([]);
@@ -131,6 +164,22 @@ export default function DeploymentDetailPage() {
       .then(setAccessRows)
       .catch(() => setAccessRows([]));
   }, [activeTab, deployment]);
+
+  useEffect(() => {
+    if (activeTab !== "platform" || !deployment || !isCrmAdmin) return;
+    setPlatformAccessErr(null);
+    apiJson<{
+      admins: { _id: string; email: string; display_name: string | null }[];
+      admin_sync: Deployment["admin_sync"] | null;
+    }>(`/api/deployments/${deployment._id}/platform-access`)
+      .then(setPlatformAccess)
+      .catch((e) => {
+        setPlatformAccess(null);
+        setPlatformAccessErr(
+          e instanceof ApiError ? e.message : "Az ERP hozzáférés nem tölthető be.",
+        );
+      });
+  }, [activeTab, deployment, isCrmAdmin]);
 
   useEffect(() => {
     if (activeTab !== "partner" || !deployment) return;
@@ -406,7 +455,7 @@ export default function DeploymentDetailPage() {
         className="flex items-center gap-2 border-b overflow-x-auto pb-[1px]"
         style={{ borderColor: "var(--color-border-subtle, #222)" }}
       >
-        {TABS.map((tab) => (
+        {TABS.filter((tab) => tab.id !== "platform" || isCrmAdmin).map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
@@ -800,6 +849,93 @@ export default function DeploymentDetailPage() {
             )}
           </Card>
         </div>
+      )}
+
+      {activeTab === "platform" && isCrmAdmin && (
+        <Card className="p-6">
+          <h3 style={{ fontSize: "0.875rem", fontWeight: 700, marginBottom: "4px" }}>
+            Standing ERP admin hozzáférés
+          </h3>
+          <p
+            style={{
+              fontSize: "0.8rem",
+              color: "var(--color-text-muted, #555)",
+              marginBottom: "16px",
+            }}
+          >
+            Minden crm.admin jogosultságú munkatárs automatikusan, nem visszavonható módon
+            hozzáférést kap minden deploymenthez (ezt a site saját admin-kezelése nem
+            tudja törölni). Ez a lista csak megjelenít — a hozzáférés a Csapat oldalon, a
+            crm.admin szerepkör ki-/bekapcsolásával módosítható, minden site-ra egyszerre.
+          </p>
+
+          {platformAccessErr && (
+            <p className="text-sm text-red-400" role="alert">
+              {platformAccessErr}
+            </p>
+          )}
+
+          {platformAccess && (
+            <>
+              <div style={{ marginBottom: "16px", fontSize: "0.8rem" }}>
+                {platformAccess.admin_sync &&
+                platformAccess.admin_sync.status !== "idle" ? (
+                  <span>
+                    Utolsó szinkron:{" "}
+                    <Badge
+                      variant={
+                        platformAccess.admin_sync.status === "ok" ? "success" : "error"
+                      }
+                    >
+                      {platformAccess.admin_sync.status === "ok" ? "OK" : "Hiba"}
+                    </Badge>{" "}
+                    {platformAccess.admin_sync.last_synced_at
+                      ? new Date(platformAccess.admin_sync.last_synced_at).toLocaleString(
+                          "hu-HU",
+                        )
+                      : "—"}
+                    {platformAccess.admin_sync.last_error && (
+                      <span style={{ color: "var(--color-accent-primary, #e53935)" }}>
+                        {" "}
+                        ({platformAccess.admin_sync.last_error})
+                      </span>
+                    )}
+                  </span>
+                ) : (
+                  <span style={{ color: "var(--color-text-muted, #555)" }}>
+                    Még nem történt admin szinkron.
+                  </span>
+                )}
+              </div>
+
+              {platformAccess.admins.length === 0 ? (
+                <p style={{ color: "var(--color-text-muted, #555)" }}>
+                  Nincs crm.admin jogosultságú munkatárs.
+                </p>
+              ) : (
+                <ul style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {platformAccess.admins.map((a) => (
+                    <li
+                      key={a._id}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: "0.85rem",
+                        padding: "8px 0",
+                        borderBottom: "1px solid var(--color-border-subtle, #222)",
+                      }}
+                    >
+                      <span>{a.display_name ?? a.email}</span>
+                      <span style={{ color: "var(--color-text-muted, #555)" }}>
+                        {a.email}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+        </Card>
       )}
 
       {activeTab === "events" && (
