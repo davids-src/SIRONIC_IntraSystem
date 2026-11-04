@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { type Connection } from "mongoose";
 import {
   generateKeyPair,
   exportJWK,
@@ -29,11 +29,15 @@ type LoadedKeys = {
 // itself is still only fetched/generated once, in `resolvePrivateJwk`, which is cheap to
 // call repeatedly — it's a single findOne (or one insert, only for whichever request
 // happens to be first ever).
-async function resolvePrivateJwk(): Promise<JWK> {
+async function resolvePrivateJwk(connection?: Connection): Promise<JWK> {
   const envJwk = process.env.AUTH_OIDC_PRIVATE_KEY;
   if (envJwk) return JSON.parse(envJwk) as JWK;
 
-  const collection = mongoose.connection.collection("oidc_signing_keys");
+  // apps/auth itself has only one (default) connection, so `connection` is omitted there.
+  // CRM holds its own default connection to the `crm` db — `mongoose.connection` would read
+  // this collection from the wrong database — so it must pass its secondary auth connection
+  // explicitly (see connectSecondaryAuthDb()).
+  const collection = (connection ?? mongoose.connection).collection("oidc_signing_keys");
   const existing = await collection.findOne({ _id: SIGNING_KEY_LOCK_ID as any });
   if (existing) return existing.jwk as JWK;
 
@@ -64,8 +68,8 @@ async function resolvePrivateJwk(): Promise<JWK> {
   }
 }
 
-async function loadKeys(): Promise<LoadedKeys> {
-  const jwk = await resolvePrivateJwk();
+async function loadKeys(connection?: Connection): Promise<LoadedKeys> {
+  const jwk = await resolvePrivateJwk(connection);
   const privateKey = await importJWK(jwk, ALG);
   const publicJwkBase = { ...jwk };
   delete (publicJwkBase as { d?: string }).d;
@@ -112,13 +116,18 @@ export type VerifiedIdToken = {
 };
 
 /** Verifies a token this same server issued — used by /userinfo, which accepts the id_token
- * as a bearer access token (this MVP doesn't mint a separate opaque access token). */
+ * as a bearer access token (this MVP doesn't mint a separate opaque access token).
+ *
+ * `connection` lets a caller outside apps/auth (e.g. CRM verifying a CLI login token) point
+ * this at the actual `sironic_auth` database via its own secondary connection — otherwise
+ * it would read `mongoose.connection`, which in CRM's process is the `crm` db. */
 export async function verifyIssuedToken(
   token: string,
   opts: { issuer: string; audience?: string },
+  connection?: Connection,
 ): Promise<VerifiedIdToken | null> {
   try {
-    const { publicKey } = await loadKeys();
+    const { publicKey } = await loadKeys(connection);
     const { payload } = await jwtVerify(token, publicKey, {
       issuer: opts.issuer,
       audience: opts.audience,
@@ -135,8 +144,8 @@ export async function verifyIssuedToken(
   }
 }
 
-export async function getJwks(): Promise<{ keys: JWK[] }> {
-  const { publicJwk } = await loadKeys();
+export async function getJwks(connection?: Connection): Promise<{ keys: JWK[] }> {
+  const { publicJwk } = await loadKeys(connection);
   return { keys: [publicJwk] };
 }
 

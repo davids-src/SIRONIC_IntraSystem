@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { withReturnTo } from "@/lib/redirect-target";
 
-export function SetupForm() {
+export function SetupForm({ returnTo }: { returnTo: string | null }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,7 +26,7 @@ export function SetupForm() {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error ?? "Beállítás sikertelen.");
       }
-      router.push("/login");
+      router.push(withReturnTo("/login", returnTo));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Beállítás sikertelen.");
     } finally {
