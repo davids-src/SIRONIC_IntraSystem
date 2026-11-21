@@ -4,9 +4,32 @@ import bcrypt from "bcryptjs";
 import { connectDB, User } from "@erp/db-core";
 import { loginSchema } from "./validation";
 import { getSessionAccess } from "./permissions";
+import { OIDC_PROVIDER_ID, getOidcConfig } from "./oidc";
+import { linkOidcIdentity } from "./oidc-link";
+
+const oidc = getOidcConfig();
 
 export const authConfig: NextAuthConfig = {
   providers: [
+    // Only when OIDC_ISSUER + OIDC_CLIENT_ID are set. Credentials stays for /setup admin + local dev.
+    ...(oidc
+      ? [
+          {
+            id: OIDC_PROVIDER_ID,
+            name: "SIRONIC",
+            type: "oidc" as const,
+            issuer: oidc.issuer,
+            clientId: oidc.clientId,
+            clientSecret: oidc.clientSecret,
+            checks: ["pkce", "state"] as ("pkce" | "state")[],
+            client: {
+              token_endpoint_auth_method: oidc.clientSecret
+                ? "client_secret_basic"
+                : "none",
+            },
+          },
+        ]
+      : []),
     Credentials({
       name: "credentials",
       credentials: {
@@ -34,6 +57,18 @@ export const authConfig: NextAuthConfig = {
     }),
   ],
   callbacks: {
+    async signIn({ user, account, profile }) {
+      if (account?.provider !== OIDC_PROVIDER_ID) return true;
+      const decision = await linkOidcIdentity({
+        sub: account.providerAccountId ?? profile?.sub ?? "",
+        email: profile?.email ?? user.email,
+        emailVerified: profile?.email_verified === true,
+      });
+      if (!decision.ok) return `/login?oidc=${decision.reason}`;
+      // Session identity is the LOCAL user; permissions are loaded from it in jwt().
+      user.id = decision.userId;
+      return true;
+    },
     async jwt({ token, user, trigger }) {
       if (user?.id) {
         token.id = user.id;

@@ -98,7 +98,7 @@ Rule check: downstream→upstream sync facade calls only; reverse effects via do
 Numbering is continuous and never reused. Recommended defaults are assumptions until the owner confirms.
 
 1. **Multi-tenant vs single-tenant** — **decision (2026-11-21)**: the ERP is single-tenant (one instance = one DB = one organisation, per engine). The partner portal is not tenancy: partners see only their own data via a viewer→`contactId` filter in the facades (see Phase 6). Migration drops `tenantId`. Nyitva: confirm prod data holds only one tenant before migration (quick count of distinct `tenantId`).
-2. **Auth** — _open, recommended_: keep `apps/auth` as IdP; `@erp/auth` signs in via OIDC and links to a local `User`+`Role` (permissions stay local). Reuses the just-built OIDC/CLI bridge.
+2. **Auth** — _implemented in Phase 0 (2026-11-21), pending live IdP check_: keep `apps/auth` as IdP; `@erp/auth` signs in via OIDC and links to a local `User`+`Role` (permissions stay local). Reuses the just-built OIDC/CLI bridge.
 3. **Apps** — _open, recommended_: two composition roots (`apps/erp` staff, `apps/portal` partners), shared domain packages, separate RBAC.
 4. **Test runner** — _recommended_: Vitest (migrate the few Jest tests in `lib`/`modules`).
 5. **Tooling** — _recommended_: adopt engine gates (turbo `preflight`, eslint, commitlint, husky); pnpm stays 10.
@@ -117,5 +117,5 @@ Numbering is continuous and never reused. Recommended defaults are assumptions u
 ## 8. Immediate next steps
 
 1. Verify the distinct `tenantId` count in prod (read-only query, run by you or with your OK). #1, #11–#13 are decided; #2–#9 keep their recommended defaults unless you object.
-2. ~~Phase 0 spike~~ **done (2026-11-21)**: engine packages + stripped app shell in `erp/`, lint/typecheck/test/guard/build green. Remaining Phase 0: OIDC login via `apps/auth` (#2), `/setup` smoke test on memory Mongo, CI workflow, Docker build, Hungarian review of copied help articles.
+2. ~~Phase 0 spike~~ **done (2026-11-21)**: engine packages + stripped app shell in `erp/`, lint/typecheck/test/guard/build green. OIDC login (#2), `/setup` smoke test, CI workflows and Dockerfile fixes now done (see `erp/docs/AGENT_HANDOFF.md`). Remaining: live-IdP check, Hungarian review of copied help articles, #15.
 3. Deep per-module field-level mapping (legacy model → new model, incl. indexes) written _just before_ each phase starts, using INVENTORY_MAPPING.md as the skeleton.

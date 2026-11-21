@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:integration": "vitest run --passWithNoTests integration.test"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.3",

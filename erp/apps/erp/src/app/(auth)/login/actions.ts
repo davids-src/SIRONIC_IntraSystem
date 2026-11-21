@@ -1,6 +1,7 @@
 "use server";
 
 import { signIn } from "@erp/auth";
+import { isOidcConfigured, OIDC_PROVIDER_ID } from "@erp/auth/oidc";
 import { loginSchema } from "@erp/auth/validation";
 import { AuthError } from "next-auth";
 
@@ -48,4 +49,10 @@ export async function loginAction(
   }
 
   return { success: true };
+}
+
+/** Starts the platform (SIRONIC) OIDC login; does nothing when OIDC is not configured. */
+export async function oidcLoginAction(): Promise<void> {
+  if (!isOidcConfigured()) return;
+  await signIn(OIDC_PROVIDER_ID, { redirectTo: "/" });
 }

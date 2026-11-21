@@ -17,3 +17,5 @@ export {
   hasPermission,
   hasAnyPermission,
 } from "./session";
+export { linkOidcIdentity } from "./oidc-link";
+export { isOidcConfigured, OIDC_PROVIDER_ID } from "./oidc";
