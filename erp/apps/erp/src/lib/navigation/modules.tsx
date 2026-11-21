@@ -6,6 +6,7 @@ import { arlistaNav } from "./arlista-nav";
 import { projektNav } from "./projekt-nav";
 import { keszletNav } from "./keszlet-nav";
 import { ertekesitesNav } from "./ertekesites-nav";
+import { telepitesekNav } from "./telepitesek-nav";
 
 /**
  * Sidebar menu groups of the domain modules — the one place a new module adds its navigation
@@ -24,6 +25,7 @@ export const MODULE_NAV: ModuleNavGroup[] = [
   projektNav,
   keszletNav,
   ertekesitesNav,
+  telepitesekNav,
   {
     label: "Eszközök",
     tourId: "nav-eszkoz",

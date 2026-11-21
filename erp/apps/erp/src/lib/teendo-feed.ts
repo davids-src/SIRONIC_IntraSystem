@@ -11,6 +11,8 @@ import { partnerApi } from "@erp/partner";
 import { projektApi } from "@erp/projekt";
 import { keszletApi } from "@erp/keszlet";
 import { ertekesitesApi } from "@erp/ertekesites";
+import { deploymentsApi } from "@erp/deployments";
+import { userHasPermission } from "@erp/auth";
 import { FELADAT_ALLAPOT_LABELS } from "@erp/feladat/client";
 import { budapestNap } from "@erp/lib/utils";
 import {
@@ -28,6 +30,7 @@ const MODUL_LABELS: Record<string, string> = {
   projekt: "Projekt",
   keszlet: "Készlet",
   ertekesites: "Értékesítés",
+  deployments: "Telepítések",
 };
 
 /** Everything assigned to the user in every module (incl. responsibilities), one fetch per request. */
@@ -40,6 +43,7 @@ export const getSajatTaskRefs = cache(async (userId: string): Promise<TaskRef[]>
     projektApi.listMyAssignments(userId),
     keszletApi.listMyAssignments(userId),
     ertekesitesApi.listMyAssignments(userId),
+    telepitesTeendok(userId),
   ]);
   return all.flat();
 });
@@ -128,4 +132,14 @@ export function refTeendo(t: TaskRef): Teendo {
     uj: false,
     url: t.url,
   };
+}
+
+/** Failed/manual pipeline steps, overdue payments and expiring records — only what the user may see. */
+async function telepitesTeendok(userId: string): Promise<TaskRef[]> {
+  const [telepites, fizetes] = await Promise.all([
+    userHasPermission(userId, "deployments:telepites:read"),
+    userHasPermission(userId, "deployments:fizetes:read"),
+  ]);
+  if (!telepites && !fizetes) return [];
+  return deploymentsApi.listTeendok({ telepites, fizetes });
 }

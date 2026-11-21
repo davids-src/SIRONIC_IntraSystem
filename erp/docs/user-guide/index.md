@@ -34,6 +34,7 @@ A menüpontok **jogosultságtól függenek**. Ha nem látsz egy modult, kérd a 
 | Feladatok               | Minden rád váró tétel egy listában, a legsürgősebb elöl; saját feladat felvétele, kiadás kollégának vagy csoportnak, feladat-folyamat, csevegés. |
 | Árlista                 | Termék- és szolgáltatás-árlista, ügyfélkategóriánkénti ármátrix, árbontás, árképzési beállítások.                                                |
 | Értékesítés             | Árajánlatok (varázsló, befagyasztott árak, kiküldés, utánkövetés, PDF), szerződések és sablonok, beszállítói megrendelőlapok.                    |
+| Telepítések             | Partneroldalak kiépítése lépésenként (Cloudflare, NPM, GitHub, Portainer), csomagok és fizetések, integrációs kapcsolatok, stack sablonok.     |
 | Értesítési központ      | A fejléc csengője: feladat- és rendszerjelzések, asztali értesítés, e-mail értesítés (saját döntés).                                             |
 | Partnerek, Érdeklődők   | Ügyfelek, alvállalkozók, beszállítók és értékesítési érdeklődők nyilvántartása; árazási profil; archiválás.                                      |
 | Titoktár                | Jelszavak és hozzáférések titkosítva; érték csak kérésre jelenik meg (10 mp), naplózva; megosztás felhasználóval vagy szerepkörrel.              |
@@ -70,6 +71,9 @@ Az üzleti modulok (Partnerek, Árlista, Készlet, Értékesítés, …) bevezet
 - [Leltár](/help/keszlet-leltar)
 - [RMA ügyek](/help/keszlet-rma)
 - [Raktárhelyek](/help/keszlet-raktarhelyek)
+- [Telepítések és kiépítési lépések](/help/telepitesek-lista)
+- [Csomagok és fizetések](/help/telepitesek-fizetesek)
+- [Integrációk és stack sablonok](/help/telepitesek-integraciok)
 - [Gépészet áttekintés](/help/gepeszet-attekintes)
 - [Gépek kezelése](/help/gepeszet-gepek)
 - [Szervizjegyek kezelése](/help/gepeszet-szervizjegyek)
