@@ -14,6 +14,7 @@ COPY packages/auth/package.json ./packages/auth/
 COPY packages/core/package.json ./packages/core/
 COPY packages/db-core/package.json ./packages/db-core/
 COPY packages/eslint-config/package.json ./packages/eslint-config/
+COPY packages/ertekesites/package.json ./packages/ertekesites/
 COPY packages/eszkoz/package.json ./packages/eszkoz/
 COPY packages/feladat/package.json ./packages/feladat/
 COPY packages/jelzes/package.json ./packages/jelzes/

@@ -9,6 +9,17 @@
 
 export type DomainEventPayloads = {
   "job.created": { jobId: string; code: string; name: string };
+  /** Értékesítés: an offer was accepted (consumers: projekt, bizonylat — wired by the app). */
+  "ajanlat.elfogadva": {
+    ajanlatId: string;
+    azonosito: string;
+    partnerId: string;
+    partnerNev: string;
+    nettoOsszeg: number;
+    bruttoOsszeg: number;
+    penznem: string;
+    elfogadtaUserId: string;
+  };
 };
 
 export type DomainEventName = keyof DomainEventPayloads;

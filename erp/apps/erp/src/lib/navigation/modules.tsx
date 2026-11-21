@@ -3,6 +3,7 @@ import { ContactIcon, HandshakeIcon, KeyRoundIcon, WrenchIcon } from "lucide-rea
 import { PARTNER_PERMISSIONS } from "@erp/partner/client";
 import type { SidebarNavItem } from "@/components/sidebar-nav-group";
 import { arlistaNav } from "./arlista-nav";
+import { ertekesitesNav } from "./ertekesites-nav";
 
 /**
  * Sidebar menu groups of the domain modules — the one place a new module adds its navigation
@@ -18,6 +19,7 @@ export type ModuleNavGroup = {
 
 export const MODULE_NAV: ModuleNavGroup[] = [
   arlistaNav,
+  ertekesitesNav,
   {
     label: "Eszközök",
     tourId: "nav-eszkoz",

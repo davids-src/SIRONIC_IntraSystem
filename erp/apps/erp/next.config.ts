@@ -21,6 +21,7 @@ const nextConfig: NextConfig = {
     "@erp/auth",
     "@erp/core",
     "@erp/db-core",
+    "@erp/ertekesites",
     "@erp/eszkoz",
     "@erp/feladat",
     "@erp/jelzes",

@@ -8,6 +8,7 @@ import { enginePermissions } from "@erp/admin";
 import { mediaPermissions } from "@erp/media";
 import { jelzesPermissions } from "@erp/jelzes";
 import { eszkozPermissions } from "@erp/eszkoz";
+import { ertekesitesPermissions } from "@erp/ertekesites";
 import { partnerPermissions } from "@erp/partner";
 import { secretsPermissions } from "@erp/secrets";
 import { arlistaPermissions } from "@erp/arlista";
@@ -20,6 +21,7 @@ import { arlistaPermissions } from "@erp/arlista";
   partnerPermissions,
   secretsPermissions,
   arlistaPermissions,
+  ertekesitesPermissions,
   // Domain modules: add `<modul>Permissions` here (docs/05 §3).
 ].forEach(registerPermissionModule);
 
