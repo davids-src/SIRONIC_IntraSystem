@@ -17,6 +17,7 @@ COPY packages/eszkoz/package.json ./packages/eszkoz/
 COPY packages/lib/package.json ./packages/lib/
 COPY packages/mail/package.json ./packages/mail/
 COPY packages/media/package.json ./packages/media/
+COPY packages/partner/package.json ./packages/partner/
 COPY packages/rbac/package.json ./packages/rbac/
 COPY packages/tsconfig/package.json ./packages/tsconfig/
 COPY packages/ui/package.json ./packages/ui/

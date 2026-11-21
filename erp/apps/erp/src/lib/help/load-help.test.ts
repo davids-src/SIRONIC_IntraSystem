@@ -21,6 +21,16 @@ describe("load-help integration", () => {
     expect(withoutPerm.some((a) => a.slug === "index")).toBe(true);
   });
 
+  it("gates the Partnerek articles on their read permissions", () => {
+    const slugs = (keys: string[]) => getHelpArticlesForUser(keys).map((a) => a.slug);
+    expect(slugs(["partner:partner:read"])).toEqual(
+      expect.arrayContaining(["partner-lista", "partner-adatlap"]),
+    );
+    expect(slugs(["partner:partner:read"])).not.toContain("erdeklodok");
+    expect(slugs(["partner:erdeklodo:read"])).toContain("erdeklodok");
+    expect(slugs([])).not.toContain("partner-lista");
+  });
+
   it("groups sections with Áttekintés first", () => {
     const sections = groupHelpArticlesBySection(
       getHelpArticlesForUser(["users:read", "roles:manage"]),

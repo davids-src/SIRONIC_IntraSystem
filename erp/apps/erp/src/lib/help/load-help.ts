@@ -78,6 +78,7 @@ export function groupHelpArticlesBySection(articles: HelpArticle[]): HelpSection
   const sectionOrder = [
     "Áttekintés",
     "Eszközök",
+    "Partnerek",
     "Gépészet",
     "Vállalkozás",
     "Termelés",

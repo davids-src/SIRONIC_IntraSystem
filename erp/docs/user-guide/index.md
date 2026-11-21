@@ -33,6 +33,7 @@ A menüpontok **jogosultságtól függenek**. Ha nem látsz egy modult, kérd a 
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Feladatok               | Minden rád váró tétel egy listában, a legsürgősebb elöl; saját feladat felvétele, kiadás kollégának vagy csoportnak, feladat-folyamat, csevegés. |
 | Értesítési központ      | A fejléc csengője: feladat- és rendszerjelzések, asztali értesítés, e-mail értesítés (saját döntés).                                             |
+| Partnerek, Érdeklődők   | Ügyfelek, alvállalkozók, beszállítók és értékesítési érdeklődők nyilvántartása; árazási profil; archiválás.                                      |
 | Listák és táblázatok    | Keresés, szűrés, rendezés, oszlopok és oldalméret minden lista-nézetben.                                                                         |
 | Exportálás és nyomtatás | Bármelyik lista vagy adatlap Excelbe, illetve PDF-be.                                                                                            |
 | Eszközök                | Szerszámok nyilvántartása: kiadás kollégának, visszavétel, szerviz, elveszett, kivonás, mozgásnapló.                                             |
@@ -64,6 +65,9 @@ Az üzleti modulok (Partnerek, Árlista, Készlet, Értékesítés, …) bevezet
 - [Tankolások és üzemanyag-egyenleg](/help/gepeszet-tankolasok)
 - [Gépüzem tevékenységek](/help/gepeszet-gepuzem-tevekenysegek)
 - [Fogyasztásfigyelő](/help/gepeszet-fogyasztasfigyelo)
+- [Partnerek — lista](/help/partner-lista)
+- [Partner adatlapja](/help/partner-adatlap)
+- [Érdeklődők](/help/erdeklodok)
 - [Partnerek](/help/vallalkozas-partnerek)
 - [Ajánlatkérések](/help/vallalkozas-ajanlatkeresek)
 - [Ajánlatok](/help/vallalkozas-ajanlatok)
