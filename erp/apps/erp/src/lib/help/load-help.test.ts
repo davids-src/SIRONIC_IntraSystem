@@ -21,6 +21,16 @@ describe("load-help integration", () => {
     expect(withoutPerm.some((a) => a.slug === "index")).toBe(true);
   });
 
+  it("gates the árlista articles on their page permissions", () => {
+    const slugs = (perms: string[]) => getHelpArticlesForUser(perms).map((a) => a.slug);
+    expect(slugs([])).not.toContain("arlista-termekek");
+    expect(slugs(["arlista:termek:read"])).toContain("arlista-termekek");
+    expect(slugs(["arlista:termek:read"])).not.toContain("arlista-szolgaltatasok");
+    expect(slugs(["arlista:szolgaltatas:read"])).toContain("arlista-szolgaltatasok");
+    expect(slugs(["arlista:szolgaltatas:read"])).not.toContain("arlista-beallitasok");
+    expect(slugs(["arlista:beallitas:write"])).toContain("arlista-beallitasok");
+  });
+
   it("groups sections with Áttekintés first", () => {
     const sections = groupHelpArticlesBySection(
       getHelpArticlesForUser(["users:read", "roles:manage"]),

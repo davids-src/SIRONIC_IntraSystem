@@ -9,6 +9,7 @@ ENV HUSKY=0
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/erp/package.json ./apps/erp/
 COPY packages/admin/package.json ./packages/admin/
+COPY packages/arlista/package.json ./packages/arlista/
 COPY packages/auth/package.json ./packages/auth/
 COPY packages/core/package.json ./packages/core/
 COPY packages/db-core/package.json ./packages/db-core/
