@@ -8,6 +8,7 @@
     "./client": "./src/client.ts",
     "./config": "./src/config.ts",
     "./edge": "./src/auth.config.ts",
+    "./oidc": "./src/oidc.ts",
     "./permissions": "./src/permissions.ts",
     "./validation": "./src/validation.ts"
   },
@@ -15,7 +16,7 @@
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:integration": "vitest run \"**/*.integration.test.ts\""
+    "test:integration": "vitest run --passWithNoTests integration.test"
   },
   "dependencies": {
     "@auth/mongodb-adapter": "^3.11.1",

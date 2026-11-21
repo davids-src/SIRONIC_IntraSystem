@@ -6,17 +6,20 @@ WORKDIR /app
 
 FROM base AS deps
 ENV HUSKY=0
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY apps/erp/package.json ./apps/erp/
 COPY packages/admin/package.json ./packages/admin/
 COPY packages/auth/package.json ./packages/auth/
 COPY packages/core/package.json ./packages/core/
 COPY packages/db-core/package.json ./packages/db-core/
 COPY packages/eslint-config/package.json ./packages/eslint-config/
+COPY packages/feladat/package.json ./packages/feladat/
+COPY packages/jelzes/package.json ./packages/jelzes/
 COPY packages/lib/package.json ./packages/lib/
 COPY packages/mail/package.json ./packages/mail/
 COPY packages/media/package.json ./packages/media/
 COPY packages/rbac/package.json ./packages/rbac/
+COPY packages/test-utils/package.json ./packages/test-utils/
 COPY packages/tsconfig/package.json ./packages/tsconfig/
 COPY packages/ui/package.json ./packages/ui/
 RUN pnpm install --frozen-lockfile --ignore-scripts

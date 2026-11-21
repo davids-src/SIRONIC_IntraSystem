@@ -41,6 +41,12 @@ services:
       AUTH_SECRET: change-me-to-a-random-secret-at-least-32-chars
       AUTH_TRUST_HOST: "true"
 
+      # Optional platform login (apps/auth). Leave empty to keep password login only.
+      # Redirect URI to register at the IdP: ${AUTH_URL}/api/auth/callback/sironic
+      OIDC_ISSUER: ""
+      OIDC_CLIENT_ID: ""
+      OIDC_CLIENT_SECRET: ""
+
       SMTP_HOST: smtp.mailtrap.io
       SMTP_PORT: "2525"
       SMTP_USER: ""

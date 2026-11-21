@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import { loginAction, type LoginFormState } from "./actions";
+import { loginAction, oidcLoginAction, type LoginFormState } from "./actions";
 import { Button } from "@erp/ui";
 import { Input } from "@erp/ui";
 import { Label } from "@erp/ui";
@@ -11,7 +11,15 @@ import { useBranding } from "@/components/branding-provider";
 
 const initialState: LoginFormState = { success: false };
 
-export function LoginForm({ showRegisterLink = false }: { showRegisterLink?: boolean }) {
+export function LoginForm({
+  showRegisterLink = false,
+  oidcEnabled = false,
+  oidcError = null,
+}: {
+  showRegisterLink?: boolean;
+  oidcEnabled?: boolean;
+  oidcError?: string | null;
+}) {
   const branding = useBranding();
   const [state, formAction, pending] = useActionState(loginAction, initialState);
 
@@ -35,6 +43,11 @@ export function LoginForm({ showRegisterLink = false }: { showRegisterLink?: boo
             className="flex flex-col gap-6"
             data-testid="login-form"
           >
+            {oidcError && (
+              <p className="text-destructive text-sm" data-testid="oidc-error">
+                {oidcError}
+              </p>
+            )}
             {state.success === false && state.message && (
               <p className="text-destructive text-sm">{state.message}</p>
             )}
@@ -79,6 +92,13 @@ export function LoginForm({ showRegisterLink = false }: { showRegisterLink?: boo
               </p>
             )}
           </form>
+          {oidcEnabled && (
+            <form action={oidcLoginAction} className="mt-4" data-testid="oidc-login-form">
+              <Button type="submit" variant="outline" className="w-full">
+                Belépés SIRONIC fiókkal
+              </Button>
+            </form>
+          )}
         </CardContent>
       </Card>
       {branding.footerText ? (
