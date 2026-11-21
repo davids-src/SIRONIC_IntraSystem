@@ -48,6 +48,14 @@ media, ui, feladat, jelzes, test-utils, eslint-config, tsconfig`), scope `@recpl
   `erp-docker-publish.yml` (ghcr.io/<owner>/sironic-erp). `pnpm test` with `CI=true` skips `*.integration.test.ts`; CI runs
   `pnpm test:integration --concurrency=1`. (The old `test:integration` scripts used a glob filter that matched nothing; now `integration.test`.)
 
+## 2b. Phase 6 (partner portal) — done
+
+- `apps/portal` (port 3001), `@erp/portal-auth`, guard `scripts/verify-portal-isolation.mjs` (in `preflight` + CI), guide in
+  `docs/portal-guide/`, decision #20 in the plan. Docker: `apps/portal/Dockerfile`, compose + portainer services, docker-publish matrix.
+- **Open**: staff-side UI to invite the first partner admin (use `invitePortalUser` from `@erp/portal-auth` in `apps/erp`;
+  set `PORTAL_URL`); add `@erp/portal-auth` to `apps/erp` deps when doing so. Shared-store rate limiter and OIDC
+  login for the portal. `docker build -f apps/portal/Dockerfile .` was not run locally.
+
 ## 3. Traps
 
 - Two `@types/react` copies → `.npmrc` hoist (see `erp/README.md`).

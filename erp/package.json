@@ -9,7 +9,7 @@
     "test": "turbo run test",
     "test:unit": "turbo run test",
     "test:integration": "turbo run test:integration",
-    "preflight": "pnpm lint && pnpm typecheck && pnpm test && node scripts/verify-button-aschild.mjs && pnpm build",
+    "preflight": "pnpm lint && pnpm typecheck && pnpm test && node scripts/verify-button-aschild.mjs && node scripts/verify-portal-isolation.mjs && pnpm build",
     "typecheck": "turbo run typecheck",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\""

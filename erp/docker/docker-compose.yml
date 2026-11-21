@@ -37,5 +37,22 @@ services:
     depends_on:
       - mongo
 
+  portal:
+    build:
+      context: ..
+      dockerfile: apps/portal/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_DB_NAME: sironic_erp
+      # Own secret: a portal session is never valid in the staff app, nor the other way round.
+      PORTAL_AUTH_SECRET: ${PORTAL_AUTH_SECRET:-dev-portal-secret-change-in-production-min-32}
+      PORTAL_URL: http://localhost:3001
+      APP_URL: http://localhost:3001
+    depends_on:
+      - mongo
+
 volumes:
   mongo_data:
