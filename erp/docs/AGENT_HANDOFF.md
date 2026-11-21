@@ -82,6 +82,18 @@ All wiring lives in `apps/erp/src/lib/` (domain packages still import neither ea
   set `PORTAL_URL`); add `@erp/portal-auth` to `apps/erp` deps when doing so. Shared-store rate limiter and OIDC
   login for the portal. `docker build -f apps/portal/Dockerfile .` was not run locally.
 
+## 2c. Data migration runner (legacy `crm_dev` -> new ERP, same DB) — done
+
+- `pnpm migrate` (dry run) / `pnpm migrate --execute` (`scripts/migrate/run.ts` + `runner.ts`, pure helpers in
+  `runner-lib.ts`). Source and target are both `crm_dev`: legacy collections are read-only (hard-coded denylist,
+  asserted against every model collection before the first write), `crm` / `sironic_auth` are refused. Id maps live in
+  `_migration_idmap`; counters in `erp_counters`. Re-runs never duplicate (transactional docs are insert-only).
+- Users: legacy `crmusers` -> `users` keeping the bcrypt hash (login with the old password); `crm.admin` -> role `admin`.
+  RBAC baseline is synced by the runner. `/setup` is skipped because an active admin exists.
+- Run with `npx tsx --env-file=apps/erp/.env scripts/migrate/run.ts` to also get the secrets decrypt check.
+  `scripts/migrate/verify.ts` counts collections and calls the facades. Not migrated (no adapter / by design): see the
+  runner report (stock transaction history, portal users, empty legacy collections, certificates without partner).
+
 ## 3. Traps
 
 - Two `@types/react` copies → `.npmrc` hoist (see `erp/README.md`).
