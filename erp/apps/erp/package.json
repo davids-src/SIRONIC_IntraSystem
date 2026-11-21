@@ -28,6 +28,7 @@
     "@erp/auth": "workspace:*",
     "@erp/core": "workspace:*",
     "@erp/db-core": "workspace:*",
+    "@erp/bizonylat": "workspace:*",
     "@erp/ertekesites": "workspace:*",
     "@erp/eszkoz": "workspace:*",
     "@erp/feladat": "workspace:*",

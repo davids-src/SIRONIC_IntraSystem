@@ -109,6 +109,21 @@ describe("load-help integration", () => {
     );
   });
 
+  it("gates the Bizonylatok articles on their page permissions and orders the section after Értékesítés", () => {
+    const slugs = (perms: string[]) => getHelpArticlesForUser(perms).map((a) => a.slug);
+    expect(slugs([])).not.toContain("szallitolevelek");
+    expect(slugs(["bizonylat:szallitolevel:read"])).toContain("szallitolevelek");
+    expect(slugs(["bizonylat:szallitolevel:read"])).not.toContain("szamlak");
+    expect(slugs(["bizonylat:igazolas:read"])).toContain("teljesitesigazolasok");
+    expect(slugs(["bizonylat:szamla:read"])).toContain("szamlak");
+    expect(slugs(["bizonylat:jotallas:read"])).toContain("jotallasi-jegyek");
+    expect(slugs(["bizonylat:szamla:read"])).not.toContain("jotallasi-jegyek");
+    const nevek = groupHelpArticlesBySection(
+      getHelpArticlesForUser(["bizonylat:szamla:read", "ertekesites:ajanlat:read"]),
+    ).map((s) => s.name);
+    expect(nevek.indexOf("Értékesítés")).toBeLessThan(nevek.indexOf("Bizonylatok"));
+  });
+
   it("groups sections with Áttekintés first", () => {
     const sections = groupHelpArticlesBySection(
       getHelpArticlesForUser(["users:read", "roles:manage"]),

@@ -19,6 +19,7 @@ const nextConfig: NextConfig = {
     "@erp/admin",
     "@erp/arlista",
     "@erp/auth",
+    "@erp/bizonylat",
     "@erp/core",
     "@erp/db-core",
     "@erp/ertekesites",

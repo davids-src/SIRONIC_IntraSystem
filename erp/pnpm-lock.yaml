@@ -47,6 +47,9 @@ importers:
       '@erp/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@erp/bizonylat':
+        specifier: workspace:*
+        version: link:../../packages/bizonylat
       '@erp/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -392,6 +395,55 @@ importers:
         version: 11.3.0(bare-buffer@3.7.3)
       mongoose:
         specifier: ^9.0.0
+        version: 9.12.3
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^4.0.18
+        version: 4.1.12(@types/node@20.19.43)(jsdom@26.1.0)(vite@7.3.8(@types/node@20.19.43)(jiti@2.7.0)(lightningcss@1.33.0)(yaml@2.9.1))
+
+  packages/bizonylat:
+    dependencies:
+      '@erp/core':
+        specifier: workspace:*
+        version: link:../core
+      '@erp/db-core':
+        specifier: workspace:*
+        version: link:../db-core
+      '@erp/lib':
+        specifier: workspace:*
+        version: link:../lib
+      '@erp/rbac':
+        specifier: workspace:*
+        version: link:../rbac
+      '@erp/ui':
+        specifier: workspace:*
+        version: link:../ui
+      zod:
+        specifier: ^4.3.6
+        version: 4.6.7
+    devDependencies:
+      '@erp/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
+      '@erp/test-utils':
+        specifier: workspace:*
+        version: link:../test-utils
+      '@erp/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@types/node':
+        specifier: ^20
+        version: 20.19.43
+      eslint:
+        specifier: ^9.17.0
+        version: 9.39.5(jiti@2.7.0)
+      mongodb-memory-server:
+        specifier: ^11.2.0
+        version: 11.3.0(bare-buffer@3.7.3)
+      mongoose:
+        specifier: ^9.2.1
         version: 9.12.3
       typescript:
         specifier: ^5.7.2

@@ -43,6 +43,7 @@ A menüpontok **jogosultságtól függenek**. Ha nem látsz egy modult, kérd a 
 | Eszközök                | Szerszámok nyilvántartása: kiadás kollégának, visszavétel, szerviz, elveszett, kivonás, mozgásnapló.                                             |
 | Projektek               | Projektek fázisokkal, ellenőrzőlistával és költségekkel; heti terv Kanban tábla; ellenőrzőlista-sablonok; archiválás okkal.                      |
 | Projektek               | Projektek fázisokkal, ellenőrzőlistával és költségekkel; heti terv Kanban tábla; ellenőrzőlista-sablonok; archiválás okkal.                      |
+| Bizonylatok             | Szállítólevél (kiadás készletből), teljesítésigazolás (online aláírás), számlák állapota (Billingo), jótállási jegyek.                           |
 
 Az üzleti modulok (Partnerek, Árlista, Készlet, Értékesítés, …) bevezetésükkel együtt kapják meg a saját súgócikküket.
 
@@ -64,6 +65,10 @@ Az üzleti modulok (Partnerek, Árlista, Készlet, Értékesítés, …) bevezet
 - [Projektköltségek](/help/projekt-koltsegek)
 - [Heti terv](/help/projekt-heti-terv)
 - [Ellenőrzőlista-sablonok](/help/projekt-sablonok)
+- [Szállítólevelek](/help/szallitolevelek)
+- [Teljesítésigazolások](/help/teljesitesigazolasok)
+- [Számlák](/help/szamlak)
+- [Jótállási jegyek](/help/jotallasi-jegyek)
 - [Készlet — műszerfal](/help/keszlet-muszerfal)
 - [Készletlista és adatlap — foglalás](/help/keszlet-lista)
 - [Bevételezés](/help/keszlet-bevetelezes)
