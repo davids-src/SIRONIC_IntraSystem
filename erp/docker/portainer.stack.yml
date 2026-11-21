@@ -46,6 +46,10 @@ services:
       OIDC_ISSUER: ""
       OIDC_CLIENT_ID: ""
       OIDC_CLIENT_SECRET: ""
+      # Titoktár (@erp/secrets): 64 hex chars (openssl rand -hex 32) or exactly 32 bytes.
+      # Set the real value in the stack only; save it in the password manager — losing it makes
+      # every stored secret unreadable. Migrated legacy secrets require the SAME key as the old CRM.
+      SECRETS_ENCRYPTION_KEY: replace-with-64-hex-chars-from-openssl-rand
 
       SMTP_HOST: smtp.mailtrap.io
       SMTP_PORT: "2525"

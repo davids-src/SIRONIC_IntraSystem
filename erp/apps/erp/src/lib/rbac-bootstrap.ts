@@ -9,6 +9,7 @@ import { mediaPermissions } from "@erp/media";
 import { jelzesPermissions } from "@erp/jelzes";
 import { eszkozPermissions } from "@erp/eszkoz";
 import { partnerPermissions } from "@erp/partner";
+import { secretsPermissions } from "@erp/secrets";
 
 [
   enginePermissions,
@@ -16,6 +17,7 @@ import { partnerPermissions } from "@erp/partner";
   jelzesPermissions,
   eszkozPermissions,
   partnerPermissions,
+  secretsPermissions,
   // Domain modules: add `<modul>Permissions` here (docs/05 §3).
 ].forEach(registerPermissionModule);
 

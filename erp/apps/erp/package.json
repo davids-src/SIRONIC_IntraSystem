@@ -35,6 +35,7 @@
     "@erp/media": "workspace:*",
     "@erp/partner": "workspace:*",
     "@erp/rbac": "workspace:*",
+    "@erp/secrets": "workspace:*",
     "@erp/ui": "workspace:*",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",

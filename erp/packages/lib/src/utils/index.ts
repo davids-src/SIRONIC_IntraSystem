@@ -1,5 +1,11 @@
 export { cn } from "./cn";
-export { encryptSecret, decryptSecret } from "./crypto";
+export {
+  encryptSecret,
+  decryptSecret,
+  isEncryptedPayload,
+  getEncryptionKey,
+  SECRETS_KEY_ENV,
+} from "./crypto";
 export { formatDate, formatDateTime } from "./format-date";
 export {
   parsePagination,

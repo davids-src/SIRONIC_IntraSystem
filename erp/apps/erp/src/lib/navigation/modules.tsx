@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ContactIcon, HandshakeIcon, WrenchIcon } from "lucide-react";
+import { ContactIcon, HandshakeIcon, KeyRoundIcon, WrenchIcon } from "lucide-react";
 import { PARTNER_PERMISSIONS } from "@erp/partner/client";
 import type { SidebarNavItem } from "@/components/sidebar-nav-group";
 
@@ -48,6 +48,20 @@ export const MODULE_NAV: ModuleNavGroup[] = [
           href: "/partner/erdeklodok",
           label: "Érdeklődők",
           icon: <ContactIcon className="h-4 w-4" />,
+        },
+      },
+    ],
+  },
+  {
+    label: "Titoktár",
+    tourId: "nav-secrets",
+    items: [
+      {
+        permission: "secrets:titok:read",
+        item: {
+          href: "/secrets",
+          label: "Titkok",
+          icon: <KeyRoundIcon className="size-4" />,
         },
       },
     ],

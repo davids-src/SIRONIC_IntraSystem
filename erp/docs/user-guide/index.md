@@ -34,6 +34,7 @@ A menüpontok **jogosultságtól függenek**. Ha nem látsz egy modult, kérd a 
 | Feladatok               | Minden rád váró tétel egy listában, a legsürgősebb elöl; saját feladat felvétele, kiadás kollégának vagy csoportnak, feladat-folyamat, csevegés. |
 | Értesítési központ      | A fejléc csengője: feladat- és rendszerjelzések, asztali értesítés, e-mail értesítés (saját döntés).                                             |
 | Partnerek, Érdeklődők   | Ügyfelek, alvállalkozók, beszállítók és értékesítési érdeklődők nyilvántartása; árazási profil; archiválás.                                      |
+| Titoktár                | Jelszavak és hozzáférések titkosítva; érték csak kérésre jelenik meg (10 mp), naplózva; megosztás felhasználóval vagy szerepkörrel.              |
 | Listák és táblázatok    | Keresés, szűrés, rendezés, oszlopok és oldalméret minden lista-nézetben.                                                                         |
 | Exportálás és nyomtatás | Bármelyik lista vagy adatlap Excelbe, illetve PDF-be.                                                                                            |
 | Eszközök                | Szerszámok nyilvántartása: kiadás kollégának, visszavétel, szerviz, elveszett, kivonás, mozgásnapló.                                             |
@@ -104,6 +105,9 @@ Az üzleti modulok (Partnerek, Árlista, Készlet, Értékesítés, …) bevezet
 - [Üzenet küldése munkavállalónak](/help/hr-uzenet)
 - [Telefonkönyv](/help/hr-telefonkonyv)
 - [Saját adataim](/help/hr-sajat-adataim)
+- [Titoktár — titkok listája](/help/titoktar)
+- [Titok adatlapja — megjelenítés és másolás](/help/titoktar-adatlap)
+- [Titok megosztása](/help/titoktar-megosztas)
 - [Fiókod és jogosultságaid](/help/fiok)
 - [Felhasználók kezelése](/help/admin-felhasznalok)
 - [Szerepkörök és jogosultságok](/help/admin-szerepkorok)
