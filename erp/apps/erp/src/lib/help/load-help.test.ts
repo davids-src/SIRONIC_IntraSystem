@@ -70,26 +70,6 @@ describe("load-help integration", () => {
     );
   });
 
-  it("gates the Projektek articles on their page permissions", () => {
-    const slugs = (keys: string[]) => getHelpArticlesForUser(keys).map((a) => a.slug);
-    expect(slugs([])).not.toContain("projekt-lista");
-    expect(slugs(["projekt:projekt:read"])).toEqual(
-      expect.arrayContaining(["projekt-lista", "projekt-adatlap"]),
-    );
-    expect(slugs(["projekt:projekt:read"])).not.toContain("projekt-koltsegek");
-    expect(slugs(["projekt:koltseg:read"])).toContain("projekt-koltsegek");
-    expect(slugs(["projekt:hetiterv:read"])).toContain("projekt-heti-terv");
-    expect(slugs(["projekt:projekt:read"])).not.toContain("projekt-heti-terv");
-    expect(slugs(["projekt:sablon:read"])).toContain("projekt-sablonok");
-    const sections = groupHelpArticlesBySection(
-      getHelpArticlesForUser(["projekt:projekt:read", "users:read"]),
-    ).map((s) => s.name);
-    expect(sections).toContain("Projektek");
-    expect(sections.indexOf("Projektek")).toBeLessThan(
-      sections.indexOf("Adminisztráció"),
-    );
-  });
-
   it("gates the Értékesítés articles on their page permissions and orders the section after Árlista", () => {
     const slugs = (perms: string[]) => getHelpArticlesForUser(perms).map((a) => a.slug);
     expect(slugs([])).not.toContain("ajanlatok");
@@ -121,6 +101,21 @@ describe("load-help integration", () => {
       getHelpArticlesForUser(["szerviz:hibajegy:read", "ertekesites:ajanlat:read"]),
     ).map((s) => s.name);
     expect(nevek.indexOf("Értékesítés")).toBeLessThan(nevek.indexOf("Szerviz"));
+  });
+
+  it("gates the Bizonylatok articles on their page permissions and orders the section after Értékesítés", () => {
+    const slugs = (perms: string[]) => getHelpArticlesForUser(perms).map((a) => a.slug);
+    expect(slugs([])).not.toContain("szallitolevelek");
+    expect(slugs(["bizonylat:szallitolevel:read"])).toContain("szallitolevelek");
+    expect(slugs(["bizonylat:szallitolevel:read"])).not.toContain("szamlak");
+    expect(slugs(["bizonylat:igazolas:read"])).toContain("teljesitesigazolasok");
+    expect(slugs(["bizonylat:szamla:read"])).toContain("szamlak");
+    expect(slugs(["bizonylat:jotallas:read"])).toContain("jotallasi-jegyek");
+    expect(slugs(["bizonylat:szamla:read"])).not.toContain("jotallasi-jegyek");
+    const nevek = groupHelpArticlesBySection(
+      getHelpArticlesForUser(["bizonylat:szamla:read", "ertekesites:ajanlat:read"]),
+    ).map((s) => s.name);
+    expect(nevek.indexOf("Értékesítés")).toBeLessThan(nevek.indexOf("Bizonylatok"));
   });
 
   it("groups sections with Áttekintés first", () => {

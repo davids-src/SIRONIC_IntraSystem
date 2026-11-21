@@ -20,6 +20,18 @@ export type DomainEventPayloads = {
     penznem: string;
     elfogadtaUserId: string;
   };
+  /** Bizonylat: a customer signed a completion certificate (consumer: invoice draft task, wired by the app). */
+  "teljesitesigazolas.elfogadva": {
+    igazolasId: string;
+    azonosito: string;
+    partnerId: string;
+    partnerNev: string;
+    projektId?: string;
+    nettoOsszeg: number;
+    bruttoOsszeg: number;
+    penznem: string;
+    alairoNev: string;
+  };
 };
 
 export type DomainEventName = keyof DomainEventPayloads;
