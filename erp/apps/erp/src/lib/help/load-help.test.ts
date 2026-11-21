@@ -90,6 +90,25 @@ describe("load-help integration", () => {
     );
   });
 
+  it("gates the Értékesítés articles on their page permissions and orders the section after Árlista", () => {
+    const slugs = (perms: string[]) => getHelpArticlesForUser(perms).map((a) => a.slug);
+    expect(slugs([])).not.toContain("ajanlatok");
+    expect(slugs(["ertekesites:ajanlat:read"])).toContain("ajanlatok");
+    expect(slugs(["ertekesites:ajanlat:read"])).not.toContain("ajanlat-varazslo");
+    expect(slugs(["ertekesites:ajanlat:write"])).toContain("ajanlat-varazslo");
+    expect(slugs(["ertekesites:ajanlat:read"])).not.toContain("szerzodesek");
+    expect(slugs(["ertekesites:szerzodes:read"])).toContain("szerzodesek");
+    expect(slugs(["ertekesites:megrendelo:read"])).toContain("megrendelolapok");
+    expect(slugs(["ertekesites:szerzodes:read"])).not.toContain("megrendelolapok");
+    const nevek = groupHelpArticlesBySection(
+      getHelpArticlesForUser(["ertekesites:ajanlat:read", "arlista:termek:read"]),
+    ).map((s) => s.name);
+    expect(nevek.indexOf("Árlista")).toBeLessThan(nevek.indexOf("Értékesítés"));
+    expect(nevek.indexOf("Értékesítés")).toBeLessThan(
+      nevek.indexOf("Titoktár") === -1 ? 99 : nevek.indexOf("Titoktár"),
+    );
+  });
+
   it("groups sections with Áttekintés first", () => {
     const sections = groupHelpArticlesBySection(
       getHelpArticlesForUser(["users:read", "roles:manage"]),

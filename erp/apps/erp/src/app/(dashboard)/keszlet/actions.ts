@@ -113,10 +113,12 @@ async function foglalasKozos(
   ]);
 }
 
-export const foglalAction = (tetelId: string, input: unknown) =>
-  foglalasKozos(tetelId, input, "foglal");
-export const foglalasFeloldasAction = (tetelId: string, input: unknown) =>
-  foglalasKozos(tetelId, input, "felold");
+export async function foglalAction(tetelId: string, input: unknown) {
+  return foglalasKozos(tetelId, input, "foglal");
+}
+export async function foglalasFeloldasAction(tetelId: string, input: unknown) {
+  return foglalasKozos(tetelId, input, "felold");
+}
 
 export async function setMinimumAction(
   id: string,

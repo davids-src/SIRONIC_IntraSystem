@@ -10,6 +10,7 @@ import { eszkozApi } from "@erp/eszkoz";
 import { partnerApi } from "@erp/partner";
 import { projektApi } from "@erp/projekt";
 import { keszletApi } from "@erp/keszlet";
+import { ertekesitesApi } from "@erp/ertekesites";
 import { FELADAT_ALLAPOT_LABELS } from "@erp/feladat/client";
 import { budapestNap } from "@erp/lib/utils";
 import {
@@ -26,6 +27,7 @@ const MODUL_LABELS: Record<string, string> = {
   partner: "Partner",
   projekt: "Projekt",
   keszlet: "Készlet",
+  ertekesites: "Értékesítés",
 };
 
 /** Everything assigned to the user in every module (incl. responsibilities), one fetch per request. */
@@ -37,6 +39,7 @@ export const getSajatTaskRefs = cache(async (userId: string): Promise<TaskRef[]>
     partnerApi.listMyAssignments(userId),
     projektApi.listMyAssignments(userId),
     keszletApi.listMyAssignments(userId),
+    ertekesitesApi.listMyAssignments(userId),
   ]);
   return all.flat();
 });

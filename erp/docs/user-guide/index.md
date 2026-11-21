@@ -33,6 +33,7 @@ A menüpontok **jogosultságtól függenek**. Ha nem látsz egy modult, kérd a 
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Feladatok               | Minden rád váró tétel egy listában, a legsürgősebb elöl; saját feladat felvétele, kiadás kollégának vagy csoportnak, feladat-folyamat, csevegés. |
 | Árlista                 | Termék- és szolgáltatás-árlista, ügyfélkategóriánkénti ármátrix, árbontás, árképzési beállítások.                                                |
+| Értékesítés             | Árajánlatok (varázsló, befagyasztott árak, kiküldés, utánkövetés, PDF), szerződések és sablonok, beszállítói megrendelőlapok.                    |
 | Értesítési központ      | A fejléc csengője: feladat- és rendszerjelzések, asztali értesítés, e-mail értesítés (saját döntés).                                             |
 | Partnerek, Érdeklődők   | Ügyfelek, alvállalkozók, beszállítók és értékesítési érdeklődők nyilvántartása; árazási profil; archiválás.                                      |
 | Titoktár                | Jelszavak és hozzáférések titkosítva; érték csak kérésre jelenik meg (10 mp), naplózva; megosztás felhasználóval vagy szerepkörrel.              |
@@ -126,6 +127,10 @@ Az üzleti modulok (Partnerek, Árlista, Készlet, Értékesítés, …) bevezet
 - [Termék árlista](/help/arlista-termekek)
 - [Szolgáltatás árlista](/help/arlista-szolgaltatasok)
 - [Árképzési beállítások](/help/arlista-beallitasok)
+- [Ajánlatok — lista és állapotok](/help/ajanlatok)
+- [Új ajánlat készítése](/help/ajanlat-varazslo)
+- [Szerződések és sablonok](/help/szerzodesek)
+- [Megrendelőlapok](/help/megrendelolapok)
 - [Fiókod és jogosultságaid](/help/fiok)
 - [Felhasználók kezelése](/help/admin-felhasznalok)
 - [Szerepkörök és jogosultságok](/help/admin-szerepkorok)
