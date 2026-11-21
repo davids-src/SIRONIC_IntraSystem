@@ -1,0 +1,60 @@
+# Portainer stack: SIRONIC ERP
+# Network: external `nginxproxy_default` (routing configured outside this file)
+#
+# Image (built on push to main — no runtime secrets baked in):
+#   ghcr.io/tomkoooo/sironic-erp/erp:main → apps/erp
+#
+# Update AUTH_URL / APP_URL to the real public domain before deploy.
+# AUTH_SECRET / SMTP_* / SEED_* are read at container start from this stack only.
+
+services:
+  erp:
+    image: ghcr.io/tomkoooo/sironic-erp/erp:main
+    container_name: sironic-erp
+    restart: unless-stopped
+    labels:
+      - wud.watch=true
+      - wud.tag=include
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      TZ: Europe/Budapest
+
+      MONGODB_URI: mongodb://192.168.0.12:27017/sironic_erp
+      MONGODB_DB_NAME: sironic_erp
+
+      AUTH_URL: https://erp.example.com
+      APP_URL: https://erp.example.com
+      AUTH_SECRET: change-me-to-a-random-secret-at-least-32-chars
+      AUTH_TRUST_HOST: "true"
+
+      SMTP_HOST: smtp.mailtrap.io
+      SMTP_PORT: "2525"
+      SMTP_USER: ""
+      SMTP_PASS: ""
+      SMTP_FROM: no-reply@sironic.local
+      SMTP_SECURE: "false"
+
+      ALLOW_PUBLIC_REGISTRATION: "false"
+      SEED_ADMIN_EMAIL: admin@sironic.local
+      SEED_ADMIN_PASSWORD: change-me-on-first-deploy
+
+    networks:
+      - nginxproxy_default
+
+networks:
+  nginxproxy_default:
+    external: true

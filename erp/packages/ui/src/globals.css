@@ -1,0 +1,309 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+@import 'tw-animate-css';
+
+/*
+ * Monorepo source registration (Tailwind v4).
+ * Auto-detection only walks down from the CSS file / app CWD and does not
+ * cross package boundaries — without these, shadcn primitives in @erp/ui
+ * (Sheet, Sidebar, Button, …) ship with missing utilities.
+ */
+@source './**/*.{ts,tsx}';
+@source '../../../apps/crm/src/**/*.{ts,tsx}';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  /* Status tones (success / warning / danger / info) and the "note" (napló) tone:
+   *  bg-{tone}            solid fill (dots, bars, counters) with text-{tone}-foreground
+   *  text-{tone}          emphasised text / icon on the page background
+   *  bg-{tone}-soft       tinted surface (badges, alert boxes, highlighted rows)
+   *  text-{tone}-soft-foreground  text on the tinted surface
+   *  border-{tone}-border border of the tinted surface */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-soft: var(--success-soft);
+  --color-success-soft-foreground: var(--success-soft-foreground);
+  --color-success-border: var(--success-border);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-soft-foreground: var(--warning-soft-foreground);
+  --color-warning-border: var(--warning-border);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-soft-foreground: var(--danger-soft-foreground);
+  --color-danger-border: var(--danger-border);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-soft: var(--info-soft);
+  --color-info-soft-foreground: var(--info-soft-foreground);
+  --color-info-border: var(--info-border);
+  --color-note: var(--note);
+  --color-note-foreground: var(--note-foreground);
+  --color-note-soft: var(--note-soft);
+  --color-note-soft-foreground: var(--note-soft-foreground);
+  --color-note-border: var(--note-border);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* TODO: Replace --primary and --secondary with SIRONIC brand colors */
+:root {
+  --radius: 0.625rem;
+  --dvh: 1vh;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.141 0.005 285.823);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.141 0.005 285.823);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.141 0.005 285.823);
+  --primary: oklch(0.687 0.1972 43.33);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.1711 0.0689 268.79);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.967 0.001 286.375);
+  --muted-foreground: oklch(0.552 0.016 285.938);
+  --accent: oklch(0.967 0.001 286.375);
+  --accent-foreground: oklch(0.21 0.006 285.885);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  /* Status tones — light (Tailwind emerald / amber / red / sky / violet scales). */
+  --success: oklch(0.596 0.145 163.225);
+  --success-foreground: oklch(0.985 0 0);
+  --success-soft: oklch(0.979 0.021 166.113);
+  --success-soft-foreground: oklch(0.432 0.095 166.913);
+  --success-border: oklch(0.905 0.093 164.15);
+  --warning: oklch(0.555 0.163 48.998);
+  --warning-foreground: oklch(0.985 0 0);
+  --warning-soft: oklch(0.987 0.022 95.277);
+  --warning-soft-foreground: oklch(0.473 0.137 46.201);
+  --warning-border: oklch(0.924 0.12 95.746);
+  --danger: oklch(0.577 0.245 27.325);
+  --danger-foreground: oklch(0.985 0 0);
+  --danger-soft: oklch(0.971 0.013 17.38);
+  --danger-soft-foreground: oklch(0.444 0.177 26.899);
+  --danger-border: oklch(0.885 0.062 18.334);
+  --info: oklch(0.588 0.158 241.966);
+  --info-foreground: oklch(0.985 0 0);
+  --info-soft: oklch(0.977 0.013 236.62);
+  --info-soft-foreground: oklch(0.443 0.11 240.79);
+  --info-border: oklch(0.901 0.058 230.902);
+  --note: oklch(0.541 0.281 293.009);
+  --note-foreground: oklch(0.985 0 0);
+  --note-soft: oklch(0.969 0.016 293.756);
+  --note-soft-foreground: oklch(0.432 0.232 292.759);
+  --note-border: oklch(0.894 0.057 293.283);
+  --border: oklch(0.92 0.004 286.32);
+  --input: oklch(0.92 0.004 286.32);
+  --ring: oklch(0.705 0.015 286.067);
+  /* Categorical chart series in fixed order: blue, orange, aqua (Gépüzem grafikonok). */
+  --chart-1: oklch(0.575 0.163 255.53);
+  --chart-2: oklch(0.671 0.175 40.64);
+  --chart-3: oklch(0.669 0.141 162.11);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.141 0.005 285.823);
+  --sidebar-primary: oklch(0.21 0.006 285.885);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.967 0.001 286.375);
+  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
+  --sidebar-border: oklch(0.92 0.004 286.32);
+  --sidebar-ring: oklch(0.705 0.015 286.067);
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --dvh: 1dvh;
+  }
+}
+
+.dark {
+  --background: oklch(0.141 0.005 285.823);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.21 0.006 285.885);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.21 0.006 285.885);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.92 0.004 286.32);
+  --primary-foreground: oklch(0.21 0.006 285.885);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.274 0.006 286.033);
+  --muted-foreground: oklch(0.705 0.015 286.067);
+  --accent: oklch(0.274 0.006 286.033);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  /* Status tones — dark. */
+  --success: oklch(0.765 0.177 163.223);
+  --success-foreground: oklch(0.262 0.051 172.552);
+  --success-soft: oklch(0.262 0.051 172.552);
+  --success-soft-foreground: oklch(0.845 0.143 164.978);
+  --success-border: oklch(0.378 0.077 168.94);
+  --warning: oklch(0.828 0.189 84.429);
+  --warning-foreground: oklch(0.279 0.077 45.635);
+  --warning-soft: oklch(0.279 0.077 45.635);
+  --warning-soft-foreground: oklch(0.879 0.169 91.605);
+  --warning-border: oklch(0.414 0.112 45.904);
+  --danger: oklch(0.704 0.191 22.216);
+  --danger-foreground: oklch(0.258 0.092 26.042);
+  --danger-soft: oklch(0.258 0.092 26.042);
+  --danger-soft-foreground: oklch(0.808 0.114 19.571);
+  --danger-border: oklch(0.396 0.141 25.723);
+  --info: oklch(0.746 0.16 232.661);
+  --info-foreground: oklch(0.293 0.066 243.157);
+  --info-soft: oklch(0.293 0.066 243.157);
+  --info-soft-foreground: oklch(0.828 0.111 230.318);
+  --info-border: oklch(0.391 0.09 240.876);
+  --note: oklch(0.702 0.183 293.541);
+  --note-foreground: oklch(0.283 0.141 291.089);
+  --note-soft: oklch(0.283 0.141 291.089);
+  --note-soft-foreground: oklch(0.811 0.111 293.571);
+  --note-border: oklch(0.38 0.189 293.745);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.552 0.016 285.938);
+  --chart-1: oklch(0.622 0.161 255.05);
+  --chart-2: oklch(0.622 0.173 40.11);
+  --chart-3: oklch(0.621 0.128 163.11);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.21 0.006 285.885);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.274 0.006 286.033);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.552 0.016 285.938);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: var(--font-geist-sans), Geist, sans-serif;
+}
+
+.smart-min-dvh {
+  min-height: calc(100 * var(--dvh));
+}
+
+.invis-scroll {
+  scrollbar-width: none;
+}
+
+.invis-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+span[data-slot='avatar-fallback'] {
+  user-select: none !important;
+}
+
+/* Safari: native date/time inputs ignore h-9 without an explicit min-height */
+input[type='date'],
+input[type='datetime-local'],
+input[type='time'],
+input[type='month'],
+input[type='week'] {
+  min-height: 2.25rem;
+}
+
+/* Safari: backdrop-filter needs the webkit prefix on older versions */
+.backdrop-blur-sm {
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/*
+ * Ctrl+P on any screen (the "Nyomtatás / PDF" menu prints a clean copy instead, but the browser's
+ * own print should still give a usable page): no sidebar, header or toasts, nothing clipped by the
+ * app's fixed-height scroll layout, actions left out, cards kept whole.
+ */
+@media print {
+  @page {
+    margin: 12mm;
+  }
+  html,
+  body,
+  [data-slot='sidebar-wrapper'],
+  [data-slot='sidebar-inset'],
+  main,
+  [data-table-box] {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  body {
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  [data-slot='sidebar'],
+  [data-slot='sidebar-gap'],
+  [data-slot='sidebar-container'],
+  [data-slot='sidebar-trigger'],
+  [data-print='hide'],
+  [data-export='skip'],
+  [data-sonner-toaster] {
+    display: none !important;
+  }
+  [data-slot='card'],
+  tr,
+  dl > div {
+    break-inside: avoid;
+  }
+  thead {
+    display: table-header-group;
+  }
+  thead.sticky {
+    position: static !important;
+  }
+}

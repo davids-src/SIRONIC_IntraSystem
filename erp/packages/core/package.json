@@ -1,0 +1,24 @@
+{
+  "name": "@erp/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./folyamat": "./src/folyamat.ts"
+  },
+  "scripts": {
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@erp/eslint-config": "workspace:*",
+    "@erp/tsconfig": "workspace:*",
+    "@types/node": "^20",
+    "eslint": "^9.17.0",
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.18"
+  }
+}
