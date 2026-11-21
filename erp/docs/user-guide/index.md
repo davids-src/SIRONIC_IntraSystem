@@ -38,6 +38,7 @@ A menüpontok **jogosultságtól függenek**. Ha nem látsz egy modult, kérd a 
 | Titoktár                | Jelszavak és hozzáférések titkosítva; érték csak kérésre jelenik meg (10 mp), naplózva; megosztás felhasználóval vagy szerepkörrel.              |
 | Listák és táblázatok    | Keresés, szűrés, rendezés, oszlopok és oldalméret minden lista-nézetben.                                                                         |
 | Exportálás és nyomtatás | Bármelyik lista vagy adatlap Excelbe, illetve PDF-be.                                                                                            |
+| Készlet                 | Raktárkészlet, bevételezés, foglalás, leltár, RMA ügyek, raktárhelyek; készletérték csak külön jogosultsággal.                                   |
 | Eszközök                | Szerszámok nyilvántartása: kiadás kollégának, visszavétel, szerviz, elveszett, kivonás, mozgásnapló.                                             |
 
 Az üzleti modulok (Partnerek, Árlista, Készlet, Értékesítés, …) bevezetésükkel együtt kapják meg a saját súgócikküket.
@@ -55,6 +56,12 @@ Az üzleti modulok (Partnerek, Árlista, Készlet, Értékesítés, …) bevezet
 - [E-mail értesítések](/help/ertesitesek-email)
 - [Eszközök — lista és összesítő](/help/eszkoz-lista)
 - [Eszköz adatlapja — kiadás, visszavétel, szerviz](/help/eszkoz-adatlap)
+- [Készlet — műszerfal](/help/keszlet-muszerfal)
+- [Készletlista és adatlap — foglalás](/help/keszlet-lista)
+- [Bevételezés](/help/keszlet-bevetelezes)
+- [Leltár](/help/keszlet-leltar)
+- [RMA ügyek](/help/keszlet-rma)
+- [Raktárhelyek](/help/keszlet-raktarhelyek)
 - [Gépészet áttekintés](/help/gepeszet-attekintes)
 - [Gépek kezelése](/help/gepeszet-gepek)
 - [Szervizjegyek kezelése](/help/gepeszet-szervizjegyek)

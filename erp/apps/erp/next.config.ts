@@ -24,6 +24,7 @@ const nextConfig: NextConfig = {
     "@erp/eszkoz",
     "@erp/feladat",
     "@erp/jelzes",
+    "@erp/keszlet",
     "@erp/lib",
     "@erp/mail",
     "@erp/media",
