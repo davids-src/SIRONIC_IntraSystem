@@ -371,6 +371,33 @@ export type JotallasDetail = {
   updatedAt: string;
 };
 
+/** Portal view of an invoice - allow-listed: no Billingo reference, history or internal fields. */
+export type SzamlaPortalNezet = {
+  id: string;
+  azonosito: string;
+  szamlaszam?: string;
+  cim?: string;
+  sorok: SzamlaSor[];
+  osszeg: number;
+  penznem: string;
+  kiallitva?: string;
+  esedekes?: string;
+  kifizetve?: string;
+  allapot: SzamlaAllapot;
+};
+
+/** Portal view of a warranty card - allow-listed: no internal remark, history or archive reason. */
+export type JotallasPortalNezet = {
+  id: string;
+  azonosito: string;
+  szamlaszam?: string;
+  kiallitasNap: string;
+  sorok: JotallasSor[];
+  jogiSzoveg: string;
+  allapot: JotallasAllapot;
+  lejarat?: string;
+};
+
 export type CegAdatok = {
   nev: string;
   cim?: string;

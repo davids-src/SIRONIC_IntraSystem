@@ -457,6 +457,41 @@ export const hozzaferesApi = {
     return ok(telepitesId);
   },
 
+  /** Portal: a partner admin lists the grants of one of its own deployments. */
+  async listHozzaferesekPortal(
+    telepitesId: string,
+    nezo: Nezo,
+  ): Promise<HozzaferesSor[]> {
+    if (!isPortal(nezo) || !nezo.partnerAdmin) return [];
+    if (!(await hozzaferesApi.portalHozzaferes(telepitesId, nezo, "kezel"))) return [];
+    return hozzaferesApi.listHozzaferesek(telepitesId);
+  },
+
+  /**
+   * Portal: a partner admin grants a colleague access to one of its own deployments. The caller
+   * (portal action layer) must have verified that the target user belongs to the same partner.
+   */
+  async setHozzaferesPortal(
+    input: { portalFelhasznaloId: string; telepitesId: string; szint?: HozzaferesSzint },
+    nezo: Nezo,
+  ): Promise<DeploymentsResult> {
+    if (!isPortal(nezo) || !nezo.partnerAdmin) return hiba("Nincs jogosultságod.");
+    if (!(await hozzaferesApi.portalHozzaferes(input.telepitesId, nezo, "kezel")))
+      return hiba("A telepítés nem található.");
+    return hozzaferesApi.setHozzaferes(input, nezo.portalUserId);
+  },
+
+  async removeHozzaferesPortal(
+    portalFelhasznaloId: string,
+    telepitesId: string,
+    nezo: Nezo,
+  ): Promise<DeploymentsResult> {
+    if (!isPortal(nezo) || !nezo.partnerAdmin) return hiba("Nincs jogosultságod.");
+    if (!(await hozzaferesApi.portalHozzaferes(telepitesId, nezo, "kezel")))
+      return hiba("A telepítés nem található.");
+    return hozzaferesApi.removeHozzaferes(portalFelhasznaloId, telepitesId);
+  },
+
   /**
    * Portal access check: the deployment must belong to the viewer's partner and not be archived;
    * a partner admin sees all of them, others need a grant (and `kezel` for management).

@@ -1,6 +1,8 @@
 export {
   bizonylatApi,
   igazolasNezoSzuro,
+  szamlaNezoSzuro,
+  jotallasNezoSzuro,
   lazyAllapotSzuro,
   type ListaOpciok,
 } from "./api";

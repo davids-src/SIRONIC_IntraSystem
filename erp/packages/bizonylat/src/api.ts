@@ -35,6 +35,7 @@ import {
   type IgazolasAllapot,
   type JotallasTaroltAllapot,
   type Nezo,
+  type NezoPortal,
   type SzallitolevelAllapot,
   type SzamlaTaroltAllapot,
   type Szereplo,
@@ -75,6 +76,8 @@ import type {
   SzallitolevelPreflight,
   SzamlaDetail,
   SzamlaListItem,
+  SzamlaPortalNezet,
+  JotallasPortalNezet,
 } from "./types";
 import {
   igazolasElfogadasSchema,
@@ -354,6 +357,22 @@ export function igazolasNezoSzuro(nezo: Nezo): MongoSzuro {
   };
 }
 
+/** Portal: only the own partner's issued (non-draft), non-archived invoices. */
+export function szamlaNezoSzuro(nezo: NezoPortal): MongoSzuro {
+  if (!nezo.partnerId) return { _id: { $in: [] } };
+  return {
+    partnerId: nezo.partnerId,
+    archivalt: { $ne: true },
+    "status.key": { $ne: "piszkozat" },
+  };
+}
+
+/** Portal: only the own partner's non-archived warranty cards. */
+export function jotallasNezoSzuro(nezo: NezoPortal): MongoSzuro {
+  if (!nezo.partnerId) return { _id: { $in: [] } };
+  return { partnerId: nezo.partnerId, archivalt: { $ne: true } };
+}
+
 function toSzamlaDetail(d: ISzamla, now = new Date()): SzamlaDetail {
   const tarolt = d.status.key as SzamlaTaroltAllapot;
   return {
@@ -386,6 +405,49 @@ function toSzamlaDetail(d: ISzamla, now = new Date()): SzamlaDetail {
     elozmenyek: elozmenyek<string>(d.statusHistory),
     createdAt: d.createdAt.toISOString(),
     updatedAt: d.updatedAt.toISOString(),
+  };
+}
+
+function toSzamlaPortal(d: ISzamla, now = new Date()): SzamlaPortalNezet {
+  return {
+    id: String(d._id),
+    azonosito: d.azonosito,
+    szamlaszam: d.szamlaszam,
+    cim: d.cim,
+    sorok: d.sorok.map((s) => ({
+      leiras: s.leiras,
+      mennyiseg: s.mennyiseg,
+      egyseg: s.egyseg,
+      nettoEgysegar: s.nettoEgysegar,
+      afaKulcs: s.afaKulcs,
+    })),
+    osszeg: d.osszeg,
+    penznem: d.penznem,
+    kiallitva: iso(d.kiallitva),
+    esedekes: iso(d.esedekes),
+    kifizetve: iso(d.kifizetve),
+    allapot: szamlaAllapot(d.status.key as SzamlaTaroltAllapot, d.esedekes, now),
+  };
+}
+
+function toJotallasPortal(d: IJotallasiJegy, now = new Date()): JotallasPortalNezet {
+  const tarolt = d.status.key as JotallasTaroltAllapot;
+  return {
+    id: String(d._id),
+    azonosito: d.azonosito,
+    szamlaszam: d.szamlaszam,
+    kiallitasNap: d.kiallitasNap,
+    sorok: d.sorok.map((s) => ({
+      termekNev: s.termekNev,
+      arlistaTermekId: s.arlistaTermekId,
+      gyariSzam: s.gyariSzam,
+      evek: s.evek,
+      kezdet: s.kezdet.toISOString(),
+      vege: s.vege.toISOString(),
+    })),
+    jogiSzoveg: d.jogiSzoveg,
+    allapot: jotallasAllapot(tarolt, d.lejarat, now),
+    lejarat: iso(d.lejarat),
   };
 }
 
@@ -1092,6 +1154,39 @@ export const bizonylatApi = {
     return d ? toSzamlaDetail(d) : null;
   },
 
+  /** Portal list: structurally pinned to the viewer's partner, allow-listed projection. */
+  async listSzamlakPortal(
+    query: DataTableQuery,
+    nezo: NezoPortal,
+  ): Promise<{ data: SzamlaPortalNezet[]; total: number }> {
+    await connectDB();
+    const built = buildDataTableMongoQuery(query, SZAMLA_LIST_COLUMNS);
+    const lazy = lazyAllapotSzuro(built.filter, {
+      tarolt: "elkuldve",
+      virtualis: "lejart",
+      mezo: "esedekes",
+    });
+    const and = Array.isArray(lazy.$and) ? (lazy.$and as unknown[]) : [];
+    const filter: MongoSzuro = { ...lazy, $and: [...and, szamlaNezoSzuro(nezo)] };
+    const now = new Date();
+    return lapozottLista(
+      (f, s, sk, l) => Szamla.find(f).sort(s).skip(sk).limit(l).lean<ISzamla[]>().exec(),
+      (f) => Szamla.countDocuments(f).exec(),
+      filter,
+      built,
+      (d) => toSzamlaPortal(d, now),
+    );
+  },
+
+  async getSzamlaPortal(id: string, nezo: NezoPortal): Promise<SzamlaPortalNezet | null> {
+    if (!validId(id)) return null;
+    await connectDB();
+    const d = await Szamla.findOne({
+      $and: [{ _id: oid(id) }, szamlaNezoSzuro(nezo)],
+    }).exec();
+    return d ? toSzamlaPortal(d) : null;
+  },
+
   async createSzamla(
     input: SzamlaInput,
     partner: PartnerPillanatkep,
@@ -1368,6 +1463,42 @@ export const bizonylatApi = {
   },
 
   /** Issues a warranty card; the current legal text is frozen into it, the end dates computed. */
+  async listJotallasokPortal(
+    query: DataTableQuery,
+    nezo: NezoPortal,
+  ): Promise<{ data: JotallasPortalNezet[]; total: number }> {
+    await connectDB();
+    const built = buildDataTableMongoQuery(query, JOTALLAS_LIST_COLUMNS);
+    const lazy = lazyAllapotSzuro(built.filter, {
+      tarolt: "aktiv",
+      virtualis: "lejart",
+      mezo: "lejarat",
+    });
+    const and = Array.isArray(lazy.$and) ? (lazy.$and as unknown[]) : [];
+    const filter: MongoSzuro = { ...lazy, $and: [...and, jotallasNezoSzuro(nezo)] };
+    const now = new Date();
+    return lapozottLista(
+      (f, s, sk, l) =>
+        JotallasiJegy.find(f).sort(s).skip(sk).limit(l).lean<IJotallasiJegy[]>().exec(),
+      (f) => JotallasiJegy.countDocuments(f).exec(),
+      filter,
+      built,
+      (d) => toJotallasPortal(d, now),
+    );
+  },
+
+  async getJotallasPortal(
+    id: string,
+    nezo: NezoPortal,
+  ): Promise<JotallasPortalNezet | null> {
+    if (!validId(id)) return null;
+    await connectDB();
+    const d = await JotallasiJegy.findOne({
+      $and: [{ _id: oid(id) }, jotallasNezoSzuro(nezo)],
+    }).exec();
+    return d ? toJotallasPortal(d) : null;
+  },
+
   async createJotallas(
     input: JotallasInput,
     partner: Pick<PartnerPillanatkep, "partnerNev">,
