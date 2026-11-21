@@ -16,6 +16,7 @@ import { projektPermissions } from "@erp/projekt";
 import { keszletPermissions } from "@erp/keszlet";
 import { szervizPermissions } from "@erp/szerviz";
 import { bizonylatPermissions } from "@erp/bizonylat";
+import { deploymentsPermissions } from "@erp/deployments";
 
 [
   enginePermissions,
@@ -30,6 +31,7 @@ import { bizonylatPermissions } from "@erp/bizonylat";
   ertekesitesPermissions,
   szervizPermissions,
   bizonylatPermissions,
+  deploymentsPermissions,
   // Domain modules: add `<modul>Permissions` here (docs/05 §3).
 ].forEach(registerPermissionModule);
 

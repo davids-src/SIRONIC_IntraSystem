@@ -138,6 +138,21 @@ describe("load-help integration", () => {
     );
   });
 
+  it("gates the Telepítések articles on their page permissions", () => {
+    const slugs = (perms: string[]) => getHelpArticlesForUser(perms).map((a) => a.slug);
+    expect(slugs([])).not.toContain("telepitesek-lista");
+    expect(slugs(["deployments:telepites:read"])).toContain("telepitesek-lista");
+    expect(slugs(["deployments:telepites:read"])).not.toContain("telepitesek-fizetesek");
+    expect(slugs(["deployments:fizetes:read"])).toContain("telepitesek-fizetesek");
+    expect(slugs(["deployments:csomag:read"])).toContain("telepitesek-fizetesek");
+    expect(slugs(["deployments:sablon:read"])).toContain("telepitesek-integraciok");
+    expect(slugs(["deployments:integracio:read"])).toContain("telepitesek-integraciok");
+    const sections = groupHelpArticlesBySection(
+      getHelpArticlesForUser(["deployments:telepites:read"]),
+    );
+    expect(sections.some((s) => s.name === "Telepítések")).toBe(true);
+  });
+
   it("gates the Készlet articles on their page permissions", () => {
     const slugs = (perms: string[]) => getHelpArticlesForUser(perms).map((a) => a.slug);
     expect(slugs([])).not.toContain("keszlet-muszerfal");
