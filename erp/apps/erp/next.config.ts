@@ -28,6 +28,7 @@ const nextConfig: NextConfig = {
     "@erp/mail",
     "@erp/media",
     "@erp/partner",
+    "@erp/projekt",
     "@erp/rbac",
     "@erp/secrets",
     "@erp/ui",

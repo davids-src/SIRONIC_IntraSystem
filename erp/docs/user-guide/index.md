@@ -39,6 +39,8 @@ A menüpontok **jogosultságtól függenek**. Ha nem látsz egy modult, kérd a 
 | Listák és táblázatok    | Keresés, szűrés, rendezés, oszlopok és oldalméret minden lista-nézetben.                                                                         |
 | Exportálás és nyomtatás | Bármelyik lista vagy adatlap Excelbe, illetve PDF-be.                                                                                            |
 | Eszközök                | Szerszámok nyilvántartása: kiadás kollégának, visszavétel, szerviz, elveszett, kivonás, mozgásnapló.                                             |
+| Projektek               | Projektek fázisokkal, ellenőrzőlistával és költségekkel; heti terv Kanban tábla; ellenőrzőlista-sablonok; archiválás okkal.                      |
+| Projektek               | Projektek fázisokkal, ellenőrzőlistával és költségekkel; heti terv Kanban tábla; ellenőrzőlista-sablonok; archiválás okkal.                      |
 
 Az üzleti modulok (Partnerek, Árlista, Készlet, Értékesítés, …) bevezetésükkel együtt kapják meg a saját súgócikküket.
 
@@ -55,6 +57,16 @@ Az üzleti modulok (Partnerek, Árlista, Készlet, Értékesítés, …) bevezet
 - [E-mail értesítések](/help/ertesitesek-email)
 - [Eszközök — lista és összesítő](/help/eszkoz-lista)
 - [Eszköz adatlapja — kiadás, visszavétel, szerviz](/help/eszkoz-adatlap)
+- [Projektek — lista és összesítő](/help/projekt-lista)
+- [Projekt adatlapja](/help/projekt-adatlap)
+- [Projektköltségek](/help/projekt-koltsegek)
+- [Heti terv](/help/projekt-heti-terv)
+- [Ellenőrzőlista-sablonok](/help/projekt-sablonok)
+- [Projektek — lista és összesítő](/help/projekt-lista)
+- [Projekt adatlapja](/help/projekt-adatlap)
+- [Projektköltségek](/help/projekt-koltsegek)
+- [Heti terv](/help/projekt-heti-terv)
+- [Ellenőrzőlista-sablonok](/help/projekt-sablonok)
 - [Gépészet áttekintés](/help/gepeszet-attekintes)
 - [Gépek kezelése](/help/gepeszet-gepek)
 - [Szervizjegyek kezelése](/help/gepeszet-szervizjegyek)

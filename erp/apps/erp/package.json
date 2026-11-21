@@ -35,6 +35,7 @@
     "@erp/mail": "workspace:*",
     "@erp/media": "workspace:*",
     "@erp/partner": "workspace:*",
+    "@erp/projekt": "workspace:*",
     "@erp/rbac": "workspace:*",
     "@erp/secrets": "workspace:*",
     "@erp/ui": "workspace:*",

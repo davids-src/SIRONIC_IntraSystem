@@ -50,6 +50,46 @@ describe("load-help integration", () => {
     expect(slugs(["arlista:beallitas:write"])).toContain("arlista-beallitasok");
   });
 
+  it("gates the Projektek articles on their page permissions", () => {
+    const slugs = (keys: string[]) => getHelpArticlesForUser(keys).map((a) => a.slug);
+    expect(slugs([])).not.toContain("projekt-lista");
+    expect(slugs(["projekt:projekt:read"])).toEqual(
+      expect.arrayContaining(["projekt-lista", "projekt-adatlap"]),
+    );
+    expect(slugs(["projekt:projekt:read"])).not.toContain("projekt-koltsegek");
+    expect(slugs(["projekt:koltseg:read"])).toContain("projekt-koltsegek");
+    expect(slugs(["projekt:hetiterv:read"])).toContain("projekt-heti-terv");
+    expect(slugs(["projekt:projekt:read"])).not.toContain("projekt-heti-terv");
+    expect(slugs(["projekt:sablon:read"])).toContain("projekt-sablonok");
+    const sections = groupHelpArticlesBySection(
+      getHelpArticlesForUser(["projekt:projekt:read", "users:read"]),
+    ).map((s) => s.name);
+    expect(sections).toContain("Projektek");
+    expect(sections.indexOf("Projektek")).toBeLessThan(
+      sections.indexOf("Adminisztráció"),
+    );
+  });
+
+  it("gates the Projektek articles on their page permissions", () => {
+    const slugs = (keys: string[]) => getHelpArticlesForUser(keys).map((a) => a.slug);
+    expect(slugs([])).not.toContain("projekt-lista");
+    expect(slugs(["projekt:projekt:read"])).toEqual(
+      expect.arrayContaining(["projekt-lista", "projekt-adatlap"]),
+    );
+    expect(slugs(["projekt:projekt:read"])).not.toContain("projekt-koltsegek");
+    expect(slugs(["projekt:koltseg:read"])).toContain("projekt-koltsegek");
+    expect(slugs(["projekt:hetiterv:read"])).toContain("projekt-heti-terv");
+    expect(slugs(["projekt:projekt:read"])).not.toContain("projekt-heti-terv");
+    expect(slugs(["projekt:sablon:read"])).toContain("projekt-sablonok");
+    const sections = groupHelpArticlesBySection(
+      getHelpArticlesForUser(["projekt:projekt:read", "users:read"]),
+    ).map((s) => s.name);
+    expect(sections).toContain("Projektek");
+    expect(sections.indexOf("Projektek")).toBeLessThan(
+      sections.indexOf("Adminisztráció"),
+    );
+  });
+
   it("groups sections with Áttekintés first", () => {
     const sections = groupHelpArticlesBySection(
       getHelpArticlesForUser(["users:read", "roles:manage"]),

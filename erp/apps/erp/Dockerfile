@@ -17,6 +17,7 @@ COPY packages/eslint-config/package.json ./packages/eslint-config/
 COPY packages/eszkoz/package.json ./packages/eszkoz/
 COPY packages/feladat/package.json ./packages/feladat/
 COPY packages/jelzes/package.json ./packages/jelzes/
+COPY packages/projekt/package.json ./packages/projekt/
 COPY packages/lib/package.json ./packages/lib/
 COPY packages/mail/package.json ./packages/mail/
 COPY packages/media/package.json ./packages/media/
