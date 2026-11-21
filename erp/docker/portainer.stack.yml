@@ -3,6 +3,7 @@
 #
 # Image (built on push to main — no runtime secrets baked in):
 #   ghcr.io/tomkoooo/sironic-erp/erp:main → apps/erp
+#   ghcr.io/tomkoooo/sironic-erp-portal:main → apps/portal (partner portal, port 3001)
 #
 # Update AUTH_URL / APP_URL to the real public domain before deploy.
 # AUTH_SECRET / SMTP_* / SEED_* are read at container start from this stack only.
@@ -61,6 +62,51 @@ services:
       ALLOW_PUBLIC_REGISTRATION: "false"
       SEED_ADMIN_EMAIL: admin@sironic.local
       SEED_ADMIN_PASSWORD: change-me-on-first-deploy
+
+    networks:
+      - nginxproxy_default
+
+  portal:
+    image: ghcr.io/tomkoooo/sironic-erp-portal:main
+    container_name: sironic-erp-portal
+    restart: unless-stopped
+    labels:
+      - wud.watch=true
+      - wud.tag=include
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3001/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      HOSTNAME: "0.0.0.0"
+      TZ: Europe/Budapest
+
+      # Same database as the ERP: the portal reads through the domain facades with a partner viewer.
+      MONGODB_URI: mongodb://192.168.0.12:27017/sironic_erp
+      MONGODB_DB_NAME: sironic_erp
+
+      # Public URL of the portal (invitation / reset / magic-link mails point here).
+      PORTAL_URL: https://partner.example.com
+      APP_URL: https://partner.example.com
+      # Session signing secret, DIFFERENT from the ERP's AUTH_SECRET (>= 32 random chars).
+      PORTAL_AUTH_SECRET: change-me-to-a-different-random-secret-min-32-chars
+
+      SMTP_HOST: smtp.mailtrap.io
+      SMTP_PORT: "2525"
+      SMTP_USER: ""
+      SMTP_PASS: ""
+      SMTP_FROM: no-reply@sironic.local
+      SMTP_SECURE: "false"
 
     networks:
       - nginxproxy_default

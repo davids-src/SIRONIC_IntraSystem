@@ -8,6 +8,7 @@ FROM base AS deps
 ENV HUSKY=0
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY apps/erp/package.json ./apps/erp/
+COPY apps/portal/package.json ./apps/portal/
 COPY packages/admin/package.json ./packages/admin/
 COPY packages/arlista/package.json ./packages/arlista/
 COPY packages/auth/package.json ./packages/auth/
@@ -27,6 +28,7 @@ COPY packages/lib/package.json ./packages/lib/
 COPY packages/mail/package.json ./packages/mail/
 COPY packages/media/package.json ./packages/media/
 COPY packages/partner/package.json ./packages/partner/
+COPY packages/portal-auth/package.json ./packages/portal-auth/
 COPY packages/rbac/package.json ./packages/rbac/
 COPY packages/test-utils/package.json ./packages/test-utils/
 COPY packages/secrets/package.json ./packages/secrets/

@@ -57,16 +57,48 @@ jobs:
         run: pnpm test:integration --concurrency=1
 
       - name: Guard scripts
-        run: node scripts/verify-button-aschild.mjs
+        run: |
+          node scripts/verify-button-aschild.mjs
+          node scripts/verify-portal-isolation.mjs
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [erp, portal]
+    defaults:
+      run:
+        working-directory: erp
+    env:
+      AUTH_SECRET: ci-build-secret-minimum-32-characters-long
+      PORTAL_AUTH_SECRET: ci-portal-secret-minimum-32-characters-long
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: erp/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       # Dummy env only: the build never connects to a database.
-      - name: Build
-        run: pnpm build
+      - name: Build ${{ matrix.app }}
+        run: pnpm --filter @erp/${{ matrix.app }} build
         env:
           MONGODB_URI: mongodb://localhost:27017
           MONGODB_DB_NAME: sironic_erp
           AUTH_URL: http://localhost:3000
           APP_URL: http://localhost:3000
+          PORTAL_URL: http://localhost:3001
+          SECRETS_ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
           SMTP_HOST: localhost
           SMTP_PORT: "587"
           SMTP_USER: ci
