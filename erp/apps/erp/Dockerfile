@@ -15,6 +15,7 @@ COPY packages/core/package.json ./packages/core/
 COPY packages/db-core/package.json ./packages/db-core/
 COPY packages/eslint-config/package.json ./packages/eslint-config/
 COPY packages/eszkoz/package.json ./packages/eszkoz/
+COPY packages/keszlet/package.json ./packages/keszlet/
 COPY packages/feladat/package.json ./packages/feladat/
 COPY packages/jelzes/package.json ./packages/jelzes/
 COPY packages/projekt/package.json ./packages/projekt/

@@ -38,6 +38,7 @@ A menüpontok **jogosultságtól függenek**. Ha nem látsz egy modult, kérd a 
 | Titoktár                | Jelszavak és hozzáférések titkosítva; érték csak kérésre jelenik meg (10 mp), naplózva; megosztás felhasználóval vagy szerepkörrel.              |
 | Listák és táblázatok    | Keresés, szűrés, rendezés, oszlopok és oldalméret minden lista-nézetben.                                                                         |
 | Exportálás és nyomtatás | Bármelyik lista vagy adatlap Excelbe, illetve PDF-be.                                                                                            |
+| Készlet                 | Raktárkészlet, bevételezés, foglalás, leltár, RMA ügyek, raktárhelyek; készletérték csak külön jogosultsággal.                                   |
 | Eszközök                | Szerszámok nyilvántartása: kiadás kollégának, visszavétel, szerviz, elveszett, kivonás, mozgásnapló.                                             |
 | Projektek               | Projektek fázisokkal, ellenőrzőlistával és költségekkel; heti terv Kanban tábla; ellenőrzőlista-sablonok; archiválás okkal.                      |
 | Projektek               | Projektek fázisokkal, ellenőrzőlistával és költségekkel; heti terv Kanban tábla; ellenőrzőlista-sablonok; archiválás okkal.                      |
@@ -62,11 +63,12 @@ Az üzleti modulok (Partnerek, Árlista, Készlet, Értékesítés, …) bevezet
 - [Projektköltségek](/help/projekt-koltsegek)
 - [Heti terv](/help/projekt-heti-terv)
 - [Ellenőrzőlista-sablonok](/help/projekt-sablonok)
-- [Projektek — lista és összesítő](/help/projekt-lista)
-- [Projekt adatlapja](/help/projekt-adatlap)
-- [Projektköltségek](/help/projekt-koltsegek)
-- [Heti terv](/help/projekt-heti-terv)
-- [Ellenőrzőlista-sablonok](/help/projekt-sablonok)
+- [Készlet — műszerfal](/help/keszlet-muszerfal)
+- [Készletlista és adatlap — foglalás](/help/keszlet-lista)
+- [Bevételezés](/help/keszlet-bevetelezes)
+- [Leltár](/help/keszlet-leltar)
+- [RMA ügyek](/help/keszlet-rma)
+- [Raktárhelyek](/help/keszlet-raktarhelyek)
 - [Gépészet áttekintés](/help/gepeszet-attekintes)
 - [Gépek kezelése](/help/gepeszet-gepek)
 - [Szervizjegyek kezelése](/help/gepeszet-szervizjegyek)

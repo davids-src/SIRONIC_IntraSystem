@@ -12,6 +12,7 @@ import { partnerPermissions } from "@erp/partner";
 import { secretsPermissions } from "@erp/secrets";
 import { arlistaPermissions } from "@erp/arlista";
 import { projektPermissions } from "@erp/projekt";
+import { keszletPermissions } from "@erp/keszlet";
 
 [
   enginePermissions,
@@ -22,6 +23,7 @@ import { projektPermissions } from "@erp/projekt";
   secretsPermissions,
   arlistaPermissions,
   projektPermissions,
+  keszletPermissions,
   // Domain modules: add `<modul>Permissions` here (docs/05 §3).
 ].forEach(registerPermissionModule);
 

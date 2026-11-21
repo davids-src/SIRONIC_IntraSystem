@@ -81,6 +81,7 @@ export function groupHelpArticlesBySection(articles: HelpArticle[]): HelpSection
     "Partnerek",
     "Árlista",
     "Projektek",
+    "Készlet",
     "Gépészet",
     "Vállalkozás",
     "Termelés",

@@ -109,4 +109,25 @@ describe("load-help integration", () => {
       true,
     );
   });
+
+  it("gates the Készlet articles on their page permissions", () => {
+    const slugs = (perms: string[]) => getHelpArticlesForUser(perms).map((a) => a.slug);
+    expect(slugs([])).not.toContain("keszlet-muszerfal");
+    for (const slug of [
+      "keszlet-muszerfal",
+      "keszlet-lista",
+      "keszlet-leltar",
+      "keszlet-raktarhelyek",
+    ]) {
+      expect(slugs(["keszlet:keszlet:read"])).toContain(slug);
+    }
+    expect(slugs(["keszlet:keszlet:read"])).not.toContain("keszlet-bevetelezes");
+    expect(slugs(["keszlet:keszlet:read"])).not.toContain("keszlet-rma");
+    expect(slugs(["keszlet:bevetel:write"])).toContain("keszlet-bevetelezes");
+    expect(slugs(["keszlet:rma:read"])).toContain("keszlet-rma");
+    const sections = groupHelpArticlesBySection(
+      getHelpArticlesForUser(["keszlet:keszlet:read"]),
+    );
+    expect(sections.some((s) => s.name === "Készlet")).toBe(true);
+  });
 });
