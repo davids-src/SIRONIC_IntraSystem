@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { ContactIcon, HandshakeIcon } from "lucide-react";
+import { PARTNER_PERMISSIONS } from "@erp/partner/client";
 import type { SidebarNavItem } from "@/components/sidebar-nav-group";
 
 /**
@@ -13,7 +15,30 @@ export type ModuleNavGroup = {
   items: Array<{ permission: string; item: SidebarNavItem }>;
 };
 
-export const MODULE_NAV: ModuleNavGroup[] = [];
+export const MODULE_NAV: ModuleNavGroup[] = [
+  {
+    label: "Partnerek",
+    tourId: "nav-partner",
+    items: [
+      {
+        permission: PARTNER_PERMISSIONS.partnerRead,
+        item: {
+          href: "/partner",
+          label: "Partnerek",
+          icon: <HandshakeIcon className="h-4 w-4" />,
+        },
+      },
+      {
+        permission: PARTNER_PERMISSIONS.erdeklodoRead,
+        item: {
+          href: "/partner/erdeklodok",
+          label: "Érdeklődők",
+          icon: <ContactIcon className="h-4 w-4" />,
+        },
+      },
+    ],
+  },
+];
 
 export function buildModuleNav(hasPermission: (key: string) => boolean): Array<{
   label: string;
