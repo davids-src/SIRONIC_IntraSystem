@@ -7,11 +7,13 @@ import {
 import { enginePermissions } from "@erp/admin";
 import { mediaPermissions } from "@erp/media";
 import { jelzesPermissions } from "@erp/jelzes";
+import { eszkozPermissions } from "@erp/eszkoz";
 
 [
   enginePermissions,
   mediaPermissions,
   jelzesPermissions,
+  eszkozPermissions,
   // Domain modules: add `<modul>Permissions` here (docs/05 §3).
 ].forEach(registerPermissionModule);
 

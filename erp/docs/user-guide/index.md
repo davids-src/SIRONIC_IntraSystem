@@ -35,6 +35,7 @@ A menüpontok **jogosultságtól függenek**. Ha nem látsz egy modult, kérd a 
 | Értesítési központ      | A fejléc csengője: feladat- és rendszerjelzések, asztali értesítés, e-mail értesítés (saját döntés).                                             |
 | Listák és táblázatok    | Keresés, szűrés, rendezés, oszlopok és oldalméret minden lista-nézetben.                                                                         |
 | Exportálás és nyomtatás | Bármelyik lista vagy adatlap Excelbe, illetve PDF-be.                                                                                            |
+| Eszközök                | Szerszámok nyilvántartása: kiadás kollégának, visszavétel, szerviz, elveszett, kivonás, mozgásnapló.                                             |
 
 Az üzleti modulok (Partnerek, Árlista, Készlet, Értékesítés, …) bevezetésükkel együtt kapják meg a saját súgócikküket.
 
@@ -49,6 +50,8 @@ Az üzleti modulok (Partnerek, Árlista, Készlet, Értékesítés, …) bevezet
 - [Feladat-folyamat — lépések egymás után](/help/feladatok-folyamat)
 - [Értesítési központ — jelzések és értesítési beállítások](/help/jelzesek)
 - [E-mail értesítések](/help/ertesitesek-email)
+- [Eszközök — lista és összesítő](/help/eszkoz-lista)
+- [Eszköz adatlapja — kiadás, visszavétel, szerviz](/help/eszkoz-adatlap)
 - [Gépészet áttekintés](/help/gepeszet-attekintes)
 - [Gépek kezelése](/help/gepeszet-gepek)
 - [Szervizjegyek kezelése](/help/gepeszet-szervizjegyek)

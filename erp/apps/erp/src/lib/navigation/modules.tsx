@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { WrenchIcon } from "lucide-react";
 import type { SidebarNavItem } from "@/components/sidebar-nav-group";
 
 /**
@@ -13,7 +14,22 @@ export type ModuleNavGroup = {
   items: Array<{ permission: string; item: SidebarNavItem }>;
 };
 
-export const MODULE_NAV: ModuleNavGroup[] = [];
+export const MODULE_NAV: ModuleNavGroup[] = [
+  {
+    label: "Eszközök",
+    tourId: "nav-eszkoz",
+    items: [
+      {
+        permission: "eszkoz:eszkoz:read",
+        item: {
+          href: "/eszkoz",
+          label: "Eszközök",
+          icon: <WrenchIcon className="size-4" />,
+        },
+      },
+    ],
+  },
+];
 
 export function buildModuleNav(hasPermission: (key: string) => boolean): Array<{
   label: string;

@@ -20,6 +20,7 @@ const nextConfig: NextConfig = {
     "@erp/auth",
     "@erp/core",
     "@erp/db-core",
+    "@erp/eszkoz",
     "@erp/feladat",
     "@erp/jelzes",
     "@erp/lib",

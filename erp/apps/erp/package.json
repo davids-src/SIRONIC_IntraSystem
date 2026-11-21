@@ -26,6 +26,7 @@
     "@erp/auth": "workspace:*",
     "@erp/core": "workspace:*",
     "@erp/db-core": "workspace:*",
+    "@erp/eszkoz": "workspace:*",
     "@erp/feladat": "workspace:*",
     "@erp/jelzes": "workspace:*",
     "@erp/lib": "workspace:*",

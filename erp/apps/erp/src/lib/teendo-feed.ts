@@ -6,6 +6,7 @@
 import { cache } from "react";
 import type { TaskRef } from "@erp/core";
 import { feladatApi, type FeladatSor } from "@erp/feladat";
+import { eszkozApi } from "@erp/eszkoz";
 import { FELADAT_ALLAPOT_LABELS } from "@erp/feladat/client";
 import { budapestNap } from "@erp/lib/utils";
 import {
@@ -18,12 +19,16 @@ import {
 /** Module label for the row subtitle; domain modules add their entry (fallback: the module key). */
 const MODUL_LABELS: Record<string, string> = {
   feladat: "Feladat",
+  eszkoz: "Eszköz",
 };
 
 /** Everything assigned to the user in every module (incl. responsibilities), one fetch per request. */
 export const getSajatTaskRefs = cache(async (userId: string): Promise<TaskRef[]> => {
   // Domain modules: add `<modul>Api.listMyAssignments(userId)` to this list.
-  const all = await Promise.all([feladatApi.listMyAssignments(userId)]);
+  const all = await Promise.all([
+    feladatApi.listMyAssignments(userId),
+    eszkozApi.listMyAssignments(userId),
+  ]);
   return all.flat();
 });
 

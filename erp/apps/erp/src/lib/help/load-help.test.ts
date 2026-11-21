@@ -28,4 +28,16 @@ describe("load-help integration", () => {
     expect(sections.length).toBeGreaterThan(0);
     expect(sections[0]?.name).toBe("Áttekintés");
   });
+
+  it("gates the Eszközök articles on eszkoz:eszkoz:read", () => {
+    const nelkul = getHelpArticlesForUser([]);
+    const jogosult = getHelpArticlesForUser(["eszkoz:eszkoz:read"]);
+    for (const slug of ["eszkoz-lista", "eszkoz-adatlap"]) {
+      expect(nelkul.some((a) => a.slug === slug)).toBe(false);
+      expect(jogosult.some((a) => a.slug === slug)).toBe(true);
+    }
+    expect(groupHelpArticlesBySection(jogosult).some((s) => s.name === "Eszközök")).toBe(
+      true,
+    );
+  });
 });
