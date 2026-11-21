@@ -17,6 +17,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   transpilePackages: [
     "@erp/admin",
+    "@erp/arlista",
     "@erp/auth",
     "@erp/core",
     "@erp/db-core",
