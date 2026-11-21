@@ -32,6 +32,8 @@ services:
       MONGODB_DB_NAME: sironic_erp
       AUTH_SECRET: ${AUTH_SECRET:-dev-secret-change-in-production-min-32-chars}
       AUTH_URL: http://localhost:3000
+      # Titoktár: exactly 32 bytes or 64 hex chars. Local placeholder only — never a real key.
+      SECRETS_ENCRYPTION_KEY: ${SECRETS_ENCRYPTION_KEY:-local-dev-only-key-not-for-prod!}
     depends_on:
       - mongo
 

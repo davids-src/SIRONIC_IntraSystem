@@ -82,6 +82,7 @@ export function groupHelpArticlesBySection(articles: HelpArticle[]): HelpSection
     "Termelés",
     "Gazdaság",
     "HR",
+    "Titoktár",
     "Fiók",
     "Adminisztráció",
   ];

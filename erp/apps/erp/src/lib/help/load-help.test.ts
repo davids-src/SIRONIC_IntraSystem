@@ -21,6 +21,15 @@ describe("load-help integration", () => {
     expect(withoutPerm.some((a) => a.slug === "index")).toBe(true);
   });
 
+  it("gates the Titoktár articles on their permission keys", () => {
+    const slugs = (keys: string[]) => getHelpArticlesForUser(keys).map((a) => a.slug);
+    expect(slugs(["secrets:titok:read"])).toContain("titoktar");
+    expect(slugs(["secrets:titok:read"])).toContain("titoktar-adatlap");
+    expect(slugs(["secrets:titok:read"])).not.toContain("titoktar-megosztas");
+    expect(slugs(["secrets:titok:share"])).toContain("titoktar-megosztas");
+    expect(slugs([])).not.toContain("titoktar");
+  });
+
   it("groups sections with Áttekintés first", () => {
     const sections = groupHelpArticlesBySection(
       getHelpArticlesForUser(["users:read", "roles:manage"]),

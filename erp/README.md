@@ -15,3 +15,7 @@ pnpm preflight      # lint → typecheck → test → guard → build
 - `.npmrc` hoists `@types/*`/`react` into `erp/node_modules`; otherwise TypeScript resolves a second
   `@types/react` from the legacy root `node_modules`.
 - Never point `apps/erp/.env` at the legacy or production database.
+- `SECRETS_ENCRYPTION_KEY` (Titoktár, AES-256-GCM): required, 64 hex chars or exactly 32 bytes, no
+  fallback — without it creating/revealing secrets fails closed. Generate with
+  `openssl rand -hex 32`, keep it in the password manager (losing it = all secrets lost), never
+  commit it. A migrated legacy dataset needs the same key as the old CRM.

@@ -4,6 +4,7 @@ export const PERMISSION_GROUP_LABELS: Record<string, string> = {
   users: "Felhasználók",
   media: "Médiatár",
   jelzes: "Jelzések",
+  secrets: "Titoktár",
 };
 
 export function permissionGroupLabel(group: string): string {

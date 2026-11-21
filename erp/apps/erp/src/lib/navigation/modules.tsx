@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { KeyRoundIcon } from "lucide-react";
 import type { SidebarNavItem } from "@/components/sidebar-nav-group";
 
 /**
@@ -13,7 +14,22 @@ export type ModuleNavGroup = {
   items: Array<{ permission: string; item: SidebarNavItem }>;
 };
 
-export const MODULE_NAV: ModuleNavGroup[] = [];
+export const MODULE_NAV: ModuleNavGroup[] = [
+  {
+    label: "Titoktár",
+    tourId: "nav-secrets",
+    items: [
+      {
+        permission: "secrets:titok:read",
+        item: {
+          href: "/secrets",
+          label: "Titkok",
+          icon: <KeyRoundIcon className="size-4" />,
+        },
+      },
+    ],
+  },
+];
 
 export function buildModuleNav(hasPermission: (key: string) => boolean): Array<{
   label: string;
