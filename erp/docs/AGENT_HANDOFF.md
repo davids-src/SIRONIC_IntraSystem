@@ -94,6 +94,13 @@ All wiring lives in `apps/erp/src/lib/` (domain packages still import neither ea
   `scripts/migrate/verify.ts` counts collections and calls the facades. Not migrated (no adapter / by design): see the
   runner report (stock transaction history, portal users, empty legacy collections, certificates without partner).
 
+## 2d. Header search v2 (live, menus + modules)
+
+- `components/globalis-kereso.tsx` (client): menu/module entries filter in the browser (`lib/navigation/menu-kereses.ts`,
+  entries built in the dashboard layout from the viewer's permissions), record hits come from `GET /api/kereses?q=`
+  (debounced, abortable, same `globalisKereses` fan-out + per-facade permission checks). Ctrl/Cmd+K or `/` focuses it;
+  Enter without a selection opens `/kereses`. No page reload (`router.push`). Mirrored in `recplus` (menu/module search).
+
 ## 3. Traps
 
 - Two `@types/react` copies → `.npmrc` hoist (see `erp/README.md`).

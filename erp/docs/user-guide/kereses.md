@@ -1,13 +1,19 @@
 ---
 title: Keresés az egész rendszerben
-description: A fejléc keresőmezője és a Keresés oldal — találatok modulonként, a jogosultságaid szerint.
+description: A fejléc keresőmezője — menük, modulok és adatok keresése azonnal, oldal-újratöltés nélkül, a jogosultságaid szerint.
 order: 4
 section: Áttekintés
 ---
 
 ## Hol találod
 
-A **fejléc keresőmezője** minden oldalon ott van (kis képernyőn rejtett — ott nyisd meg a **Keresés** oldalt: `/kereses`). Enterrel a **Keresés** oldalra jutsz a találatokkal.
+A **fejléc keresőmezője** (a morzsasor és az ikonsor — Excel/nyomtatás, értesítések, téma — mellett) minden oldalon ott van. Gyorsbillentyű: **Ctrl+K** (Macen **Cmd+K**) vagy a **/** gomb. Kis képernyőn a mező rejtett — ott nyisd meg a **Keresés** oldalt: `/kereses`.
+
+## Gépelés közben (oldal újratöltése nélkül)
+
+- Már az első betűnél megjelenik a **Menü** találatai: a menüpontok és modulok neve szerint szűr (ékezet nélkül is: `arlista` megtalálja az „Árlista” menüt). Csak olyan menüpontot ajánl, amelyet a bal oldali menüben is látsz.
+- **2 karaktertől** ugyanabban a listában megjelennek az **adatok** is (partner, ajánlat, projekt stb.), modulonként jelölve.
+- Nyilakkal (**↑ ↓**) lépkedhetsz, **Enter**rel megnyitod a kijelöltet, **Esc**-cel bezárod. Ha semmi sincs kijelölve, az Enter a teljes **Keresés** oldalra visz az összes találattal.
 
 ## Mit látsz
 

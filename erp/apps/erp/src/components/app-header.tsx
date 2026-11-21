@@ -17,6 +17,8 @@ import { Container } from "@erp/ui";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { JelzesCsengo } from "@/components/jelzes/jelzes-csengo";
 import { useBranding } from "@/components/branding-provider";
+import { GlobalisKereso } from "@/components/globalis-kereso";
+import type { MenuBejegyzes } from "@/lib/navigation/menu-kereses";
 
 export function translateSegment(segment: string): string {
   const map: Record<string, string> = {
@@ -48,8 +50,11 @@ export function translateSegment(segment: string): string {
 
 export default function AppHeader({
   jelzesOlvasatlan = 0,
+  menu = [],
 }: {
   jelzesOlvasatlan?: number;
+  /** Permission-filtered menu / module entries for the header search. */
+  menu?: MenuBejegyzes[];
 }) {
   const pathname = usePathname();
   const pathnameSegments = pathname.split("/").filter((segment) => segment !== "");
@@ -101,21 +106,8 @@ export default function AppHeader({
               )}
             </BreadcrumbList>
           </Breadcrumb>
-          {/* Global search: a plain GET form, works without JavaScript. */}
-          <form action="/kereses" method="get" role="search" className="hidden sm:block">
-            <label htmlFor="globalis-kereses" className="sr-only">
-              Keresés
-            </label>
-            <input
-              id="globalis-kereses"
-              name="q"
-              type="search"
-              minLength={2}
-              placeholder="Keresés…"
-              autoComplete="off"
-              className="border-input bg-background h-9 w-40 rounded-md border px-3 text-sm lg:w-56"
-            />
-          </form>
+          {/* Global search: menus/modules filter instantly, records load live (no reload). */}
+          <GlobalisKereso menu={menu} />
           {/* Excel / print of whatever the current screen shows — for meetings. */}
           <ElementExportMenu
             getRoot={() => document.querySelector("main")}
