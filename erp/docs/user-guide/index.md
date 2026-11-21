@@ -34,6 +34,7 @@ A menüpontok **jogosultságtól függenek**. Ha nem látsz egy modult, kérd a 
 | Feladatok               | Minden rád váró tétel egy listában, a legsürgősebb elöl; saját feladat felvétele, kiadás kollégának vagy csoportnak, feladat-folyamat, csevegés. |
 | Árlista                 | Termék- és szolgáltatás-árlista, ügyfélkategóriánkénti ármátrix, árbontás, árképzési beállítások.                                                |
 | Értékesítés             | Árajánlatok (varázsló, befagyasztott árak, kiküldés, utánkövetés, PDF), szerződések és sablonok, beszállítói megrendelőlapok.                    |
+| Szerviz                 | Hibajegyek (belső megjegyzésekkel), munkalapok aláírással és készletkiadással, karbantartási tervek lusta esedékességgel.                        |
 | Értesítési központ      | A fejléc csengője: feladat- és rendszerjelzések, asztali értesítés, e-mail értesítés (saját döntés).                                             |
 | Partnerek, Érdeklődők   | Ügyfelek, alvállalkozók, beszállítók és értékesítési érdeklődők nyilvántartása; árazási profil; archiválás.                                      |
 | Titoktár                | Jelszavak és hozzáférések titkosítva; érték csak kérésre jelenik meg (10 mp), naplózva; megosztás felhasználóval vagy szerepkörrel.              |
@@ -60,6 +61,9 @@ Az üzleti modulok (Partnerek, Árlista, Készlet, Értékesítés, …) bevezet
 - [Eszközök — lista és összesítő](/help/eszkoz-lista)
 - [Eszköz adatlapja — kiadás, visszavétel, szerviz](/help/eszkoz-adatlap)
 - [Projektek — lista és összesítő](/help/projekt-lista)
+- [Hibajegyek](/help/szerviz-hibajegyek)
+- [Munkalapok](/help/szerviz-munkalapok)
+- [Karbantartási tervek](/help/szerviz-karbantartas)
 - [Projekt adatlapja](/help/projekt-adatlap)
 - [Projektköltségek](/help/projekt-koltsegek)
 - [Heti terv](/help/projekt-heti-terv)

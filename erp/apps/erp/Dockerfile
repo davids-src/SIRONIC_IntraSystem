@@ -27,6 +27,7 @@ COPY packages/partner/package.json ./packages/partner/
 COPY packages/rbac/package.json ./packages/rbac/
 COPY packages/test-utils/package.json ./packages/test-utils/
 COPY packages/secrets/package.json ./packages/secrets/
+COPY packages/szerviz/package.json ./packages/szerviz/
 COPY packages/tsconfig/package.json ./packages/tsconfig/
 COPY packages/ui/package.json ./packages/ui/
 RUN pnpm install --frozen-lockfile --ignore-scripts

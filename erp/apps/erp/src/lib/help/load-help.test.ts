@@ -109,6 +109,20 @@ describe("load-help integration", () => {
     );
   });
 
+  it("gates the Szerviz articles on their page permissions and orders the section after Értékesítés", () => {
+    const slugs = (perms: string[]) => getHelpArticlesForUser(perms).map((a) => a.slug);
+    expect(slugs([])).not.toContain("szerviz-hibajegyek");
+    expect(slugs(["szerviz:hibajegy:read"])).toContain("szerviz-hibajegyek");
+    expect(slugs(["szerviz:hibajegy:read"])).not.toContain("szerviz-munkalapok");
+    expect(slugs(["szerviz:munkalap:read"])).toContain("szerviz-munkalapok");
+    expect(slugs(["szerviz:munkalap:read"])).not.toContain("szerviz-karbantartas");
+    expect(slugs(["szerviz:karbantartas:read"])).toContain("szerviz-karbantartas");
+    const nevek = groupHelpArticlesBySection(
+      getHelpArticlesForUser(["szerviz:hibajegy:read", "ertekesites:ajanlat:read"]),
+    ).map((s) => s.name);
+    expect(nevek.indexOf("Értékesítés")).toBeLessThan(nevek.indexOf("Szerviz"));
+  });
+
   it("groups sections with Áttekintés first", () => {
     const sections = groupHelpArticlesBySection(
       getHelpArticlesForUser(["users:read", "roles:manage"]),

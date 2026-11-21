@@ -33,6 +33,7 @@ const nextConfig: NextConfig = {
     "@erp/projekt",
     "@erp/rbac",
     "@erp/secrets",
+    "@erp/szerviz",
     "@erp/ui",
   ],
   // pdfmake reads its bundled Roboto font files from disk at runtime (HR document PDFs).
