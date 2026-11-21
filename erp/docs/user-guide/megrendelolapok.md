@@ -23,7 +23,7 @@ Az **Új megrendelőlap** gombbal (**Megrendelőlapok kezelése**, `ertekesites:
 
 Piszkozat → Elküldve → Teljesítve; Törölt (külön jogosultság: **Megrendelőlap törlése**, `ertekesites:megrendelo:delete`). A tételek és a beszállító **csak Piszkozat állapotban** módosíthatók.
 
-A **Teljesítve** jelölés csak elküldött megrendelőlapon végezhető el. Ha a készletmodul be van kötve, a teljesítés a tételeket bevételezi; a bevételezés eredménye (sikeres / sikertelen) az adatlapon látszik. Sikertelen bevételezésnél a teljesítés rögzítve marad, a bevételezés újra megkísérelhető.
+A **Teljesítve** jelölés csak elküldött megrendelőlapon végezhető el. A teljesítés a raktározható tételeket (árlista-termékhez kötött sorokat) automatikusan bevételezi a készletbe, rendelésenként pontosan egyszer; a szabad szöveges és szolgáltatás-sorok kimaradnak. A bevételezés eredménye (sikeres / sikertelen) az adatlapon látszik. Sikertelen bevételezésnél a teljesítés rögzítve marad, és az adatlapon megjelenik a **Bevételezés újrapróbálása** gomb — az újrapróbálás sem tud kétszer bevételezni.
 
 ## Archiválás
 

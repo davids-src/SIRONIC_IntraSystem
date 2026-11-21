@@ -2,7 +2,14 @@ import { Types } from "mongoose";
 import { appendStatusChange, connectDB, nextSequence } from "@erp/db-core";
 import { buildDataTableMongoQuery } from "@erp/ui";
 import type { DataTableQuery } from "@erp/ui";
-import { emitDomainEvent, type TaskRef } from "@erp/core";
+import {
+  SEARCH_PER_TYPE,
+  emitDomainEvent,
+  type SearchHit,
+  type SearchViewer,
+  type ActivityRef,
+  type TaskRef,
+} from "@erp/core";
 import { Ajanlat, type IAjanlat } from "./models/Ajanlat";
 import { Megrendelolap, type IMegrendelolap } from "./models/Megrendelolap";
 import {
@@ -484,6 +491,83 @@ export const ertekesitesApi = {
   },
 
   /** Open offers the user is responsible for (follow-up date as due date). */
+  /**
+   * Global search: a few hits per entity type, gated on the viewer's read permissions (checked
+   * before any query). Terms shorter than 2 characters return nothing.
+   */
+  async search(query: string, viewer: SearchViewer): Promise<SearchHit[]> {
+    const term = query.trim();
+    if (term.length < 2) return [];
+    const sq = {
+      page: 1,
+      pageSize: SEARCH_PER_TYPE,
+      search: term,
+      filters: {},
+    } as unknown as DataTableQuery;
+    const out: SearchHit[] = [];
+    if (viewer.permissions.includes("ertekesites:ajanlat:read")) {
+      const { data } = await ertekesitesApi.listAjanlatok(sq);
+      for (const a of data)
+        out.push({
+          module: "ertekesites",
+          entityLabel: "Ajánlat",
+          entityId: a._id,
+          title: `${a.azonosito} · ${a.cim}`,
+          subtitle: a.partnerNev,
+          url: `/ertekesites/ajanlatok/${a._id}`,
+        });
+    }
+    if (viewer.permissions.includes("ertekesites:szerzodes:read")) {
+      const { data } = await ertekesitesApi.listSzerzodesek(sq);
+      for (const s of data)
+        out.push({
+          module: "ertekesites",
+          entityLabel: "Szerződés",
+          entityId: s._id,
+          title: `${s.azonosito} · ${s.nev}`,
+          url: `/ertekesites/szerzodesek/${s._id}`,
+        });
+    }
+    if (viewer.permissions.includes("ertekesites:megrendelo:read")) {
+      const { data } = await ertekesitesApi.listMegrendelok(sq);
+      for (const m of data)
+        out.push({
+          module: "ertekesites",
+          entityLabel: "Megrendelőlap",
+          entityId: m._id,
+          title: m.azonosito,
+          subtitle: m.beszallitoNev,
+          url: `/ertekesites/megrendelok/${m._id}`,
+        });
+    }
+    return out;
+  },
+
+  /** Latest status changes (newest first) — feeds the dashboard's activity panel. */
+  async getTevekenyseg(limit = 8): Promise<ActivityRef[]> {
+    await connectDB();
+    const rows = await Ajanlat.find({
+      archivalt: { $ne: true },
+      "status.changedAt": { $exists: true },
+    })
+      .sort({ "status.changedAt": -1 })
+      .limit(limit)
+      .lean()
+      .exec();
+    return rows.map((d) => ({
+      module: "ertekesites",
+      entityType: "ajanlat",
+      entityId: String(d._id),
+      title: `${d.azonosito} · ${d.cim}`,
+      statusLabel:
+        AJANLAT_ALLAPOT_LABELS[d.status.key as keyof typeof AJANLAT_ALLAPOT_LABELS] ??
+        d.status.key,
+      changedAt: d.status.changedAt.toISOString(),
+      changedBy: String(d.status.changedBy),
+      url: `/ertekesites/ajanlatok/${d._id}`,
+    }));
+  },
+
   async listMyAssignments(userId: string): Promise<TaskRef[]> {
     if (!validId(userId)) return [];
     await connectDB();

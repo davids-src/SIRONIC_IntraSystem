@@ -11,5 +11,8 @@ export type {
   TaskRef,
   ActivityRef,
   Ertesites,
+  SearchViewer,
+  SearchHit,
 } from "./shared-types";
+export { SEARCH_PER_TYPE } from "./shared-types";
 export * from "./folyamat";

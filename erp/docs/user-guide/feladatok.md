@@ -89,11 +89,11 @@ Egy sor egy tétel. Az oszlopok:
 - **Határidő** — a dátum, alatta „ma”, „holnap”, „3 nap múlva”; a lejárt piros, „5 napja lejárt” felirattal.
 - **Prioritás** — **Magas** és **Sürgős** címkével; a normál halványan.
 - **Kategória** — a feladat kategóriája (lásd lent), ha van.
-- **Forrás** — honnan jött: Kollégától, Saját, Gépek, HR, Szabadság, Vállalkozás, Termelés, Gazdaság.
+- **Forrás** — honnan jött: Kollégától, Saját, vagy az érintett modul: Eszközök, Partnerek, Projektek, Készlet, Értékesítés, Szerviz, Bizonylatok, Telepítések.
 
 Egy szerződés vagy ajánlatkérés lépéséhez tartozó feladatnál a cím alatt egy harmadik sor is látszik: **hol tart a folyamat** — például „Szerződés RSZ-012-1-2026 — V-Híd Zrt. · Véleményezés alatt · Kovács Diána”.
 
-Az alapsorrend: lejártak, ma esedékesek, majd a sürgősek, az elfogadásra várók, végül határidő szerint. Bármelyik oszlop szerint szűrhetsz (pl. Forrás = Gépek, vagy Esedékesség = A következő 7 napban), és kereshetsz cím, felelős, kiadó szerint.
+Az alapsorrend: lejártak, ma esedékesek, majd a sürgősek, az elfogadásra várók, végül határidő szerint. Bármelyik oszlop szerint szűrhetsz (pl. Forrás = Szerviz, vagy Esedékesség = A következő 7 napban), és kereshetsz cím, felelős, kiadó szerint.
 
 ### Hozzám rendelt gépek, eszközök
 

@@ -14,6 +14,32 @@ media, ui, feladat, jelzes, test-utils, eslint-config, tsconfig`), scope `@recpl
   dashboard: `src/lib/dashboard.ts`.
 - `Ertesites` type moved into `@erp/core`.
 
+## 1a. Phase 5 (cross-cutting wiring) — done
+
+All wiring lives in `apps/erp/src/lib/` (domain packages still import neither each other nor engine services).
+
+- **Stock ports**: `keszletBevetelPort` (`ertekesites-loaders.ts`: PO fulfil -> `keszletApi.bevetelez`, ref `beszerzesi_rendeles:<id>`,
+  non-product lines skipped), `keszletKiadasPort` in `szerviz-loaders.ts` (worklog finalize) and `bizonylat-loaders.ts` (delivery note).
+  Fulfil action always passes the port; `ujraBevetelezMegrendeloAction` + button retry a failed receipt. Proven end-to-end in
+  `src/lib/keszlet-portok.integration.test.ts` (memory Mongo).
+- **Event listeners** (`esemeny-figyelok.ts`, registered by `core-bootstrap.ts`, best-effort): `ajanlat.elfogadva` -> linked Feladat
+  - push for the accepting user (contract prep, due +7 days); `teljesitesigazolas.elfogadva` -> draft invoice via `bizonylatApi.createSzamla`
+    (actor = first user with `bizonylat:szamla:write`; no such user -> skipped + logged) + notify them; `keszlet.alacsony` (new payload in
+    `@erp/core`, emitted by `keszletApi.kiad` after a real issue) -> Jelzés to users with `keszlet:keszlet:write`.
+    Listeners are registered from `ensureCoreBootstrapped()` (dashboard layout), so events emitted from an unauthenticated route (the
+    future public certificate sign-off page, Billingo webhook) only react once a dashboard page was rendered in that process: call
+    `ensureCoreBootstrapped()` from those routes when they land.
+- **Dashboard**: `DASHBOARD_PROVIDERS` in `lib/dashboard.ts` (partner, arlista, keszlet, ertekesites, szerviz, bizonylat x2, projekt,
+  eszkoz, deployments x2); icon union extended (folder, receipt, server, briefcase). Activity comes from new `getTevekenyseg()` on
+  ertekesites (ajanlat), szerviz (hibajegy) and bizonylat (szamla); other modules contribute tiles only.
+- **Global search**: `search(query, viewer)` on partner, arlista, keszlet, ertekesites, szerviz, bizonylat, projekt, eszkoz,
+  deployments, secrets facades (permission checked before any query, 5 hits per type, min 2 chars). `lib/kereses.ts` fans out;
+  header form + `/kereses` page. `@erp/arlista` and `@erp/secrets` do not depend on `@erp/core`, so they declare the hit shape
+  structurally. Feladat is not in the global search (it has its own list search).
+- **Teendőim**: every module's `listMyAssignments` was already in `teendo-feed.ts`; `kategoriaOf` now maps module -> its own category
+  (`teendo.ts` labels), "egyeb" only for unknown modules. `kapcsolat-allapot.ts` still resolves flow state for Feladat only.
+- Help: `kereses.md` (new), `vezerlopult.md` rewritten for the ERP, `megrendelolapok.md` / `feladatok.md` updated.
+
 ## 2. Open
 
 - `docs/user-guide/*` were copied from RecPlus and still mention RecPlus modules in places

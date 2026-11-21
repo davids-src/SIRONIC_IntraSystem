@@ -11,7 +11,14 @@ import { Types } from "mongoose";
 import { appendStatusChange, connectDB, nextSequence } from "@erp/db-core";
 import { buildDataTableMongoQuery } from "@erp/ui";
 import type { DataTableQuery } from "@erp/ui";
-import { emitDomainEvent, type TaskRef } from "@erp/core";
+import {
+  SEARCH_PER_TYPE,
+  emitDomainEvent,
+  type SearchHit,
+  type SearchViewer,
+  type ActivityRef,
+  type TaskRef,
+} from "@erp/core";
 import { Szallitolevel, type ISzallitolevel } from "./models/Szallitolevel";
 import {
   Teljesitesigazolas,
@@ -1440,6 +1447,87 @@ export const bizonylatApi = {
   // ── Teendők ──────────────────────────────────────────────────────────────────
 
   /** Certificates awaiting the customer's signature and overdue invoices of the user. */
+  /**
+   * Global search: a few hits per entity type, gated on the viewer's read permissions (checked
+   * before any query). Terms shorter than 2 characters return nothing.
+   */
+  async search(query: string, viewer: SearchViewer): Promise<SearchHit[]> {
+    const term = query.trim();
+    if (term.length < 2) return [];
+    const sq = {
+      page: 1,
+      pageSize: SEARCH_PER_TYPE,
+      search: term,
+      filters: {},
+    } as unknown as DataTableQuery;
+    const out: SearchHit[] = [];
+    if (viewer.permissions.includes("bizonylat:szallitolevel:read")) {
+      const { data } = await bizonylatApi.listSzallitolevelek(sq);
+      for (const s of data)
+        out.push({
+          module: "bizonylat",
+          entityLabel: "Szállítólevél",
+          entityId: s._id,
+          title: s.azonosito,
+          subtitle: s.partnerNev,
+          url: `/bizonylat/szallitolevelek/${s._id}`,
+        });
+    }
+    if (viewer.permissions.includes("bizonylat:igazolas:read")) {
+      const { data } = await bizonylatApi.listIgazolasok(sq, {
+        kind: "staff",
+        userId: viewer.userId,
+      });
+      for (const i of data)
+        out.push({
+          module: "bizonylat",
+          entityLabel: "Teljesítésigazolás",
+          entityId: i._id,
+          title: `${i.azonosito} · ${i.cim}`,
+          subtitle: i.partnerNev,
+          url: `/bizonylat/igazolasok/${i._id}`,
+        });
+    }
+    if (viewer.permissions.includes("bizonylat:szamla:read")) {
+      const { data } = await bizonylatApi.listSzamlak(sq);
+      for (const s of data)
+        out.push({
+          module: "bizonylat",
+          entityLabel: "Számla",
+          entityId: s._id,
+          title: s.szamlaszam ? `${s.azonosito} · ${s.szamlaszam}` : s.azonosito,
+          subtitle: s.partnerNev,
+          url: `/bizonylat/szamlak/${s._id}`,
+        });
+    }
+    return out;
+  },
+
+  /** Latest status changes (newest first) — feeds the dashboard's activity panel. */
+  async getTevekenyseg(limit = 8): Promise<ActivityRef[]> {
+    await connectDB();
+    const rows = await Szamla.find({
+      archivalt: { $ne: true },
+      "status.changedAt": { $exists: true },
+    })
+      .sort({ "status.changedAt": -1 })
+      .limit(limit)
+      .lean()
+      .exec();
+    return rows.map((d) => ({
+      module: "bizonylat",
+      entityType: "szamla",
+      entityId: String(d._id),
+      title: `${d.azonosito} · ${d.partnerNev}`,
+      statusLabel:
+        SZAMLA_ALLAPOT_LABELS[d.status.key as keyof typeof SZAMLA_ALLAPOT_LABELS] ??
+        d.status.key,
+      changedAt: d.status.changedAt.toISOString(),
+      changedBy: String(d.status.changedBy),
+      url: `/bizonylat/szamlak/${d._id}`,
+    }));
+  },
+
   async listMyAssignments(userId: string): Promise<TaskRef[]> {
     if (!validId(userId)) return [];
     await connectDB();

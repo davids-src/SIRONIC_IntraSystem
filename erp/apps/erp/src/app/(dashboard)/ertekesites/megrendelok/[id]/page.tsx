@@ -18,8 +18,10 @@ import { ArchiveControls } from "@/app/(dashboard)/partner/_components/archive-c
 import {
   archivMegrendeloAction,
   megrendeloAllapotAction,
+  ujraBevetelezMegrendeloAction,
   visszaallitMegrendeloAction,
 } from "../../actions";
+import { AkcioGomb } from "@/app/(dashboard)/szerviz/_components/akcio-gomb";
 import { AllapotPanel, type AllapotLehetoseg } from "../../_components/allapot-panel";
 
 const FT = new Intl.NumberFormat("hu-HU");
@@ -84,13 +86,20 @@ export default async function MegrendeloPage({
               label: "Bevételezés",
               value: m.bevetelezes
                 ? `${m.bevetelezes.ok ? "Sikeres" : "Sikertelen"}${m.bevetelezes.uzenet ? ` — ${m.bevetelezes.uzenet}` : ""}`
-                : m.allapot === "teljesitve"
-                  ? "Nincs készletbe véve"
-                  : undefined,
+                : undefined,
             },
           ]}
         />
         {m.megjegyzes && <p className="text-sm whitespace-pre-line">{m.megjegyzes}</p>}
+        {m.allapot === "teljesitve" && m.bevetelezes && !m.bevetelezes.ok && canWrite && (
+          <div className="flex flex-wrap items-center gap-3 rounded border border-red-300 p-2 text-sm">
+            A bevételezés nem sikerült — az áru még nincs a készletben.
+            <AkcioGomb
+              action={ujraBevetelezMegrendeloAction.bind(null, m.id)}
+              label="Bevételezés újrapróbálása"
+            />
+          </div>
+        )}
       </Section>
       <Section title="Tételek">
         <div className="overflow-x-auto">

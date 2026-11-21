@@ -16,7 +16,11 @@ import {
   utankovetesSchema,
 } from "@erp/ertekesites/validation";
 import type { ArSnapshot } from "@erp/arlista";
-import { arSnapshotPartnerhez, partnerPillanatkep } from "@/lib/ertekesites-loaders";
+import {
+  arSnapshotPartnerhez,
+  keszletBevetelPort,
+  partnerPillanatkep,
+} from "@/lib/ertekesites-loaders";
 
 export type ErtekesitesFormState =
   | { success: false; fieldErrors?: Record<string, string[]>; message?: string }
@@ -354,8 +358,12 @@ export async function megrendeloAllapotAction(
   const kulcs = szoveg(fd, "allapot");
   if (kulcs === "teljesitve") {
     const user = await requirePermission(P.megrendeloWrite);
-    // The keszlet module is not bound yet: no receipt port is passed, the order is only fulfilled.
-    const r = await ertekesitesApi.teljesitMegrendelo(id, szereploOf(user));
+    // Fulfilling receives the lines into stock through the keszlet port (idempotent on the order).
+    const r = await ertekesitesApi.teljesitMegrendelo(
+      id,
+      szereploOf(user),
+      keszletBevetelPort(user.id),
+    );
     if (!r.ok) return { success: false, message: r.message };
     revalidatePath(`/ertekesites/megrendelok/${id}`);
     revalidatePath("/ertekesites/megrendelok");
@@ -408,4 +416,16 @@ export async function visszaallitMegrendeloAction(
   revalidatePath("/ertekesites/megrendelok");
   revalidatePath(`/ertekesites/megrendelok/${id}`);
   return { success: true, id, message: "Megrendelőlap visszaállítva." };
+}
+
+/** Retries the stock receipt of a fulfilled order whose first attempt failed. */
+export async function ujraBevetelezMegrendeloAction(
+  id: string,
+  _prev: ErtekesitesFormState,
+): Promise<ErtekesitesFormState> {
+  const user = await requirePermission(P.megrendeloWrite);
+  const r = await ertekesitesApi.ujraBevetelezMegrendelo(id, keszletBevetelPort(user.id));
+  revalidatePath(`/ertekesites/megrendelok/${id}`);
+  if (!r.ok) return { success: false, message: r.message };
+  return { success: true, id, message: "Bevételezés rögzítve." };
 }

@@ -2,7 +2,12 @@ import { Types } from "mongoose";
 import { appendStatusChange, connectDB, nextSequence } from "@erp/db-core";
 import { buildDataTableMongoQuery } from "@erp/ui";
 import type { DataTableQuery } from "@erp/ui";
-import type { TaskRef } from "@erp/core";
+import {
+  SEARCH_PER_TYPE,
+  type SearchHit,
+  type SearchViewer,
+  type TaskRef,
+} from "@erp/core";
 import { Partner, type IPartner } from "./models/Partner";
 import { Erdeklodo, type IErdeklodo, type ITevekenyseg } from "./models/Erdeklodo";
 import {
@@ -633,6 +638,47 @@ export const partnerApi = {
   },
 
   /** Open leads the user is responsible for — feeds Teendőim. */
+  /**
+   * Global search: a few hits per entity type, gated on the viewer's read permissions (checked
+   * before any query). Terms shorter than 2 characters return nothing.
+   */
+  async search(query: string, viewer: SearchViewer): Promise<SearchHit[]> {
+    const term = query.trim();
+    if (term.length < 2) return [];
+    const sq = {
+      page: 1,
+      pageSize: SEARCH_PER_TYPE,
+      search: term,
+      filters: {},
+    } as unknown as DataTableQuery;
+    const out: SearchHit[] = [];
+    if (viewer.permissions.includes("partner:partner:read")) {
+      const { data } = await partnerApi.listPartnerek(sq);
+      for (const p of data)
+        out.push({
+          module: "partner",
+          entityLabel: "Partner",
+          entityId: p._id,
+          title: p.nev,
+          subtitle: [p.azonosito, p.varos].filter(Boolean).join(" · "),
+          url: `/partner/${p._id}`,
+        });
+    }
+    if (viewer.permissions.includes("partner:erdeklodo:read")) {
+      const { data } = await partnerApi.listErdeklodok(sq);
+      for (const e of data)
+        out.push({
+          module: "partner",
+          entityLabel: "Érdeklődő",
+          entityId: e._id,
+          title: e.cegNev,
+          subtitle: [e.azonosito, e.kapcsolattartoNev].filter(Boolean).join(" · "),
+          url: `/partner/erdeklodok/${e._id}`,
+        });
+    }
+    return out;
+  },
+
   async listMyAssignments(userId: string): Promise<TaskRef[]> {
     if (!validId(userId)) return [];
     await connectDB();

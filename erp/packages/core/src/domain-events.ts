@@ -32,6 +32,19 @@ export type DomainEventPayloads = {
     penznem: string;
     alairoNev: string;
   };
+  /**
+   * Készlet: an issue left a stock row at or below its minimum (consumer: stock-manager
+   * Jelzés, wired by the app). Emitted best-effort by `keszletApi.kiad` after a real (non-replayed) issue.
+   */
+  "keszlet.alacsony": {
+    tetelId: string;
+    arlistaTermekId: string;
+    nev: string;
+    kod: string;
+    raktarhelyKod: string;
+    keszlet: number;
+    minimum: number;
+  };
 };
 
 export type DomainEventName = keyof DomainEventPayloads;

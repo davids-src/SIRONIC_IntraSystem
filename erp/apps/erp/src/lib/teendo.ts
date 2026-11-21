@@ -5,12 +5,33 @@
  */
 import type { FeladatSor } from "@erp/feladat";
 
-export const TEENDO_KATEGORIAK = ["kollegatol", "sajat", "egyeb"] as const;
+/** Feladat sources first, then one category per module that feeds `listMyAssignments`. */
+export const TEENDO_KATEGORIAK = [
+  "kollegatol",
+  "sajat",
+  "eszkoz",
+  "partner",
+  "projekt",
+  "keszlet",
+  "ertekesites",
+  "szerviz",
+  "bizonylat",
+  "telepitesek",
+  "egyeb",
+] as const;
 export type TeendoKategoria = (typeof TEENDO_KATEGORIAK)[number];
 
 export const TEENDO_KATEGORIA_LABELS: Record<TeendoKategoria, string> = {
   kollegatol: "Kollégától",
   sajat: "Saját",
+  eszkoz: "Eszközök",
+  partner: "Partnerek",
+  projekt: "Projektek",
+  keszlet: "Készlet",
+  ertekesites: "Értékesítés",
+  szerviz: "Szerviz",
+  bizonylat: "Bizonylatok",
+  telepitesek: "Telepítések",
   egyeb: "Egyéb",
 };
 

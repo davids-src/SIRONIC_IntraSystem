@@ -10,7 +10,14 @@ import { Types } from "mongoose";
 import { connectDB, nextSequence, User } from "@erp/db-core";
 import { buildDataTableMongoQuery } from "@erp/ui";
 import type { DataTableQuery } from "@erp/ui";
-import type { Ertesites, TaskRef } from "@erp/core";
+import {
+  SEARCH_PER_TYPE,
+  emitDomainEvent,
+  type Ertesites,
+  type SearchHit,
+  type SearchViewer,
+  type TaskRef,
+} from "@erp/core";
 import { KeszletTetel, type IKeszletTetel } from "./models/KeszletTetel";
 import { KeszletMozgas } from "./models/KeszletMozgas";
 import { Raktarhely } from "./models/Raktarhely";
@@ -162,6 +169,36 @@ const validId = (id: string) => Types.ObjectId.isValid(id);
 const nev = (u: { name?: string | null; email?: string } | undefined) =>
   u?.name || u?.email || "Ismeretlen";
 
+/**
+ * After a real issue: every touched row at or below its minimum raises `keszlet.alacsony`.
+ * Best-effort — a failing listener or query never fails the issue itself.
+ */
+async function alacsonyKeszletJelzes(termekIdk: string[]): Promise<void> {
+  try {
+    const sorok = await KeszletTetel.find({
+      arlistaTermekId: { $in: [...new Set(termekIdk)] },
+      minimum: { $ne: null },
+    })
+      .lean<IKeszletTetel[]>()
+      .exec();
+    for (const t of sorok) {
+      if (t.minimum === null || t.minimum === undefined || t.keszlet > t.minimum)
+        continue;
+      await emitDomainEvent("keszlet.alacsony", {
+        tetelId: String(t._id),
+        arlistaTermekId: t.arlistaTermekId,
+        nev: t.nev,
+        kod: t.kod,
+        raktarhelyKod: t.raktarhelyKod,
+        keszlet: t.keszlet,
+        minimum: t.minimum,
+      });
+    }
+  } catch (e) {
+    console.error("[keszlet] alacsony készlet jelzés", e);
+  }
+}
+
 function muvelet(r: MuveletEredmeny): KeszletResult {
   return r.ok ? { ok: true, idempotens: r.idempotens, ertesitesek: [] } : hiba(r.message);
 }
@@ -258,7 +295,10 @@ export const keszletApi = {
     actorId: string,
     opts?: MuveletOpciok,
   ): Promise<KeszletResult> {
-    return muvelet(await kiadMuvelet(sorok, ref, actorId, opts));
+    const r = muvelet(await kiadMuvelet(sorok, ref, actorId, opts));
+    if (r.ok && !r.idempotens)
+      await alacsonyKeszletJelzes(sorok.map((x) => x.arlistaTermekId));
+    return r;
   },
 
   async foglal(
@@ -826,6 +866,35 @@ export const keszletApi = {
   },
 
   /** Active RMA cases the user is responsible for — feeds Teendőim / Feladatok. */
+  /**
+   * Global search: a few hits per entity type, gated on the viewer's read permissions (checked
+   * before any query). Terms shorter than 2 characters return nothing.
+   */
+  async search(query: string, viewer: SearchViewer): Promise<SearchHit[]> {
+    const term = query.trim();
+    if (term.length < 2) return [];
+    const sq = {
+      page: 1,
+      pageSize: SEARCH_PER_TYPE,
+      search: term,
+      filters: {},
+    } as unknown as DataTableQuery;
+    const out: SearchHit[] = [];
+    if (viewer.permissions.includes("keszlet:keszlet:read")) {
+      const { data } = await keszletApi.listKeszlet(viewer, sq);
+      for (const t of data)
+        out.push({
+          module: "keszlet",
+          entityLabel: "Készlet",
+          entityId: t._id,
+          title: t.nev,
+          subtitle: `${t.kod} · ${t.keszlet} ${t.egyseg ?? "db"}`,
+          url: `/keszlet/lista/${t._id}`,
+        });
+    }
+    return out;
+  },
+
   async listMyAssignments(userId: string): Promise<TaskRef[]> {
     if (!validId(userId)) return [];
     await connectDB();

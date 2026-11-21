@@ -39,6 +39,19 @@ import type {
   ArazasiBeallitasInput,
 } from "./validation";
 
+// `@erp/core` is not a dependency of this package: the global-search shapes are declared
+// structurally (identical to `SearchHit` / `SearchViewer`), the app treats them alike.
+const SEARCH_PER_TYPE = 5;
+type SearchViewer = { userId: string; permissions: readonly string[] };
+type SearchHit = {
+  module: string;
+  entityLabel: string;
+  entityId: string;
+  title: string;
+  subtitle?: string;
+  url: string;
+};
+
 export type Result = { ok: true; id?: string } | { ok: false; message: string };
 const fail = (message: string): { ok: false; message: string } => ({
   ok: false,
@@ -255,6 +268,35 @@ function egyesit(doc: Partial<ArazasiBeallitasok> | null): ArazasiBeallitasok {
 // ── Facade ─────────────────────────────────────────────────────────────────────
 
 export const arlistaApi = {
+  /**
+   * Global search: a few hits per entity type, gated on the viewer's read permissions (checked
+   * before any query). Terms shorter than 2 characters return nothing.
+   */
+  async search(query: string, viewer: SearchViewer): Promise<SearchHit[]> {
+    const term = query.trim();
+    if (term.length < 2) return [];
+    const sq = {
+      page: 1,
+      pageSize: SEARCH_PER_TYPE,
+      search: term,
+      filters: {},
+    } as unknown as DataTableQuery;
+    const out: SearchHit[] = [];
+    if (viewer.permissions.includes("arlista:termek:read")) {
+      const { data } = await arlistaApi.listTermekek(viewer, sq);
+      for (const t of data)
+        out.push({
+          module: "arlista",
+          entityLabel: t.tipus === "termek" ? "Termék" : "Árlistatétel",
+          entityId: t._id,
+          title: t.nev,
+          subtitle: t.kod,
+          url: `/arlista/termekek/${t._id}`,
+        });
+    }
+    return out;
+  },
+
   // ── Termék / munkadíj / csomag katalógus ──
 
   async listTermekek(

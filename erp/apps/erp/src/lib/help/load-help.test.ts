@@ -173,4 +173,10 @@ describe("load-help integration", () => {
     );
     expect(sections.some((s) => s.name === "Készlet")).toBe(true);
   });
+
+  it("shows the search and dashboard articles to every signed-in user", () => {
+    const slugs = getHelpArticlesForUser([]).map((a) => a.slug);
+    expect(slugs).toContain("kereses");
+    expect(slugs).toContain("vezerlopult");
+  });
 });

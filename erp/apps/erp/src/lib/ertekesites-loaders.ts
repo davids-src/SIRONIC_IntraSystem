@@ -6,7 +6,8 @@
 import { arlistaApi, type ArSnapshot } from "@erp/arlista";
 import type { PartnerArazasiProfil as ArlistaProfil } from "@erp/arlista/client";
 import { partnerApi, type PartnerDetail } from "@erp/partner";
-import type { PartnerPillanatkep } from "@erp/ertekesites/client";
+import { keszletApi } from "@erp/keszlet";
+import type { KeszletBevetelPort, PartnerPillanatkep } from "@erp/ertekesites/client";
 
 export type PartnerOpcio = { id: string; nev: string };
 
@@ -132,4 +133,48 @@ export async function betoltArlistaValasztok(
     }
   }
   return out;
+}
+
+/**
+ * Binds the purchase-order receipt port to `keszletApi.bevetelez`. Idempotent on the order id:
+ * the stock engine keys every movement by reference + line, so a retry never receives twice.
+ * Lines that are not árlista products (free text, services) cannot be stocked and are skipped;
+ * the line index passed to the engine is the index among the stockable lines, which is stable
+ * because a fulfilled order's lines never change.
+ */
+export function keszletBevetelPort(actorId: string): KeszletBevetelPort {
+  return {
+    async bevetelez(sorok, ref) {
+      const bevetel: Parameters<typeof keszletApi.bevetelez>[0] = [];
+      for (const s of sorok) {
+        if (!s.arlistaTetelId) continue;
+        const t = await arlistaApi.getTermek(
+          { userId: actorId, permissions: [] },
+          s.arlistaTetelId,
+        );
+        if (!t || t.tipus !== "termek") continue;
+        bevetel.push({
+          arlistaTermekId: t._id,
+          mennyiseg: s.mennyiseg,
+          termek: { nev: t.nev, kod: t.kod, egyseg: t.egyseg },
+          beszerzesiAr: s.nettoEgysegar,
+        });
+      }
+      if (bevetel.length === 0)
+        return { ok: true, uzenet: "Nem volt raktározható tétel a megrendelésen." };
+      const r = await keszletApi.bevetelez(
+        bevetel,
+        { referenceType: "beszerzesi_rendeles", referenceId: ref.id },
+        actorId,
+      );
+      return r.ok
+        ? {
+            ok: true,
+            uzenet: r.idempotens
+              ? "Már bevételezve."
+              : `${bevetel.length} tétel bevételezve a készletbe.`,
+          }
+        : { ok: false, message: r.message };
+    },
+  };
 }

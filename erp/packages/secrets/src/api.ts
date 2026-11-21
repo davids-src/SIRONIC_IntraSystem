@@ -17,6 +17,19 @@ import type { AccessAction, SecretViewer, ShareKind, ShareLevel } from "./consta
 import { Secret, SecretHozzaferes, SecretShare, type ISecret } from "./models/Secret";
 import type { CreateSecretInput, ShareInput, UpdateSecretInput } from "./validation";
 
+// `@erp/core` is not a dependency of this package: the global-search shapes are declared
+// structurally (identical to `SearchHit` / `SearchViewer`), the app treats them alike.
+const SEARCH_PER_TYPE = 5;
+type SearchViewer = { userId: string; permissions: readonly string[] };
+type SearchHit = {
+  module: string;
+  entityLabel: string;
+  entityId: string;
+  title: string;
+  subtitle?: string;
+  url: string;
+};
+
 export type { SecretViewer } from "./constants";
 
 export type SecretResult = { ok: true; id?: string } | { ok: false; message: string };
@@ -111,6 +124,41 @@ function toDetail(
 }
 
 export const secretsApi = {
+  /**
+   * Global search: a few hits per entity type, gated on the viewer's read permissions (checked
+   * before any query). Terms shorter than 2 characters return nothing.
+   */
+  async search(
+    query: string,
+    viewer: SearchViewer & { roleIds?: readonly string[] },
+  ): Promise<SearchHit[]> {
+    const term = query.trim();
+    if (term.length < 2) return [];
+    const sq = {
+      page: 1,
+      pageSize: SEARCH_PER_TYPE,
+      search: term,
+      filters: {},
+    } as unknown as DataTableQuery;
+    const out: SearchHit[] = [];
+    if (viewer.permissions.includes("secrets:titok:read")) {
+      // Names only — never values; the list applies the owner/share access filter.
+      const { data } = await secretsApi.list(
+        { ...viewer, roleIds: viewer.roleIds ?? [] },
+        sq,
+      );
+      for (const s of data)
+        out.push({
+          module: "secrets",
+          entityLabel: "Titok",
+          entityId: s._id,
+          title: s.name,
+          subtitle: s.description,
+          url: `/secrets/${s._id}`,
+        });
+    }
+    return out;
+  },
   /** The viewer's own and shared secrets. The projection drops the ciphertext in the query. */
   async list(
     viewer: SecretViewer,

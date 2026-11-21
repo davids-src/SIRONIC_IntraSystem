@@ -11,7 +11,13 @@ import { Types } from "mongoose";
 import { connectDB, User } from "@erp/db-core";
 import { buildDataTableMongoQuery } from "@erp/ui";
 import type { DataTableQuery } from "@erp/ui";
-import type { Ertesites, TaskRef } from "@erp/core";
+import {
+  SEARCH_PER_TYPE,
+  type Ertesites,
+  type SearchHit,
+  type SearchViewer,
+  type TaskRef,
+} from "@erp/core";
 import { Eszkoz } from "./models/Eszkoz";
 import { EszkozMozgas } from "./models/EszkozMozgas";
 import { ESZKOZ_LIST_COLUMNS, type EszkozListItem } from "./columns";
@@ -462,6 +468,35 @@ export const eszkozApi = {
   },
 
   /** Tools the user currently holds — feeds "Feladatok" as assignments. */
+  /**
+   * Global search: a few hits per entity type, gated on the viewer's read permissions (checked
+   * before any query). Terms shorter than 2 characters return nothing.
+   */
+  async search(query: string, viewer: SearchViewer): Promise<SearchHit[]> {
+    const term = query.trim();
+    if (term.length < 2) return [];
+    const sq = {
+      page: 1,
+      pageSize: SEARCH_PER_TYPE,
+      search: term,
+      filters: {},
+    } as unknown as DataTableQuery;
+    const out: SearchHit[] = [];
+    if (viewer.permissions.includes("eszkoz:eszkoz:read")) {
+      const { data } = await eszkozApi.listEszkozok(sq);
+      for (const e of data)
+        out.push({
+          module: "eszkoz",
+          entityLabel: "Eszköz",
+          entityId: e._id,
+          title: e.megnevezes,
+          subtitle: [e.marka, e.tipusszam, e.gyariSzam].filter(Boolean).join(" · "),
+          url: `/eszkoz/${e._id}`,
+        });
+    }
+    return out;
+  },
+
   async listMyAssignments(userId: string): Promise<TaskRef[]> {
     if (!validId(userId)) return [];
     await connectDB();

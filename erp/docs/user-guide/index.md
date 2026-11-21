@@ -52,6 +52,7 @@ Az üzleti modulok (Partnerek, Árlista, Készlet, Értékesítés, …) bevezet
 ## Kapcsolódó fejezetek
 
 - [Vezérlőpult (kezdőoldal)](/help/vezerlopult)
+- [Keresés az egész rendszerben](/help/kereses)
 - [Listák és táblázatok használata](/help/tablazatok)
 - [Exportálás és nyomtatás](/help/exportalas-nyomtatas)
 - [Feladatok — teendőim, saját és csoportos feladatok](/help/feladatok)

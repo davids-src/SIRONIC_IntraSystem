@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import { createTestMongo } from "@erp/test-utils/mongo-memory";
 import { connectDB, User } from "@erp/db-core";
+import { clearDomainEventListenersForTests, onDomainEvent } from "@erp/core";
 import { keszletApi } from "./api";
 import { KeszletTetel } from "./models/KeszletTetel";
 import { KeszletMozgas } from "./models/KeszletMozgas";
@@ -70,6 +71,44 @@ afterEach(async () => {
 afterAll(async () => {
   await mongoose.disconnect();
   await mongo.stop();
+});
+
+describe("kiad — keszlet.alacsony event", () => {
+  it("fires once per real issue that leaves a row at/below its minimum, not on replay", async () => {
+    clearDomainEventListenersForTests();
+    const kapott: Array<{ keszlet: number; minimum: number }> = [];
+    onDomainEvent("keszlet.alacsony", (p) => {
+      kapott.push({ keszlet: p.keszlet, minimum: p.minimum });
+    });
+    await bevetel("1", 10);
+    await bevetel("2", 10);
+    await KeszletTetel.updateOne({ arlistaTermekId: "1" }, { $set: { minimum: 5 } });
+    const sorok = [
+      { arlistaTermekId: "1", mennyiseg: 6 },
+      { arlistaTermekId: "2", mennyiseg: 1 },
+    ];
+    expect((await keszletApi.kiad(sorok, ref("SZL-LOW"), actor)).ok).toBe(true);
+    expect(kapott).toEqual([{ keszlet: 4, minimum: 5 }]);
+    await keszletApi.kiad(sorok, ref("SZL-LOW"), actor);
+    expect(kapott).toHaveLength(1);
+    clearDomainEventListenersForTests();
+  });
+
+  it("a listener that throws never fails the issue", async () => {
+    clearDomainEventListenersForTests();
+    onDomainEvent("keszlet.alacsony", () => {
+      throw new Error("boom");
+    });
+    await bevetel("1", 3);
+    await KeszletTetel.updateOne({ arlistaTermekId: "1" }, { $set: { minimum: 5 } });
+    const r = await keszletApi.kiad(
+      [{ arlistaTermekId: "1", mennyiseg: 1 }],
+      ref("SZL-X"),
+      actor,
+    );
+    expect(r.ok).toBe(true);
+    clearDomainEventListenersForTests();
+  });
 });
 
 describe("kiad — check-all then mutate-all", () => {

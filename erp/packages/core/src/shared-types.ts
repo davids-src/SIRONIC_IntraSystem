@@ -62,3 +62,20 @@ export type Ertesites = {
   url: string;
   tag?: string;
 };
+
+/** Who is searching: module `search` facade methods are gated on the viewer's permissions. */
+export type SearchViewer = { userId: string; permissions: readonly string[] };
+
+/** One global-search hit — what every module facade's `search(query, viewer)` returns. */
+export type SearchHit = {
+  module: string;
+  /** Human entity label, e.g. "Partner", "Ajánlat". */
+  entityLabel: string;
+  entityId: string;
+  title: string;
+  subtitle?: string;
+  url: string;
+};
+
+/** How many hits one entity type contributes to the global search. */
+export const SEARCH_PER_TYPE = 5;

@@ -11,7 +11,13 @@ import { Types } from "mongoose";
 import { connectDB, nextSequence, User } from "@erp/db-core";
 import { buildDataTableMongoQuery } from "@erp/ui";
 import type { DataTableQuery } from "@erp/ui";
-import type { TaskRef } from "@erp/core";
+import {
+  SEARCH_PER_TYPE,
+  type SearchHit,
+  type SearchViewer,
+  type ActivityRef,
+  type TaskRef,
+} from "@erp/core";
 import { Hibajegy, type IHibajegy } from "./models/Hibajegy";
 import { Munkalap, type IMunkalap } from "./models/Munkalap";
 import { KarbantartasiTerv, type IKarbantartasiTerv } from "./models/KarbantartasiTerv";
@@ -1369,6 +1375,77 @@ export const szervizApi = {
       karbantartasFacade.listEsedekes(ma),
     ]);
     return { hibajegy, munkalap, esedekes };
+  },
+
+  /**
+   * Global search: a few hits per entity type, gated on the viewer's read permissions (checked
+   * before any query). Terms shorter than 2 characters return nothing.
+   */
+  async search(query: string, viewer: SearchViewer): Promise<SearchHit[]> {
+    const term = query.trim();
+    if (term.length < 2) return [];
+    const sq = {
+      page: 1,
+      pageSize: SEARCH_PER_TYPE,
+      search: term,
+      filters: {},
+    } as unknown as DataTableQuery;
+    const out: SearchHit[] = [];
+    if (viewer.permissions.includes("szerviz:hibajegy:read")) {
+      const { data } = await hibajegyFacade.listHibajegyek(sq, {
+        kind: "staff",
+        userId: viewer.userId,
+      });
+      for (const j of data)
+        out.push({
+          module: "szerviz",
+          entityLabel: "Hibajegy",
+          entityId: j._id,
+          title: `${j.azonosito} · ${j.targy}`,
+          url: `/szerviz/hibajegyek/${j._id}`,
+        });
+    }
+    if (viewer.permissions.includes("szerviz:munkalap:read")) {
+      const { data } = await munkalapFacade.listMunkalapok(sq, {
+        kind: "staff",
+        userId: viewer.userId,
+      });
+      for (const m of data)
+        out.push({
+          module: "szerviz",
+          entityLabel: "Munkalap",
+          entityId: m._id,
+          title: m.azonosito,
+          subtitle: [m.partnerNev, m.szerelo].filter(Boolean).join(" · "),
+          url: `/szerviz/munkalapok/${m._id}`,
+        });
+    }
+    return out;
+  },
+
+  /** Latest status changes (newest first) — feeds the dashboard's activity panel. */
+  async getTevekenyseg(limit = 8): Promise<ActivityRef[]> {
+    await connectDB();
+    const rows = await Hibajegy.find({
+      archivalt: { $ne: true },
+      "status.changedAt": { $exists: true },
+    })
+      .sort({ "status.changedAt": -1 })
+      .limit(limit)
+      .lean()
+      .exec();
+    return rows.map((d) => ({
+      module: "szerviz",
+      entityType: "hibajegy",
+      entityId: String(d._id),
+      title: `${d.azonosito} · ${d.targy}`,
+      statusLabel:
+        HIBAJEGY_ALLAPOT_LABELS[d.status.key as keyof typeof HIBAJEGY_ALLAPOT_LABELS] ??
+        d.status.key,
+      changedAt: d.status.changedAt.toISOString(),
+      changedBy: String(d.status.changedBy),
+      url: `/szerviz/hibajegyek/${d._id}`,
+    }));
   },
 
   /** Everything the user owes in this module — feeds Teendőim. */

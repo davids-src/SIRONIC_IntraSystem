@@ -1,5 +1,6 @@
 import { jelzesApi } from "@erp/jelzes";
 import { seedEngineMailTemplates } from "@erp/admin";
+import { regisztralEsemenyFigyelok } from "./esemeny-figyelok";
 
 const SYNCED = Symbol.for("erp.coreBootstrapped");
 
@@ -7,7 +8,8 @@ const SYNCED = Symbol.for("erp.coreBootstrapped");
 export function ensureCoreBootstrapped(): void {
   const g = globalThis as typeof globalThis & { [SYNCED]?: boolean };
   if (g[SYNCED]) return;
-  // Domain modules: register their `onDomainEvent` listeners here.
+  // Cross-module reactions (ajánlat → szerződés-feladat, igazolás → számlapiszkozat, alacsony készlet).
+  regisztralEsemenyFigyelok();
   g[SYNCED] = true;
   // Task events no longer become Jelzések — drop the ones stored before the change.
   void jelzesApi

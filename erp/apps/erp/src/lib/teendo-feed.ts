@@ -62,8 +62,21 @@ export function csakTeendok(refs: TaskRef[]): TaskRef[] {
 export function kategoriaOf(t: Pick<TaskRef, "module" | "entityType">): TeendoKategoria {
   if (t.module === "feladat")
     return t.entityType === "feladat-sajat" ? "sajat" : "kollegatol";
-  return "egyeb";
+  const modul = MODUL_KATEGORIA[t.module];
+  return modul ?? "egyeb";
 }
+
+/** TaskRef `module` → "Teendőim" category (deployments surfaces as "telepitesek"). */
+const MODUL_KATEGORIA: Record<string, TeendoKategoria> = {
+  eszkoz: "eszkoz",
+  partner: "partner",
+  projekt: "projekt",
+  keszlet: "keszlet",
+  ertekesites: "ertekesites",
+  szerviz: "szerviz",
+  bizonylat: "bizonylat",
+  deployments: "telepitesek",
+};
 
 /** A due date from any module → Budapest calendar day (`YYYY-MM-DD`). */
 export function napOf(due: string | undefined): string | undefined {

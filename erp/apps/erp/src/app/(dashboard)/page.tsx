@@ -1,10 +1,14 @@
 import Link from "next/link";
 import {
   AlertTriangleIcon,
+  BriefcaseIcon,
   CheckCircle2Icon,
   FileClockIcon,
+  FolderIcon,
   PackageIcon,
   PlusIcon,
+  ReceiptIcon,
+  ServerIcon,
   UsersIcon,
   WrenchIcon,
 } from "lucide-react";
@@ -17,7 +21,17 @@ import { KpiTile } from "@/components/kpi-tile";
 import { Panel } from "@/components/panel";
 import { loadDashboard, type DashboardTile } from "@/lib/dashboard";
 
-const MODULE_LABELS: Record<string, string> = { feladat: "Feladatok" };
+const MODULE_LABELS: Record<string, string> = {
+  feladat: "Feladatok",
+  ertekesites: "Értékesítés",
+  szerviz: "Szerviz",
+  bizonylat: "Bizonylat",
+  projekt: "Projekt",
+  keszlet: "Készlet",
+  partner: "Partner",
+  eszkoz: "Eszköz",
+  deployments: "Telepítések",
+};
 
 const ICONS: Record<DashboardTile["icon"], React.ReactNode> = {
   alert: <AlertTriangleIcon className="size-4" />,
@@ -26,6 +40,10 @@ const ICONS: Record<DashboardTile["icon"], React.ReactNode> = {
   users: <UsersIcon className="size-4" />,
   wrench: <WrenchIcon className="size-4" />,
   check: <CheckCircle2Icon className="size-4" />,
+  folder: <FolderIcon className="size-4" />,
+  receipt: <ReceiptIcon className="size-4" />,
+  server: <ServerIcon className="size-4" />,
+  briefcase: <BriefcaseIcon className="size-4" />,
 };
 
 const dateTime = new Intl.DateTimeFormat("hu-HU", {

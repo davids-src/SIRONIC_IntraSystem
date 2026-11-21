@@ -37,6 +37,7 @@ export function translateSegment(segment: string): string {
     sajat: "Saját adataim",
     jelzesek: "Értesítési központ",
     kuldes: "Küldés",
+    kereses: "Keresés",
   };
   // A record id says nothing to the reader — the page title names the record.
   if (/^[0-9a-f]{24}$/i.test(segment)) return "Részletek";
@@ -100,6 +101,21 @@ export default function AppHeader({
               )}
             </BreadcrumbList>
           </Breadcrumb>
+          {/* Global search: a plain GET form, works without JavaScript. */}
+          <form action="/kereses" method="get" role="search" className="hidden sm:block">
+            <label htmlFor="globalis-kereses" className="sr-only">
+              Keresés
+            </label>
+            <input
+              id="globalis-kereses"
+              name="q"
+              type="search"
+              minLength={2}
+              placeholder="Keresés…"
+              autoComplete="off"
+              className="border-input bg-background h-9 w-40 rounded-md border px-3 text-sm lg:w-56"
+            />
+          </form>
           {/* Excel / print of whatever the current screen shows — for meetings. */}
           <ElementExportMenu
             getRoot={() => document.querySelector("main")}
