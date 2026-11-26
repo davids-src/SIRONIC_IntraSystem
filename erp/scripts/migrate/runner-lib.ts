@@ -2,17 +2,22 @@
  * Pure helpers of the migration runner (no DB, no env access) — unit-tested in
  * `runner-lib.test.ts`. The safety rules live here so they can be tested:
  *
- *  - source AND target database is `crm_dev` (the legacy copy hosts the new ERP's own,
- *    differently named collections side by side); `crm` (production) and `sironic_auth` are refused;
- *  - the legacy collections are read-only: no model of the new ERP may use one of their names.
+ *  - the source is the production legacy database `crm`, opened strictly read-only — it stays
+ *    untouched as the backup of the original data;
+ *  - the target is the ERP's own database `sironic_erp` (what `docker/portainer.stack.yml` runs on);
+ *    the legacy databases (`crm`, `crm_dev`) and `sironic_auth` are refused as a target;
+ *  - the legacy collections are never written: no model of the new ERP may use one of their names.
  */
 
-export const LEGACY_DB = "crm_dev";
-export const TARGET_DB = "crm_dev";
-export const DEFAULT_MONGO_URI = `mongodb://192.168.0.12:27017/${LEGACY_DB}`;
-const FORBIDDEN_DBS = ["crm", "sironic_auth", "admin", "local", "config"];
+export const LEGACY_DB = "crm";
+export const TARGET_DB = "sironic_erp";
+const MONGO_HOST = "mongodb://192.168.0.12:27017";
+export const DEFAULT_LEGACY_URI = `${MONGO_HOST}/${LEGACY_DB}`;
+export const DEFAULT_TARGET_URI = `${MONGO_HOST}/${TARGET_DB}`;
+/** Never a target: the legacy data (the backup), the IdP and Mongo's own databases. */
+const PROTECTED_DBS = ["crm", "crm_dev", "sironic_auth", "admin", "local", "config"];
 
-/** Every collection that existed in `crm_dev` before the first migration run: read-only. */
+/** Every collection of the legacy CRM (`crm`, and its `crm_dev` copy): read-only, never written. */
 export const LEGACY_COLLECTIONS: readonly string[] = [
   "auditlogs",
   "checklisttemplates",
@@ -39,6 +44,7 @@ export const LEGACY_COLLECTIONS: readonly string[] = [
   "maintenanceplans",
   "notificationpreferences",
   "notifications",
+  "offers",
   "oidcauthorizationcodes",
   "oidcclients",
   "partnerdeploymentaccesses",
@@ -79,17 +85,24 @@ export function parseMongoUri(uri: string): { base: string; db: string } {
   return { base: m[1]!, db: m[2]! };
 }
 
-/** Throws unless `db` is exactly `crm_dev` (and never one of the protected databases). */
-export function assertDbName(db: string | undefined, expected = TARGET_DB): void {
-  if (!db || FORBIDDEN_DBS.includes(db) || db !== expected) {
-    throw new Error(`Refusing to run: database "${db}" is not "${expected}"`);
+/**
+ * Throws unless `db` is exactly the database of `role`. A target is additionally never one of
+ * the protected databases (so a misconfigured constant can not turn the backup into a target).
+ */
+export function assertDbName(
+  db: string | undefined,
+  role: "legacy" | "target" = "target",
+): void {
+  const expected = role === "legacy" ? LEGACY_DB : TARGET_DB;
+  if (!db || db !== expected || (role === "target" && PROTECTED_DBS.includes(db))) {
+    throw new Error(`Refusing to run: ${role} database "${db}" is not "${expected}"`);
   }
 }
 
 /** Validates the URI and returns it (query string dropped). */
 export function validateUri(uri: string, role: "legacy" | "target"): string {
   const { base, db } = parseMongoUri(uri);
-  assertDbName(db, role === "legacy" ? LEGACY_DB : TARGET_DB);
+  assertDbName(db, role);
   return `${base}/${db}`;
 }
 
@@ -97,10 +110,17 @@ export function resolveUris(env: Record<string, string | undefined>): {
   legacyUri: string;
   targetUri: string;
 } {
-  return {
-    legacyUri: validateUri(env.LEGACY_MONGODB_URI?.trim() || DEFAULT_MONGO_URI, "legacy"),
-    targetUri: validateUri(env.TARGET_MONGODB_URI?.trim() || DEFAULT_MONGO_URI, "target"),
-  };
+  const legacyUri = validateUri(
+    env.LEGACY_MONGODB_URI?.trim() || DEFAULT_LEGACY_URI,
+    "legacy",
+  );
+  const targetUri = validateUri(
+    env.TARGET_MONGODB_URI?.trim() || DEFAULT_TARGET_URI,
+    "target",
+  );
+  if (legacyUri === targetUri)
+    throw new Error("Refusing to run: source and target are the same");
+  return { legacyUri, targetUri };
 }
 
 /** Throws if any collection the runner would write is a legacy one. */

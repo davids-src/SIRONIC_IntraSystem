@@ -82,17 +82,23 @@ All wiring lives in `apps/erp/src/lib/` (domain packages still import neither ea
   set `PORTAL_URL`); add `@erp/portal-auth` to `apps/erp` deps when doing so. Shared-store rate limiter and OIDC
   login for the portal. `docker build -f apps/portal/Dockerfile .` was not run locally.
 
-## 2c. Data migration runner (legacy `crm_dev` -> new ERP, same DB) — done
+## 2c. Data migration runner (legacy `crm` -> `sironic_erp`) — done, executed 2026-11-26
 
 - `pnpm migrate` (dry run) / `pnpm migrate --execute` (`scripts/migrate/run.ts` + `runner.ts`, pure helpers in
-  `runner-lib.ts`). Source and target are both `crm_dev`: legacy collections are read-only (hard-coded denylist,
-  asserted against every model collection before the first write), `crm` / `sironic_auth` are refused. Id maps live in
-  `_migration_idmap`; counters in `erp_counters`. Re-runs never duplicate (transactional docs are insert-only).
+  `runner-lib.ts`). Source is the **production** legacy DB `crm`, opened read-only — it stays untouched as the
+  backup of the original data. Target is the ERP's own `sironic_erp` (what `docker/portainer.stack.yml` runs on);
+  `crm`, `crm_dev`, `sironic_auth` are refused as a target. Idempotency lookups (id map, natural keys) read the
+  target through a separate read-only client. Id maps live in `_migration_idmap`; counters in `erp_counters`.
+- **Re-run right before the cut-over** (`pnpm migrate --execute`): it only adds what was created in the CRM since
+  the previous run (transactional docs are insert-only; catalog rows refresh). 2026-11-26 run: 0 skipped business
+  docs; a second dry run created nothing.
 - Users: legacy `crmusers` -> `users` keeping the bcrypt hash (login with the old password); `crm.admin` -> role `admin`.
   RBAC baseline is synced by the runner. `/setup` is skipped because an active admin exists.
+- Teljesítésigazolások saved without a partner in the CRM go to the archived placeholder partner
+  "Ismeretlen partner (migráció)" (decision 2026-11-26).
 - Run with `npx tsx --env-file=apps/erp/.env scripts/migrate/run.ts` to also get the secrets decrypt check.
-  `scripts/migrate/verify.ts` counts collections and calls the facades. Not migrated (no adapter / by design): see the
-  runner report (stock transaction history, portal users, empty legacy collections, certificates without partner).
+  `scripts/migrate/verify.ts` counts collections and calls the facades. Not migrated (by design): stock transaction
+  history (opening balance instead), portal users (re-invite), deployments/events/templates (live infra sync).
 
 ## 2d. Header search v2 (live, menus + modules)
 
@@ -105,3 +111,17 @@ All wiring lives in `apps/erp/src/lib/` (domain packages still import neither ea
 
 - Two `@types/react` copies → `.npmrc` hoist (see `erp/README.md`).
 - Do not run the dev server against the legacy/prod DB.
+
+## 2e. Engine sync with RecPlus (2026-11-26)
+
+Ported from `recplus` (commits 8ea0498, 30ca341, 20e4f7a — engine parts only), documented in `~/programing/tCrm-templete/docs`
+(06, 07, 09, 11):
+
+- `@erp/core/theme`: role-colour theme engine (validation per role, derived tokens + dark mode), Arculat → Színek,
+  injected in the root layout. `DEFAULT_THEME.primary` = the SIRONIC orange of `globals.css` (`#f96611`).
+- `@erp/feladat` `kategoria-lista`: task categories only from the admin list (`/admin/feladat-kategoriak`), seeded
+  with the ERP module names (`ALAP_KATEGORIAK`); linked tasks get their module's category (`KAPCSOLAT_KATEGORIAK`).
+- DataTable: resizable remembered column widths, forgiving accent-insensitive multi-term search, Budapest date cells.
+- `@erp/media`: Word/Excel/OpenDocument as protected attachments (download only).
+- Értesítési beállítások moved to `/jelzesek/beallitasok`.
+- Next sync: diff `recplus` engine packages after 20e4f7a.

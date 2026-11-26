@@ -1,13 +1,15 @@
 /**
- * Legacy `crm_dev` -> new ERP data migration runner (entrypoint).
+ * Legacy `crm` (production CRM) -> new ERP `sironic_erp` data migration runner (entrypoint).
  *
  *   pnpm migrate              # dry run (reads only, validates every mapped document)
- *   pnpm migrate --execute    # writes
+ *   pnpm migrate --execute    # writes into sironic_erp
  *
- * SAFETY (see `runner-lib.ts`): source and target are both `crm_dev`; the legacy collections are
- * strictly read-only and the runner only writes the new ERP's own collections (+ `_migration_idmap`
- * and `erp_counters`). `crm` (production) and `sironic_auth` are refused. Overrides are accepted
- * only through LEGACY_MONGODB_URI / TARGET_MONGODB_URI and must end in `/crm_dev`.
+ * SAFETY (see `runner-lib.ts`): `crm` is opened read-only and is never written — it stays as the
+ * backup of the original data; the runner writes only the ERP's own database `sironic_erp`
+ * (+ `_migration_idmap` and `erp_counters` there). `crm` / `crm_dev` / `sironic_auth` are refused as
+ * a target. Overrides go through LEGACY_MONGODB_URI (must end in `/crm`) and TARGET_MONGODB_URI
+ * (must end in `/sironic_erp`). Re-runs are idempotent: a re-run right before the cut-over only
+ * adds what was created in the CRM since the previous run.
  *
  * This file only prepares the environment (the DB layer reads MONGODB_URI/MONGODB_DB_NAME at import
  * time) and then loads the real runner.

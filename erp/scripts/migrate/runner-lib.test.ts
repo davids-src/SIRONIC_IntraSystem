@@ -15,21 +15,32 @@ import {
 } from "./runner-lib";
 
 describe("database safety", () => {
-  it("accepts crm_dev only", () => {
-    expect(() => assertDbName("crm_dev")).not.toThrow();
-    for (const db of ["crm", "sironic_auth", "erp_dev", "", undefined]) {
-      expect(() => assertDbName(db)).toThrow(/Refusing/);
+  it("reads only crm and writes only sironic_erp", () => {
+    expect(() => assertDbName("crm", "legacy")).not.toThrow();
+    expect(() => assertDbName("sironic_erp", "target")).not.toThrow();
+    expect(() => assertDbName("sironic_erp")).not.toThrow();
+    for (const db of ["crm", "crm_dev", "sironic_auth", "erp_dev", "", undefined]) {
+      expect(() => assertDbName(db, "target")).toThrow(/Refusing/);
+    }
+    for (const db of ["sironic_erp", "crm_dev", "sironic_auth", undefined]) {
+      expect(() => assertDbName(db, "legacy")).toThrow(/Refusing/);
     }
   });
 
-  it("defaults to the crm_dev copy and rejects other databases in overrides", () => {
-    expect(resolveUris({}).legacyUri).toBe("mongodb://192.168.0.12:27017/crm_dev");
+  it("defaults to crm -> sironic_erp and rejects other databases in overrides", () => {
+    expect(resolveUris({})).toEqual({
+      legacyUri: "mongodb://192.168.0.12:27017/crm",
+      targetUri: "mongodb://192.168.0.12:27017/sironic_erp",
+    });
     expect(
-      resolveUris({ TARGET_MONGODB_URI: "mongodb://x:1/crm_dev?a=b" }).targetUri,
-    ).toBe("mongodb://x:1/crm_dev");
+      resolveUris({ TARGET_MONGODB_URI: "mongodb://x:1/sironic_erp?a=b" }).targetUri,
+    ).toBe("mongodb://x:1/sironic_erp");
     expect(() => validateUri("mongodb://192.168.0.12:27017/crm", "target")).toThrow();
+    expect(() => validateUri("mongodb://h/crm_dev", "target")).toThrow();
     expect(() => validateUri("mongodb://h/sironic_auth", "legacy")).toThrow();
-    expect(() => resolveUris({ LEGACY_MONGODB_URI: "mongodb://h/erp_dev" })).toThrow();
+    expect(() =>
+      resolveUris({ LEGACY_MONGODB_URI: "mongodb://h/sironic_erp" }),
+    ).toThrow();
     expect(() => validateUri("not a uri", "target")).toThrow();
   });
 

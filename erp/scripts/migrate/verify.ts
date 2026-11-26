@@ -1,5 +1,5 @@
 /**
- * Post-migration check against `crm_dev` (read-only): collection counts plus calls to the real
+ * Post-migration check against `sironic_erp` (read-only): collection counts plus calls to the real
  * facades. `pnpm tsx --env-file=apps/erp/.env scripts/migrate/verify.ts` (the env file is only
  * needed for nothing here; the target is pinned like in run.ts).
  */
@@ -14,7 +14,7 @@ async function main(): Promise<void> {
   mongoose.set("autoCreate", false);
   const { connectDB } = await import("@erp/db-core");
   await connectDB();
-  assertDbName(mongoose.connection.db!.databaseName);
+  assertDbName(mongoose.connection.db!.databaseName, "target");
   const q = { page: 1, pageSize: 5, filters: {} } as never;
   const counts: Record<string, number> = {};
   for (const c of [

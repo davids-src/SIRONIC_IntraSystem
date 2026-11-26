@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
- * Migration runner implementation (see `run.ts` for the safety contract). Module order follows the
+ * Migration runner implementation (see `run.ts` for the safety contract): legacy `crm` (read-only)
+ * -> the ERP's own `sironic_erp`. Module order follows the
  * dependencies: users -> partner -> arlista -> keszlet -> projekt -> ertekesites -> szerviz ->
  * bizonylat -> eszkoz -> secrets -> deployments.
  *
@@ -33,10 +34,16 @@ const NOT_BUSINESS = new Set(["tenants", "counters", "settings"]);
 
 // ------------------------------------------------------------------ read-only legacy access
 
-/** The only way the runner reads: find/aggregate/count — there is no write method on purpose. */
+/**
+ * The only way the runner reads: find/aggregate/count — there is no write method on purpose.
+ * Used for the legacy source (`crm`) and for lookups in the target (id map, natural keys).
+ */
 class ReadOnlyDb {
-  constructor(private readonly db: mongoose.mongo.Db) {
-    assertDbName(db.databaseName, LEGACY_DB);
+  constructor(
+    private readonly db: mongoose.mongo.Db,
+    role: "legacy" | "target",
+  ) {
+    assertDbName(db.databaseName, role);
   }
   async collectionNames(): Promise<string[]> {
     return (await this.db.listCollections({}, { nameOnly: true }).toArray()).map(
@@ -103,7 +110,10 @@ class IdMap {
 
 type Ctx = {
   execute: boolean;
+  /** The legacy source (`crm`), read-only. */
   ro: ReadOnlyDb;
+  /** Reads of the target's own collections (what an earlier run already migrated). */
+  tgt: ReadOnlyDb;
   report: Report;
   ids: IdMap;
   tenantId: string;
@@ -173,7 +183,7 @@ async function writeDoc(
   r.mapped++;
   let existing = ctx.ids.get(o.kind, o.legacyId);
   if (!existing && o.natural) {
-    const found = await ctx.ro.findOne(o.model.collection.name, o.natural);
+    const found = await ctx.tgt.findOne(o.model.collection.name, o.natural);
     if (found) existing = idStr(found._id);
   }
   if (existing) {
@@ -217,7 +227,7 @@ async function stepUsers(ctx: Ctx): Promise<void> {
   const roleId = async (key: string): Promise<string | undefined> => {
     if (roleCache.has(key)) return roleCache.get(key);
     let id: string | undefined;
-    const doc = await ctx.ro.findOne("roles", { key });
+    const doc = await ctx.tgt.findOne("roles", { key });
     if (doc) id = idStr(doc._id);
     else if (!ctx.execute) id = newId(); // dry run: RBAC sync would create it
     if (id) roleCache.set(key, id);
@@ -276,7 +286,7 @@ async function stepUsers(ctx: Ctx): Promise<void> {
 
 export async function main(opts: RunOptions): Promise<void> {
   const { execute } = opts;
-  assertDbName(TARGET_DB);
+  assertDbName(TARGET_DB, "target");
   const notes: string[] = [];
   const report = new Report();
   console.log(
@@ -288,9 +298,19 @@ export async function main(opts: RunOptions): Promise<void> {
     serverSelectionTimeoutMS: 10000,
   });
   await client.connect();
+  // Separate read client on the target: what earlier runs migrated (id map, natural keys).
+  const targetClient = new mongoose.mongo.MongoClient(opts.targetUri, {
+    serverSelectionTimeoutMS: 10000,
+  });
+  await targetClient.connect();
   try {
-    const ro = new ReadOnlyDb(client.db(LEGACY_DB));
+    const ro = new ReadOnlyDb(client.db(LEGACY_DB), "legacy");
+    const tgt = new ReadOnlyDb(targetClient.db(TARGET_DB), "target");
     const existing = await ro.collectionNames();
+    const existingTarget = await tgt.collectionNames();
+    console.log(
+      `[target] ${TARGET_DB}: ${existingTarget.length} collections before this run`,
+    );
 
     // ---- tenant check (STOP when business data spans several tenants)
     const perCollection: Record<string, Array<{ _id: unknown; n: number }>> = {};
@@ -337,7 +357,7 @@ export async function main(opts: RunOptions): Promise<void> {
       await connectDB();
       console.log("[target] connected");
       const db = mongoose.connection.db!;
-      assertDbName(db.databaseName, TARGET_DB);
+      assertDbName(db.databaseName, "target");
       assertWritableCollections(["_migration_idmap"]);
       idColl = db.collection("_migration_idmap");
       await idColl.createIndex({ kind: 1, legacyId: 1 }, { unique: true });
@@ -349,10 +369,11 @@ export async function main(opts: RunOptions): Promise<void> {
     }
 
     const ids = new IdMap(idColl);
-    await ids.load(ro, existing);
+    await ids.load(tgt, existingTarget);
     const ctx: Ctx = {
       execute,
       ro,
+      tgt,
       report,
       ids,
       tenantId,
@@ -392,6 +413,7 @@ export async function main(opts: RunOptions): Promise<void> {
     console.log(execute ? "[migrate] done" : "[migrate] dry run done — nothing written");
   } finally {
     await client.close();
+    await targetClient.close();
     if (mongoose.connection.readyState !== 0) await mongoose.disconnect();
   }
 }
@@ -410,6 +432,46 @@ const withCreated = (doc: Row, src: Row | undefined): Row =>
     ? doc
     : { ...doc, createdAt: new Date(src.created_at) };
 
+/** Legacy-side key of the placeholder partner (not a real `contacts` id). */
+const ISMERETLEN_PARTNER_ID = "migracio-ismeretlen-partner";
+const ISMERETLEN_PARTNER_NEV = "Ismeretlen partner (migráció)";
+
+/** The archived placeholder partner for legacy documents without a partner (idempotent). */
+async function ismeretlenPartner(ctx: Ctx): Promise<string> {
+  const known = ctx.ids.get("partner:contact", ISMERETLEN_PARTNER_ID);
+  if (known) return known;
+  let id = newId();
+  if (ctx.execute) {
+    const { upsertPartnerek } = await import("../../packages/partner/src/migration");
+    const { Partner } = await import("../../packages/partner/src/models/Partner");
+    await upsertPartnerek([
+      {
+        regiForras: "contact",
+        regiId: ISMERETLEN_PARTNER_ID,
+        tipus: "ceg",
+        nev: ISMERETLEN_PARTNER_NEV,
+        megjegyzes:
+          "A régi CRM-ben partner nélkül rögzített bizonylatok gyűjtője (adatmigráció, 2026-11).",
+        kapcsolattartok: [],
+        cimkek: [],
+        archivalt: true,
+        archivalasOka: "Adatmigráció: partner nélküli régi bizonylatok",
+        archivalasIdopont: new Date(),
+      } as never,
+    ]);
+    const d = await Partner.findOne({
+      regiForras: "contact",
+      regiId: ISMERETLEN_PARTNER_ID,
+    })
+      .select("_id")
+      .lean();
+    id = String(d!._id);
+  }
+  await ctx.ids.set("partner:contact", ISMERETLEN_PARTNER_ID, id);
+  ctx.partnerNames.set(id, ISMERETLEN_PARTNER_NEV);
+  return id;
+}
+
 async function stepPartner(ctx: Ctx): Promise<void> {
   const { mapContact, mapSupplier, mapLead, upsertPartnerek, upsertErdeklodok } =
     await import("../../packages/partner/src/migration");
@@ -423,7 +485,7 @@ async function stepPartner(ctx: Ctx): Promise<void> {
   ];
   const r = (src: string) => ctx.report.row(src);
   const known = new Map<string, string>();
-  for (const d of await ctx.ro.find("partnerek", {}))
+  for (const d of await ctx.tgt.find("partnerek", {}))
     known.set(`${d.regiForras}:${d.regiId}`, d._id);
   let created = 0;
   let updated = 0;
@@ -605,10 +667,10 @@ async function stepArlista(ctx: Ctx): Promise<void> {
   for (const [, id] of ctx.ids.kind("arlista")) {
     if (ctx.arlista.has(id)) continue;
     const d =
-      (await ctx.ro.findOne("arlista_tetelek", {
+      (await ctx.tgt.findOne("arlista_tetelek", {
         _id: new mongoose.Types.ObjectId(id),
       })) ??
-      (await ctx.ro.findOne("arlista_szolgaltatas_tetelek", {
+      (await ctx.tgt.findOne("arlista_szolgaltatas_tetelek", {
         _id: new mongoose.Types.ObjectId(id),
       }));
     if (d) ctx.arlista.set(id, { nev: d.nev, kod: d.kod, egyseg: d.egyseg });
@@ -995,12 +1057,26 @@ async function stepBizonylat(ctx: Ctx): Promise<void> {
   );
   const warranties = await legacyRows(ctx, "warrantycards", "bizonylat_jotallasi_jegyek");
   await guardNoAdapter(ctx, "invoices", "no számla persistence adapter yet");
+  // Certificates the CRM saved without a (known) partner go to an archived placeholder partner,
+  // so they exist in the ERP too (decision 2026-11-26); every other document keeps the strict rule.
+  const partnerek = ctx.ids.union("partner:contact");
+  const arva = (c: Row) => !c.contact_id || !partnerek.has(idStr(c.contact_id));
+  let igazolasok = certs;
+  if (certs.some(arva)) {
+    partnerek.set(ISMERETLEN_PARTNER_ID, await ismeretlenPartner(ctx));
+    igazolasok = certs.map((c) =>
+      arva(c) ? { ...c, contact_id: ISMERETLEN_PARTNER_ID } : c,
+    );
+    ctx.note(
+      `${certs.filter(arva).length} teljesítésigazolás without a partner -> archived placeholder partner "${ISMERETLEN_PARTNER_NEV}"`,
+    );
+  }
   const res = migraljBizonylat({
     szallitolevelek: notes as never,
-    igazolasok: certs as never,
+    igazolasok: igazolasok as never,
     szamlak: [],
     jotallasok: warranties as never,
-    partnerek: ctx.ids.union("partner:contact"),
+    partnerek,
     termekek: ctx.ids.kind("arlista"),
     jogiSzoveg: ALAP_JOTALLASI_SZOVEG,
   });
