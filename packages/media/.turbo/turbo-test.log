@@ -1,0 +1,20 @@
+
+> @erp/media@0.0.0 test /Users/tomko/programing/sironic infra/erp/packages/media
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.12 [39m[90m/Users/tomko/programing/sironic infra/erp/packages/media[39m
+
+[90mstderr[2m | src/vedett.integration.test.ts
+[22m[39mMONGODB_URI is not set — database operations will fail at runtime
+
+ [32m✓[39m src/vedett.integration.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 3812[2mms[22m[39m
+     [33m[2m✓[22m[39m dedups only within the same access level and is hidden from the Médiatár [33m 1213[2mms[22m[39m
+     [33m[2m✓[22m[39m only the uploader (or the entity already using it) may attach a protected file [33m 367[2mms[22m[39m
+ [32m✓[39m src/upload-constraints.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m2 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[32m7 passed[39m[22m[90m (7)[39m
+[2m   Start at [22m 19:23:29
+[2m   Duration [22m 5.29s[2m (transform 689ms, setup 0ms, import 1.11s, tests 3.82s, environment 0ms)[22m
+

@@ -1,15 +1,21 @@
-import type { ActorContext } from "@crm/types";
-
-export interface AuthSession {
-  userId: string;
-  tenantId: string;
-  roleKeys: ActorContext["roleKeys"];
-}
-
-export function toActorContext(session: AuthSession): ActorContext {
-  return {
-    actorId: session.userId,
-    tenantId: session.tenantId,
-    roleKeys: session.roleKeys,
-  };
-}
+export { handlers, auth, signIn, signOut } from "./auth-instance";
+export { authConfig } from "./config";
+export {
+  getEffectivePermissionKeys,
+  getSessionAccess,
+  userHasPermission,
+  userHasAnyPermission,
+  getAllPermissions,
+  getAllRolesWithPermissions,
+} from "./permissions";
+export {
+  INACTIVE_ACCOUNT_PATH,
+  getCurrentUser,
+  requireAuth,
+  requirePermission,
+  requireAnyPermission,
+  hasPermission,
+  hasAnyPermission,
+} from "./session";
+export { linkOidcIdentity } from "./oidc-link";
+export { isOidcConfigured, OIDC_PROVIDER_ID } from "./oidc";

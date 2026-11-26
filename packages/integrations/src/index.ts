@@ -1,4 +1,9 @@
-export { IntegrationError, ProviderHttpError } from "./errors";
+export {
+  IntegrationError,
+  ProviderHttpError,
+  type IntegrationProvider,
+  type HttpProviderLabel,
+} from "./errors";
 export { redact, redactHeaders } from "./redact";
 export { httpRequest, type HttpRequestOptions, type HttpResponse } from "./http";
 
@@ -24,6 +29,7 @@ export type {
 export { PortainerClient } from "./portainer/client";
 export type {
   ContainerSummary,
+  ImageSummary,
   PortainerClientConfig,
   PortainerCredentials,
   PortainerStack,

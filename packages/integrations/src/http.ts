@@ -36,6 +36,8 @@ export interface HttpResponse {
   headers: Headers;
   text: string;
   json: unknown;
+  /** Raw body bytes (for binary payloads such as Docker's multiplexed log stream). */
+  bytes: Uint8Array;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -83,13 +85,16 @@ function describeNetworkError(err: unknown): string {
   return String(err);
 }
 
-async function parseBody(res: Response): Promise<{ text: string; json: unknown }> {
-  const text = await res.text();
-  if (!text) return { text, json: null };
+async function parseBody(
+  res: Response,
+): Promise<{ text: string; json: unknown; bytes: Uint8Array }> {
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  const text = new TextDecoder().decode(bytes);
+  if (!text) return { text, json: null, bytes };
   try {
-    return { text, json: JSON.parse(text) };
+    return { text, json: JSON.parse(text), bytes };
   } catch {
-    return { text, json: null };
+    return { text, json: null, bytes };
   }
 }
 
@@ -132,10 +137,10 @@ export async function httpRequest(
       }
       const res = await fetch(url, init);
       clearTimeout(timeout);
-      const { text, json } = await parseBody(res);
+      const { text, json, bytes } = await parseBody(res);
 
       if (res.ok) {
-        return { status: res.status, headers: res.headers, text, json };
+        return { status: res.status, headers: res.headers, text, json, bytes };
       }
 
       const shouldRetry =

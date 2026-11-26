@@ -1,0 +1,49 @@
+
+> @erp/ertekesites@0.0.0 test:integration /Users/tomko/programing/sironic infra/erp/packages/ertekesites
+> vitest run --passWithNoTests integration.test
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.12 [39m[90m/Users/tomko/programing/sironic infra/erp/packages/ertekesites[39m
+
+[90mstderr[2m | src/api.integration.test.ts
+[22m[39mMONGODB_URI is not set — database operations will fail at runtime
+
+(node:46935) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:46935) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:46935) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:46935) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:46935) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:46935) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:46935) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:46935) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:46935) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+[90mstderr[2m | src/api.integration.test.ts[2m > [22m[2mAjánlat[2m > [22m[2melfogadáskor ajanlat.elfogadva esemény megy; a hibás figyelő nem akadályoz
+[22m[39m[domain-event] listener for "ajanlat.elfogadva" failed Error: figyelő hiba
+    at [90m/Users/tomko/programing/sironic infra/erp/packages/ertekesites/[39msrc/api.integration.test.ts:185:13
+    at /Users/tomko/programing/sironic infra/erp/packages/core/src/domain-events.ts:80:15
+    at Array.map (<anonymous>)
+    at emitDomainEvent (/Users/tomko/programing/sironic infra/erp/packages/core/src/domain-events.ts:78:21)
+    at Object.changeAjanlatAllapot [90m(/Users/tomko/programing/sironic infra/erp/packages/ertekesites/[39msrc/api.ts:422:15[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at [90m/Users/tomko/programing/sironic infra/erp/packages/ertekesites/[39msrc/api.integration.test.ts:190:15
+    at file:///Users/tomko/programing/sironic%20infra/erp/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.12/node_modules/[4m@vitest[24m/runner/dist/chunk-artifact.js:1903:20
+
+(node:46935) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:46935) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:46935) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:46935) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:46935) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:46935) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:46935) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:46935) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:46935) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:46935) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ [32m✓[39m src/api.integration.test.ts [2m([22m[2m16 tests[22m[2m)[22m[33m 1964[2mms[22m[39m
+     [33m[2m✓[22m[39m sorszámot kap, a végösszeget a szerver számolja a snapshot árából [33m 395[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m16 passed[39m[22m[90m (16)[39m
+[2m   Start at [22m 21:39:55
+[2m   Duration [22m 3.03s[2m (transform 406ms, setup 0ms, import 931ms, tests 1.96s, environment 0ms)[22m
+

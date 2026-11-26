@@ -1,0 +1,14 @@
+
+> @erp/infra-cli@0.0.0 test /Users/tomko/programing/sironic infra/erp/packages/infra-cli
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.12 [39m[90m/Users/tomko/programing/sironic infra/erp/packages/infra-cli[39m
+
+ [32m✓[39m src/cli-mcp.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m18 passed[39m[22m[90m (18)[39m
+[2m   Start at [22m 19:23:30
+[2m   Duration [22m 4.87s[2m (transform 3.43s, setup 0ms, import 4.64s, tests 15ms, environment 0ms)[22m
+

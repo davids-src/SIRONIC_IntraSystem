@@ -1,0 +1,108 @@
+
+> @erp/erp@0.1.0 test /Users/tomko/programing/sironic infra/erp/apps/erp
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.12 [39m[90m/Users/tomko/programing/sironic infra/erp/apps/erp[39m
+
+[90mstderr[2m | src/lib/keszlet-portok.integration.test.ts
+[22m[39mMONGODB_URI is not set — database operations will fail at runtime
+
+(node:76117) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:76117) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:76117) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:76117) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:76117) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:76117) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:76117) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ [32m✓[39m src/lib/keszlet-portok.integration.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 6151[2mms[22m[39m
+     [33m[2m✓[22m[39m a teljesítés pontosan egyszer növeli a készletet, az újrapróbálás és az ismétlés nem duplikál [33m 1527[2mms[22m[39m
+     [33m[2m✓[22m[39m a kiadás egyszer csökkenti a készletet, az újrapróbálás idempotens; hiány esetén blokkolt [33m 2184[2mms[22m[39m
+     [33m[2m✓[22m[39m hiány esetén a lezárás blokkolt és nem változik semmi; utána egyszer von le [33m 975[2mms[22m[39m
+ [32m✓[39m src/app/(setup)/setup/setup-flow.integration.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 3526[2mms[22m[39m
+     [33m[2m✓[22m[39m creates the admin, seeds RBAC, and the credentials login accepts only that admin [33m 2856[2mms[22m[39m
+[90mstderr[2m | src/lib/dashboard.integration.test.ts
+[22m[39mMONGODB_URI is not set — database operations will fail at runtime
+
+(node:76234) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ [32m✓[39m src/lib/dashboard.integration.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 2049[2mms[22m[39m
+     [33m[2m✓[22m[39m a gyors művelet külön írási jogot kér, a tevékenység a státuszváltásból jön [33m 628[2mms[22m[39m
+[90mstderr[2m | src/lib/kereses.integration.test.ts
+[22m[39mMONGODB_URI is not set — database operations will fail at runtime
+
+(node:76270) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:76270) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:76270) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:76270) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:76270) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:76270) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:76270) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:76270) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ [32m✓[39m src/lib/kereses.integration.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 1931[2mms[22m[39m
+     [33m[2m✓[22m[39m megtalálja a terméket és a készlettételt, csak olvasási joggal, korlátozott számban [33m 948[2mms[22m[39m
+ [32m✓[39m src/lib/help/load-help.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 246[2mms[22m[39m
+ [32m✓[39m src/lib/xlsx-export.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 54[2mms[22m[39m
+ [32m✓[39m src/lib/feladat-lista.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+[90mstderr[2m | src/lib/esemeny-figyelok.test.ts
+[22m[39mMONGODB_URI is not set — database operations will fail at runtime
+
+[90mstderr[2m | src/lib/esemeny-figyelok.test.ts[2m > [22m[2majanlat.elfogadva[2m > [22m[2mhiba esetén sem dob
+[22m[39m[esemeny] ajanlat.elfogadva Error: boom
+    at Object.<anonymous> [90m(/Users/tomko/programing/sironic infra/erp/apps/erp/[39msrc/lib/esemeny-figyelok.test.ts:84:15[90m)[39m
+    at Object.Mock [as feladatLetrehoz] (file:///Users/tomko/programing/sironic%20infra/erp/node_modules/[4m.pnpm[24m/@vitest+spy@4.1.12/node_modules/[4m@vitest[24m/spy/dist/index.js:332:34)
+    at [90m/Users/tomko/programing/sironic infra/erp/apps/erp/[39msrc/lib/esemeny-figyelok.ts:58:25
+    at [90m/Users/tomko/programing/sironic infra/erp/apps/erp/[39msrc/lib/esemeny-figyelok.test.ts:87:43
+    at file:///Users/tomko/programing/sironic%20infra/erp/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.12/node_modules/[4m@vitest[24m/runner/dist/chunk-artifact.js:302:11
+    at file:///Users/tomko/programing/sironic%20infra/erp/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.12/node_modules/[4m@vitest[24m/runner/dist/chunk-artifact.js:1903:26
+    at file:///Users/tomko/programing/sironic%20infra/erp/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.12/node_modules/[4m@vitest[24m/runner/dist/chunk-artifact.js:2326:20
+    at new Promise (<anonymous>)
+    at runWithCancel (file:///Users/tomko/programing/sironic%20infra/erp/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.12/node_modules/[4m@vitest[24m/runner/dist/chunk-artifact.js:2323:10)
+    at file:///Users/tomko/programing/sironic%20infra/erp/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.12/node_modules/[4m@vitest[24m/runner/dist/chunk-artifact.js:2305:20
+
+[90mstderr[2m | src/lib/esemeny-figyelok.test.ts[2m > [22m[2mteljesitesigazolas.elfogadva[2m > [22m[2mnincs piszkozat számlát kezelő felhasználó nélkül, és nem dob
+[22m[39m[esemeny] igazolás: nincs számlát kezelő felhasználó a piszkozathoz
+
+ [32m✓[39m src/lib/esemeny-figyelok.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+[90mstderr[2m | src/lib/kereses.test.ts
+[22m[39mMONGODB_URI is not set — database operations will fail at runtime
+
+[90mstderr[2m | src/lib/kereses.test.ts[2m > [22m[2mglobalisKereses[2m > [22m[2mcsoportosít, az üres és a hibás modult kihagyja
+[22m[39m[kereses] szerviz Error: boom
+    at Object.kereses [90m(/Users/tomko/programing/sironic infra/erp/apps/erp/[39msrc/lib/kereses.test.ts:39:17[90m)[39m
+    at [90m/Users/tomko/programing/sironic infra/erp/apps/erp/[39msrc/lib/kereses.ts:80:53
+    at Array.map (<anonymous>)
+    at globalisKereses [90m(/Users/tomko/programing/sironic infra/erp/apps/erp/[39msrc/lib/kereses.ts:78:14[90m)[39m
+    at [90m/Users/tomko/programing/sironic infra/erp/apps/erp/[39msrc/lib/kereses.test.ts:33:21
+    at file:///Users/tomko/programing/sironic%20infra/erp/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.12/node_modules/[4m@vitest[24m/runner/dist/chunk-artifact.js:302:11
+    at file:///Users/tomko/programing/sironic%20infra/erp/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.12/node_modules/[4m@vitest[24m/runner/dist/chunk-artifact.js:1903:26
+    at file:///Users/tomko/programing/sironic%20infra/erp/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.12/node_modules/[4m@vitest[24m/runner/dist/chunk-artifact.js:2326:20
+    at new Promise (<anonymous>)
+    at runWithCancel (file:///Users/tomko/programing/sironic%20infra/erp/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.12/node_modules/[4m@vitest[24m/runner/dist/chunk-artifact.js:2323:10)
+
+ [32m✓[39m src/lib/kereses.test.ts [2m([22m[2m22 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m src/lib/ertesites-email.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/lib/szerviz-loaders.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/lib/navigation/menu-kereses.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/lib/lista-szurok.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/lib/push-kulcs.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/app/(auth)/login/actions.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/lib/pwa/detect.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/lib/help/filter-by-permissions.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+[90mstderr[2m | src/lib/teendo-kategoria.test.ts
+[22m[39mMONGODB_URI is not set — database operations will fail at runtime
+
+ [32m✓[39m src/lib/teendo-kategoria.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+[90mstderr[2m | src/lib/ertekesites-loaders.test.ts
+[22m[39mMONGODB_URI is not set — database operations will fail at runtime
+
+ [32m✓[39m src/lib/ertekesites-loaders.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/lib/navigation/active-nav.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m20 passed[39m[22m[90m (20)[39m
+[2m      Tests [22m [1m[32m105 passed[39m[22m[90m (105)[39m
+[2m   Start at [22m 19:23:32
+[2m   Duration [22m 31.29s[2m (transform 4.48s, setup 0ms, import 10.26s, tests 14.05s, environment 3.96s)[22m
+

@@ -1,0 +1,61 @@
+
+> @erp/portal@0.1.0 build /Users/tomko/programing/sironic infra/erp/apps/portal
+> next build
+
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /Users/tomko/programing/sironic infra/pnpm-lock.yaml as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * /Users/tomko/programing/sironic infra/erp/pnpm-lock.yaml
+
+▲ Next.js 16.1.6 (Turbopack)
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ Compiled successfully in 35.3s
+  Running TypeScript ...
+  Collecting page data using 9 workers ...
+MONGODB_URI is not set — database operations will fail at runtime
+MONGODB_URI is not set — database operations will fail at runtime
+MONGODB_URI is not set — database operations will fail at runtime
+MONGODB_URI is not set — database operations will fail at runtime
+MONGODB_URI is not set — database operations will fail at runtime
+MONGODB_URI is not set — database operations will fail at runtime
+MONGODB_URI is not set — database operations will fail at runtime
+MONGODB_URI is not set — database operations will fail at runtime
+MONGODB_URI is not set — database operations will fail at runtime
+  Generating static pages using 9 workers (0/2) ...
+✓ Generating static pages using 9 workers (2/2) in 96.1ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /api/health
+├ ƒ /csapat
+├ ƒ /elfelejtett-jelszo
+├ ƒ /hibajegyek
+├ ƒ /hibajegyek/[id]
+├ ƒ /hibajegyek/uj
+├ ƒ /igazolas/[token]
+├ ƒ /jelszo-visszaallitas
+├ ƒ /jotallasok
+├ ƒ /jotallasok/[id]
+├ ƒ /login
+├ ƒ /meghivo
+├ ƒ /munkalapok
+├ ƒ /munkalapok/[id]
+├ ƒ /oldalak
+├ ƒ /projektek
+├ ƒ /projektek/[id]
+├ ƒ /szamlak
+├ ƒ /szamlak/[id]
+├ ƒ /teljesitesigazolasok
+└ ƒ /teljesitesigazolasok/[id]
+
+
+ƒ Proxy (Middleware)
+
+ƒ  (Dynamic)  server-rendered on demand
+

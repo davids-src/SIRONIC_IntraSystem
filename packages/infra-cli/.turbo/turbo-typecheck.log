@@ -1,0 +1,4 @@
+
+> @erp/infra-cli@0.0.0 typecheck /Users/tomko/programing/sironic infra/packages/infra-cli
+> tsc --noEmit
+

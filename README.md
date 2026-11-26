@@ -1,56 +1,18 @@
-# SIRONIC IntraSystem
+# SIRONIC ERP
 
-Internal CRM and Partner Portal monorepo scaffold with strict TypeScript, modular package boundaries, and RBAC-first architecture.
+The SIRONIC ERP: a single pnpm workspace (scope `@erp/`) — `apps/erp` (staff app), `apps/portal`
+(partner portal) and the domain packages. The old CRM monorepo is no longer in the tree; it lives in
+git history under the tag `legacy-crm-monorepo`. Rules: [`CLAUDE.md`](./CLAUDE.md).
 
-## Apps
+```bash
+pnpm install
+pnpm preflight      # lint → typecheck → test → guard → build
+```
 
-- `apps/crm`
-- `apps/partner-portal`
-
-## Packages
-
-- `packages/shared`
-- `packages/ui`
-- `packages/lib`
-- `packages/types`
-- `packages/auth`
-- `packages/rbac`
-- `packages/modules`
-
-## Prerequisites
-
-- **Node.js** 20 or newer (LTS recommended)
-- **pnpm** 10.x (the repo pins `packageManager` in the root `package.json`; enable via `corepack enable` if needed)
-
-## Quick Start
-
-From the repository root:
-
-1. `pnpm install`
-2. `pnpm dev` — runs Turbo and starts both Next apps in parallel:
-   - **CRM**: http://localhost:3000 (`@crm/crm-app`)
-   - **Partner portal**: http://localhost:3003 (`@crm/partner-portal-app`)
-
-If `pnpm dev` fails to resolve the Turbo binary (rare PATH/hoisting issues), use:
-
-- `pnpm exec turbo run dev`
-
-Or run a single app:
-
-- `pnpm --filter @crm/crm-app dev`
-- `pnpm --filter @crm/partner-portal-app dev`
-
-## Quality Gates
-
-- `pnpm typecheck`
-- `pnpm test`
-- `pnpm build`
-
-## Platform expansion docs
-
-Execution-ready specifications (deployments orchestration, central auth, Next template contract):
-
-- **[`docs/README.md`](./docs/README.md)** — index
-- [`docs/00-program-overview.md`](./docs/00-program-overview.md) — vision, phases, decisions
-
-These are documentation-only until implementation phases begin. Product manual (HU): [`SIRONIC_SYSTEM_MANUAL.md`](./SIRONIC_SYSTEM_MANUAL.md) §4.13.
+- Husky hooks live in `.husky/` but are **not** auto-installed (`prepare` removed); run `pnpm exec husky` once if you want them.
+- `.npmrc` hoists `@types/*`/`react` into `node_modules`.
+- Never point `apps/erp/.env` at the legacy or production database.
+- `SECRETS_ENCRYPTION_KEY` (Titoktár, AES-256-GCM): required, 64 hex chars or exactly 32 bytes, no
+  fallback — without it creating/revealing secrets fails closed. Generate with
+  `openssl rand -hex 32`, keep it in the password manager (losing it = all secrets lost), never
+  commit it. A migrated legacy dataset needs the same key as the old CRM.

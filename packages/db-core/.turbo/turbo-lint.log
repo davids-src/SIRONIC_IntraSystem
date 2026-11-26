@@ -1,0 +1,10 @@
+
+> @erp/db-core@0.0.0 lint /Users/tomko/programing/sironic infra/erp/packages/db-core
+> eslint src/
+
+
+/Users/tomko/programing/sironic infra/erp/packages/db-core/src/repositories/base.ts
+  3:18  warning  '_T' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 1 problem (0 errors, 1 warning)
+

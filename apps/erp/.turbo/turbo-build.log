@@ -1,0 +1,183 @@
+
+> @erp/erp@0.1.0 build /Users/tomko/programing/sironic infra/erp/apps/erp
+> next build
+
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /Users/tomko/programing/sironic infra/pnpm-lock.yaml as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * /Users/tomko/programing/sironic infra/erp/pnpm-lock.yaml
+
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ Compiled successfully in 45s
+  Running TypeScript ...
+  Collecting page data using 9 workers ...
+  Generating static pages using 9 workers (0/6) ...
+  Generating static pages using 9 workers (1/6) 
+  Generating static pages using 9 workers (2/6) 
+  Generating static pages using 9 workers (4/6) 
+✓ Generating static pages using 9 workers (6/6) in 2.3s
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /account
+├ ƒ /admin/branding
+├ ƒ /admin/feladat-kategoriak
+├ ƒ /admin/mail-templates
+├ ƒ /admin/mail-templates/[id]
+├ ƒ /admin/media
+├ ƒ /admin/permissions
+├ ƒ /admin/users
+├ ƒ /admin/users/[id]
+├ ƒ /admin/users/invitations
+├ ƒ /admin/users/invite
+├ ƒ /admin/users/new
+├ ƒ /api/auth/[...nextauth]
+├ ƒ /api/health
+├ ƒ /api/kereses
+├ ƒ /api/media
+├ ƒ /api/media/[id]
+├ ƒ /api/media/[id]/file
+├ ƒ /api/media/upload
+├ ƒ /api/media/vedett
+├ ƒ /api/system/initialized
+├ ƒ /api/webhooks/billingo
+├ ƒ /arlista/beallitasok
+├ ƒ /arlista/szolgaltatasok
+├ ƒ /arlista/szolgaltatasok/[id]
+├ ƒ /arlista/szolgaltatasok/kategoriak
+├ ƒ /arlista/szolgaltatasok/new
+├ ƒ /arlista/termekek
+├ ƒ /arlista/termekek/[id]
+├ ƒ /arlista/termekek/new
+├ ƒ /bizonylat
+├ ƒ /bizonylat/beallitasok
+├ ƒ /bizonylat/igazolasok
+├ ƒ /bizonylat/igazolasok/[id]
+├ ƒ /bizonylat/igazolasok/[id]/edit
+├ ƒ /bizonylat/igazolasok/new
+├ ƒ /bizonylat/jotallasok
+├ ƒ /bizonylat/jotallasok/[id]
+├ ƒ /bizonylat/jotallasok/new
+├ ƒ /bizonylat/szallitolevelek
+├ ƒ /bizonylat/szallitolevelek/[id]
+├ ƒ /bizonylat/szallitolevelek/[id]/edit
+├ ƒ /bizonylat/szallitolevelek/new
+├ ƒ /bizonylat/szamlak
+├ ƒ /bizonylat/szamlak/[id]
+├ ƒ /ertekesites
+├ ƒ /ertekesites/ajanlatok
+├ ƒ /ertekesites/ajanlatok/[id]
+├ ƒ /ertekesites/ajanlatok/[id]/edit
+├ ƒ /ertekesites/ajanlatok/new
+├ ƒ /ertekesites/megrendelok
+├ ƒ /ertekesites/megrendelok/[id]
+├ ƒ /ertekesites/megrendelok/[id]/edit
+├ ƒ /ertekesites/megrendelok/new
+├ ƒ /ertekesites/szerzodesek
+├ ƒ /ertekesites/szerzodesek/[id]
+├ ƒ /ertekesites/szerzodesek/[id]/edit
+├ ƒ /ertekesites/szerzodesek/new
+├ ƒ /ertekesites/szerzodesek/sablonok
+├ ƒ /ertekesites/szerzodesek/sablonok/[id]
+├ ƒ /ertekesites/szerzodesek/sablonok/new
+├ ƒ /eszkoz
+├ ƒ /eszkoz/[id]
+├ ƒ /eszkoz/[id]/edit
+├ ƒ /eszkoz/new
+├ ƒ /feladatok
+├ ƒ /feladatok/[id]
+├ ƒ /feladatok/folyamat/[id]
+├ ƒ /feladatok/folyamat/uj
+├ ƒ /fiok-letiltva
+├ ƒ /help
+├ ● /help/[slug]
+├ ƒ /infra
+├ ƒ /infra/integraciok
+├ ƒ /infra/integraciok/[id]
+├ ƒ /infra/integraciok/new
+├ ƒ /infra/oldalak
+├ ƒ /infra/oldalak/[id]
+├ ƒ /infra/oldalak/new
+├ ƒ /infra/sablonok
+├ ƒ /infra/sablonok/[id]
+├ ƒ /infra/sablonok/new
+├ ƒ /infra/stackek
+├ ƒ /infra/stackek/[id]
+├ ƒ /infra/stackek/new
+├ ƒ /infra/webhelyek
+├ ƒ /infra/webhelyek/[id]
+├ ƒ /infra/webhelyek/new
+├ ƒ /jelzesek
+├ ƒ /jelzesek/beallitasok
+├ ƒ /jelzesek/kuldes
+├ ƒ /kereses
+├ ƒ /keszlet
+├ ƒ /keszlet/bevetel
+├ ƒ /keszlet/leltar
+├ ƒ /keszlet/leltar/[id]
+├ ƒ /keszlet/lista
+├ ƒ /keszlet/lista/[id]
+├ ƒ /keszlet/raktarhelyek
+├ ƒ /keszlet/rma
+├ ƒ /keszlet/rma/[id]
+├ ƒ /keszlet/rma/new
+├ ƒ /login
+├ ○ /manifest.webmanifest
+├ ƒ /my-tasks
+├ ƒ /partner
+├ ƒ /partner/[id]
+├ ƒ /partner/[id]/edit
+├ ƒ /partner/erdeklodok
+├ ƒ /partner/erdeklodok/[id]
+├ ƒ /partner/erdeklodok/[id]/edit
+├ ƒ /partner/erdeklodok/new
+├ ƒ /partner/new
+├ ƒ /projekt
+├ ƒ /projekt/[id]
+├ ƒ /projekt/[id]/edit
+├ ƒ /projekt/heti-terv
+├ ƒ /projekt/koltsegek
+├ ƒ /projekt/koltsegek/[id]
+├ ƒ /projekt/koltsegek/new
+├ ƒ /projekt/new
+├ ƒ /projekt/sablonok
+├ ƒ /projekt/sablonok/[id]
+├ ƒ /projekt/sablonok/new
+├ ƒ /pwa-icon/[size]
+├ ƒ /register
+├ ƒ /register/invite
+├ ƒ /reset-password
+├ ƒ /secrets
+├ ƒ /secrets/[id]
+├ ƒ /secrets/[id]/edit
+├ ƒ /secrets/new
+├ ƒ /setup
+├ ƒ /setup/complete
+├ ƒ /szerviz
+├ ƒ /szerviz/hibajegyek
+├ ƒ /szerviz/hibajegyek/[id]
+├ ƒ /szerviz/hibajegyek/[id]/edit
+├ ƒ /szerviz/hibajegyek/new
+├ ƒ /szerviz/karbantartas
+├ ƒ /szerviz/karbantartas/[id]
+├ ƒ /szerviz/karbantartas/new
+├ ƒ /szerviz/munkalapok
+├ ƒ /szerviz/munkalapok/[id]
+├ ƒ /szerviz/munkalapok/[id]/edit
+└ ƒ /szerviz/munkalapok/new
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+

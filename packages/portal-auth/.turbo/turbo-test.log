@@ -1,0 +1,24 @@
+
+> @erp/portal-auth@0.0.0 test /Users/tomko/programing/sironic infra/erp/packages/portal-auth
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.12 [39m[90m/Users/tomko/programing/sironic infra/erp/packages/portal-auth[39m
+
+[90mstderr[2m | src/api.integration.test.ts
+[22m[39mMONGODB_URI is not set — database operations will fail at runtime
+
+ [32m✓[39m src/api.integration.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 16488[2mms[22m[39m
+     [33m[2m✓[22m[39m only stores the token hash; accept sets the password once [33m 2104[2mms[22m[39m
+     [33m[2m✓[22m[39m refuses duplicate e-mails across partners [33m 341[2mms[22m[39m
+     [33m[2m✓[22m[39m locks after repeated failures and refuses deactivated users [33m 4706[2mms[22m[39m
+     [33m[2m✓[22m[39m does not reveal whether an account exists [33m 1268[2mms[22m[39m
+     [33m[2m✓[22m[39m issues a one-time token for active users and answers ok for unknown ones [33m 2626[2mms[22m[39m
+     [33m[2m✓[22m[39m cannot touch another partner's users; last admin is protected [33m 380[2mms[22m[39m
+ [32m✓[39m src/session-token.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m2 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[32m13 passed[39m[22m[90m (13)[39m
+[2m   Start at [22m 19:23:08
+[2m   Duration [22m 19.76s[2m (transform 573ms, setup 0ms, import 2.28s, tests 16.50s, environment 0ms)[22m
+

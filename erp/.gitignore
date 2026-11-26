@@ -1,3 +1,0 @@
-# The ERP workspace commits its own lockfile (CI and the Docker build use --frozen-lockfile);
-# the legacy repo root ignores pnpm-lock.yaml.
-!pnpm-lock.yaml

@@ -1,0 +1,55 @@
+
+> @erp/feladat@0.0.0 test /Users/tomko/programing/sironic infra/erp/packages/feladat
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.12 [39m[90m/Users/tomko/programing/sironic infra/erp/packages/feladat[39m
+
+[90mstderr[2m | src/feladat.integration.test.ts
+[22m[39mMONGODB_URI is not set — database operations will fail at runtime
+
+(node:75628) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[90mstderr[2m | src/feladat.integration.test.ts[2m > [22m[2mlépések és kapcsolt feladatok (8c, #50)[2m > [22m[2manother module creates a linked task, and is called back when it is handed on or closed
+[22m[39mKapcsolt feladat visszahívás hiba masik Error: nem dől el tőle semmi
+    at [90m/Users/tomko/programing/sironic infra/erp/packages/feladat/[39msrc/feladat.integration.test.ts:759:13
+    at fireKapcsoltFeladatHook [90m(/Users/tomko/programing/sironic infra/erp/packages/feladat/[39msrc/hooks.ts:54:11[90m)[39m
+    at kapcsoltEsemeny [90m(/Users/tomko/programing/sironic infra/erp/packages/feladat/[39msrc/api.ts:194:9[90m)[39m
+    at Object.dontFeladatrol [90m(/Users/tomko/programing/sironic infra/erp/packages/feladat/[39msrc/api.ts:1036:13[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at [90m/Users/tomko/programing/sironic infra/erp/packages/feladat/[39msrc/feladat.integration.test.ts:864:8
+    at file:///Users/tomko/programing/sironic%20infra/erp/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.12/node_modules/[4m@vitest[24m/runner/dist/chunk-artifact.js:1903:20
+
+ [32m✓[39m src/feladat.integration.test.ts [2m([22m[2m24 tests[22m[2m)[22m[33m 9235[2mms[22m[39m
+     [33m[2m✓[22m[39m goes from kiadó to felelős: accept, comment both ways, close — with a full status log [33m 1134[2mms[22m[39m
+     [33m[2m✓[22m[39m the felelős adds, ticks and edits steps; the current step shows as status [33m 505[2mms[22m[39m
+     [33m[2m✓[22m[39m another module creates a linked task, and is called back when it is handed on or closed [33m 495[2mms[22m[39m
+     [33m[2m✓[22m[39m only accepts categories of the admin list, stores the list spelling, renames and retires [33m 314[2mms[22m[39m
+[90mstderr[2m | src/uzenet.integration.test.ts
+[22m[39mMONGODB_URI is not set — database operations will fail at runtime
+
+ [32m✓[39m src/uzenet.integration.test.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 8715[2mms[22m[39m
+     [33m[2m✓[22m[39m is one thread for every copy of a group task — everyone reads everyone [33m 2726[2mms[22m[39m
+     [33m[2m✓[22m[39m notifies the mentioned participant separately and validates the reply target [33m 679[2mms[22m[39m
+     [33m[2m✓[22m[39m lets only the author edit or delete a message; a deleted one stays as a placeholder [33m 476[2mms[22m[39m
+     [33m[2m✓[22m[39m keeps one thread across a handover, and outsiders can neither read nor write [33m 381[2mms[22m[39m
+     [33m[2m✓[22m[39m registers the read receipt as "Látta" [33m 343[2mms[22m[39m
+[90mstderr[2m | src/folyamat.integration.test.ts
+[22m[39mMONGODB_URI is not set — database operations will fail at runtime
+
+(node:76080) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:76080) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ [32m✓[39m src/folyamat.integration.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 4354[2mms[22m[39m
+     [33m[2m✓[22m[39m A → B → done: each step goes to its felelős when the previous one closes [33m 2204[2mms[22m[39m
+     [33m[2m✓[22m[39m refused step waits for the kiadó; re-given in Feladatok it runs on with the new felelős [33m 417[2mms[22m[39m
+ [32m✓[39m src/egyseg.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32m✓[39m src/uzenet.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/kategoria.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m src/hooks.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m7 passed[39m[22m[90m (7)[39m
+[2m      Tests [22m [1m[32m58 passed[39m[22m[90m (58)[39m
+[2m   Start at [22m 19:23:08
+[2m   Duration [22m 28.90s[2m (transform 1.54s, setup 0ms, import 4.63s, tests 22.35s, environment 1ms)[22m
+

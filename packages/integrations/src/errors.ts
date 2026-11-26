@@ -1,4 +1,5 @@
-import type { IntegrationProvider } from "@crm/types";
+/** Provider keys of the supported integrations. */
+export type IntegrationProvider = "cloudflare" | "npm" | "portainer" | "github";
 
 /** Label for error/log attribution — includes non-settings-page callers of `httpRequest` like the admin-sync caller. */
 export type HttpProviderLabel = IntegrationProvider | "deployment";

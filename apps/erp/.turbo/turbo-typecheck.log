@@ -1,0 +1,4 @@
+
+> @erp/erp@0.1.0 typecheck /Users/tomko/programing/sironic infra/apps/erp
+> tsc --noEmit
+

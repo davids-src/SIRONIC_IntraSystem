@@ -1,0 +1,142 @@
+# TEMPLATE: a valódi titkok csak a Portainer stackben élnek, ide ne kerüljenek.
+# Sironic stack (Portainer)
+# Képek: GitHub Actions építi őket a main-re pusholáskor (.github/workflows/docker-publish.yml)
+#   ghcr.io/davids-src/sironic-erp:latest         (ERP, a régi "crm" helyett)
+#   ghcr.io/davids-src/sironic-erp-portal:latest  (partner portál, a régi "partner-portal" helyett)
+# Adatbázis: sironic_erp (a migrált éles adat). A régi `crm` adatbázis érintetlen backup.
+
+services:
+  erp:
+    container_name: sironic-erp
+    image: ghcr.io/davids-src/sironic-erp:latest
+    pull_policy: always
+    ports:
+      - "8087:3000"
+    environment:
+      NODE_ENV: "production"
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      TZ: "Europe/Budapest"
+      AUTH_TRUST_HOST: "true"
+
+      MONGODB_URI: "mongodb://192.168.0.12:27017/sironic_erp"
+      MONGODB_DB_NAME: "sironic_erp"
+
+      AUTH_URL: "https://crm.src.co.hu"
+      APP_URL: "https://crm.src.co.hu"
+      AUTH_SECRET: "<AUTH_SECRET>"
+      ALLOW_PUBLIC_REGISTRATION: "false"
+
+      # Titoktár: UGYANAZ a kulcs, mint a régi CRM-é (különben a migrált titkok nem olvashatók).
+      SECRETS_ENCRYPTION_KEY: "<SECRETS_ENCRYPTION_KEY>"
+
+      # Belépés a platform fiókkal (auth.src.co.hu). Üresen: csak jelszavas belépés.
+      # Az auth-ban regisztrálj OIDC klienst, redirect URI: https://crm.src.co.hu/api/auth/callback/sironic
+      OIDC_ISSUER: ""
+      OIDC_CLIENT_ID: ""
+      OIDC_CLIENT_SECRET: ""
+
+      SMTP_HOST: "smtp.forpsi.com"
+      SMTP_PORT: "465"
+      SMTP_SECURE: "true"
+      SMTP_USER: "noreply@sironic.hu"
+      SMTP_PASS: "<SMTP_PASS>"
+      SMTP_FROM: "SIROTECH Kft. - IntraSystem <noreply@sironic.hu>"
+
+      # Web Push (böngésző értesítések). A VAPID kulcspár fix: ne cseréld, különben az
+      # összes feliratkozás érvényét veszti.
+      VAPID_SUBJECT: "mailto:hello@sironic.hu"
+      VAPID_PUBLIC_KEY: "BPTwG91X5DBQ8S0gf0G9Rn2TND1bu-7zd2851TG7Us39C0SimL4VqJ17Ke-ChiEgY2DgA4j3NvV5i1ppehG1BwE"
+      VAPID_PRIVATE_KEY: "<VAPID_PRIVATE_KEY>"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - default
+      - nginxproxy_default
+
+  # Platform IdP (központi belépés). Változatlan, a meglévő image marad.
+  auth:
+    container_name: sironic-auth
+    image: ghcr.io/davids-src/sironic-auth:latest
+    environment:
+      AUTH_MONGODB_URI: "mongodb://192.168.0.12:27017/sironic_auth"
+      AUTH_SECRET: "<AUTH_SECRET>"
+      AUTH_SECRETS_ENCRYPTION_KEY: "<AUTH_SECRETS_ENCRYPTION_KEY>"
+      AUTH_URL: "https://auth.src.co.hu"
+      SMTP_HOST: "smtp.forpsi.com"
+      SMTP_PORT: "465"
+      SMTP_USER: "noreply@sironic.hu"
+      SMTP_PASS: "<SMTP_PASS>"
+      SMTP_FROM_EMAIL: "noreply@sironic.hu"
+      SMTP_FROM_NAME: "Sironic"
+      SMTP_REPLY_TO: "hello@sironic.hu"
+      NODE_ENV: "production"
+    restart: unless-stopped
+    networks:
+      - default
+      - nginxproxy_default
+
+  portal:
+    container_name: sironic-partner-portal
+    image: ghcr.io/davids-src/sironic-erp-portal:latest
+    pull_policy: always
+    ports:
+      - "8088:3001"
+    environment:
+      NODE_ENV: "production"
+      PORT: "3001"
+      HOSTNAME: "0.0.0.0"
+      TZ: "Europe/Budapest"
+
+      MONGODB_URI: "mongodb://192.168.0.12:27017/sironic_erp"
+      MONGODB_DB_NAME: "sironic_erp"
+
+      PORTAL_URL: "https://portal.sironic.eu"
+      APP_URL: "https://portal.sironic.eu"
+      # Az ERP AUTH_SECRET-jétől KÜLÖNBÖZŐ, min. 32 karakter.
+      PORTAL_AUTH_SECRET: "<PORTAL_AUTH_SECRET>"
+
+      SMTP_HOST: "smtp.forpsi.com"
+      SMTP_PORT: "465"
+      SMTP_SECURE: "true"
+      SMTP_USER: "noreply@sironic.hu"
+      SMTP_PASS: "<SMTP_PASS>"
+      SMTP_FROM: "SIROTECH Kft. - Partner Portal <noreply@sironic.hu>"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - default
+      - nginxproxy_default
+
+  tstream:
+    container_name: tstream
+    image: ghcr.io/tomkoooo/tstream:latest
+    ports:
+      - "8089:3000"
+    environment:
+      NEXT_PUBLIC_APP_URL: "https://stream.src.co.hu"
+      SESSION_PASSWORD: "<SESSION_PASSWORD>"
+      SESSION_SECRET: "<SESSION_SECRET>"
+      NODE_ENV: "production"
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+    restart: unless-stopped
+    networks:
+      - default
+      - nginxproxy_default
+
+networks:
+  default:
+    driver: bridge
+  nginxproxy_default:
+    external: true

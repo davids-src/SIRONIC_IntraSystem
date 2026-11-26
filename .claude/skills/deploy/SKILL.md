@@ -8,11 +8,11 @@ description: >-
 
 # /deploy
 
-A thin conversational front end for `erp/packages/infra-cli` (`sironic-infra`). The CLI does every
+A thin conversational front end for `packages/infra-cli` (`sironic-infra`). The CLI does every
 real step; never call Portainer/NPM/Cloudflare directly and never re-implement its validation.
 If the `sironic-infra` MCP server is configured, prefer its tools (same names as below, e.g. `stack_pull`).
 
-Run from `erp/`: `pnpm --filter @erp/infra-cli cli <command>`.
+Run from the repo root: `pnpm --filter @erp/infra-cli cli <command>`.
 
 ## Flow
 

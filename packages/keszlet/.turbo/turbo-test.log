@@ -1,0 +1,50 @@
+
+> @erp/keszlet@0.0.0 test /Users/tomko/programing/sironic infra/erp/packages/keszlet
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.12 [39m[90m/Users/tomko/programing/sironic infra/erp/packages/keszlet[39m
+
+[90mstderr[2m | src/keszlet.integration.test.ts
+[22m[39mMONGODB_URI is not set — database operations will fail at runtime
+
+[90mstderr[2m | src/keszlet.integration.test.ts[2m > [22m[2mkiad — keszlet.alacsony event[2m > [22m[2ma listener that throws never fails the issue
+[22m[39m[domain-event] listener for "keszlet.alacsony" failed Error: boom
+    at [90m/Users/tomko/programing/sironic infra/erp/packages/keszlet/[39msrc/keszlet.integration.test.ts:100:13
+    at /Users/tomko/programing/sironic infra/erp/packages/core/src/domain-events.ts:80:15
+    at Array.map (<anonymous>)
+    at emitDomainEvent (/Users/tomko/programing/sironic infra/erp/packages/core/src/domain-events.ts:78:21)
+    at alacsonyKeszletJelzes [90m(/Users/tomko/programing/sironic infra/erp/packages/keszlet/[39msrc/api.ts:187:13[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at Object.kiad [90m(/Users/tomko/programing/sironic infra/erp/packages/keszlet/[39msrc/api.ts:300:7[90m)[39m
+    at [90m/Users/tomko/programing/sironic infra/erp/packages/keszlet/[39msrc/keszlet.integration.test.ts:104:15
+    at file:///Users/tomko/programing/sironic%20infra/erp/node_modules/[4m.pnpm[24m/@vitest+runner@4.1.12/node_modules/[4m@vitest[24m/runner/dist/chunk-artifact.js:1903:20
+
+(node:76029) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:76029) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:76029) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:76029) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+ [32m✓[39m src/keszlet.integration.test.ts [2m([22m[2m18 tests[22m[2m)[22m[33m 10775[2mms[22m[39m
+     [33m[2m✓[22m[39m fires once per real issue that leaves a row at/below its minimum, not on replay [33m 426[2mms[22m[39m
+     [33m[2m✓[22m[39m an unexpected error on line 2 compensates line 1, and the retry then succeeds [33m 360[2mms[22m[39m
+     [33m[2m✓[22m[39m can never exceed the physical stock and keeps szabad = keszlet - foglalt [33m 360[2mms[22m[39m
+     [33m[2m✓[22m[39m concurrent reservations of the last free unit: exactly one wins [33m 364[2mms[22m[39m
+     [33m[2m✓[22m[39m reports availability per line without changing anything [33m 385[2mms[22m[39m
+     [33m[2m✓[22m[39m stocks per location and picks the location with enough free stock [33m 419[2mms[22m[39m
+     [33m[2m✓[22m[39m closing creates korrekció movements per differing line, once [33m 507[2mms[22m[39m
+     [33m[2m✓[22m[39m refuses a correction that would drop stock below the reserved quantity [33m 475[2mms[22m[39m
+     [33m[2m✓[22m[39m hides purchase prices and values without keszlet:ertek:read [33m 375[2mms[22m[39m
+     [33m[2m✓[22m[39m counts low stock, dead stock (90 days) and active RMA [33m 489[2mms[22m[39m
+     [33m[2m✓[22m[39m follows the allowed transitions, conditionally, and lists assignments [33m 324[2mms[22m[39m
+[90mstderr[2m | src/validation.test.ts
+[22m[39mMONGODB_URI is not set — database operations will fail at runtime
+
+ [32m✓[39m src/validation.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m ../../scripts/migrate/keszlet.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+[2m      Tests [22m [1m[32m26 passed[39m[22m[90m (26)[39m
+[2m   Start at [22m 19:23:29
+[2m   Duration [22m 15.03s[2m (transform 2.57s, setup 0ms, import 3.84s, tests 10.79s, environment 0ms)[22m
+

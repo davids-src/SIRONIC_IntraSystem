@@ -1,0 +1,4 @@
+
+> @erp/mail@0.0.0 typecheck /Users/tomko/programing/sironic infra/packages/mail
+> tsc --noEmit
+

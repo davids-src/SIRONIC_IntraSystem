@@ -1,0 +1,4 @@
+
+> @erp/portal@0.1.0 typecheck /Users/tomko/programing/sironic infra/apps/portal
+> tsc --noEmit
+
