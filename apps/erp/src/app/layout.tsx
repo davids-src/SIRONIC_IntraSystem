@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { SessionProvider } from "next-auth/react";
+import { SessionProvider } from "@erp/auth/client";
 import { auth } from "@erp/auth";
 import { getBranding, brandingMediaUrl } from "@erp/db-core";
 import { themeCss } from "@erp/core/theme";
