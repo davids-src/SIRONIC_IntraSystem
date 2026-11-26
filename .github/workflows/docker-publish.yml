@@ -23,6 +23,10 @@ jobs:
           - app: portal
             image: sironic-erp-portal
             dockerfile: apps/portal/Dockerfile
+          # Platform IdP (auth.src.co.hu): central login for the Sironic platform sites.
+          - app: auth
+            image: sironic-auth
+            dockerfile: apps/auth/Dockerfile
     steps:
       - uses: actions/checkout@v4
 
