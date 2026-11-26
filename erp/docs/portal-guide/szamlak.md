@@ -19,7 +19,7 @@ szereplő módon intézheted.
 
 ## Kapcsolódó fejezetek
 
-- [Telepítések](telepitesek.md)
+- [Weboldalak](oldalak.md)
 - [Jótállások](jotallasok.md)
 
 _Utolsó frissítés: 2026-11_

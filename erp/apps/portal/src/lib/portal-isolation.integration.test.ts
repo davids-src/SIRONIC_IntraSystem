@@ -5,7 +5,7 @@ import { createTestMongo } from "@erp/test-utils/mongo-memory";
 import { connectDB } from "@erp/db-core";
 import { bizonylatApi } from "@erp/bizonylat";
 import { igazolasSchema, jotallasSchema, szamlaSchema } from "@erp/bizonylat/validation";
-import { deploymentsApi } from "@erp/deployments";
+import { InfraOldal, InfraStack } from "@erp/infra/models";
 import { projektApi } from "@erp/projekt";
 import { szervizApi } from "@erp/szerviz";
 import {
@@ -173,19 +173,27 @@ async function seedPartner(p: "A" | "B"): Promise<Seed> {
   );
   if (!jo.ok || !jo.id) throw new Error("jotallas");
 
-  const t = await deploymentsApi.createTelepites(
-    {
-      nev: `Oldal ${p}`,
-      domain: `oldal-${p.toLowerCase()}.hu`,
-      partnerId,
-      dns: { rekordTipus: "A", cel: "1.2.3.4" },
-      proxy: { celHost: "app", celPort: 3000 },
-      image: { repo: "ghcr.io/x/y", tag: "v1" },
-      stack: { nev: `partner-${p.toLowerCase()}` },
-    } as never,
-    staffId,
-  );
-  if (!t.ok || !t.id) throw new Error(t.ok ? "telepites" : t.message);
+  // A site that belongs to the partner directly, and one inherited from the partner's stack.
+  const sajat = await InfraOldal.create({
+    nev: `Oldal ${p}`,
+    hostnevek: [`oldal-${p.toLowerCase()}.hu`],
+    szolgaltatas: "app",
+    port: 3000,
+    partnerId,
+  });
+  const stack = await InfraStack.create({
+    nev: `partner-${p.toLowerCase()}`,
+    portainerStackId: Math.floor(Math.random() * 1_000_000),
+    partnerId,
+  });
+  await InfraOldal.create({
+    nev: `Stack oldal ${p}`,
+    hostnevek: [`stack-${p.toLowerCase()}.hu`],
+    szolgaltatas: "web",
+    port: 3000,
+    stackId: String(stack._id),
+  });
+  const t = { ok: true as const, id: String(sajat._id) };
 
   const kolléga = await invitePortalUser({
     email: `kollega-${p.toLowerCase()}@x.hu`,
@@ -249,9 +257,7 @@ describe("partner A sees its own data (sanity)", () => {
     expect((await api.portalIgazolas(nezoA, seed.A.igazolas))?.cim).toBe("Igazolás A");
     expect(await api.portalSzamla(nezoA, seed.A.szamla)).not.toBeNull();
     expect(await api.portalJotallas(nezoA, seed.A.jotallas)).not.toBeNull();
-    expect((await api.portalTelepitesek(nezoA)).map((t) => t.id)).toContain(
-      seed.A.telepites,
-    );
+    expect((await api.portalOldalak(nezoA)).map((t) => t.id)).toContain(seed.A.telepites);
   });
 });
 
@@ -271,18 +277,18 @@ describe("partner A can never READ partner B's data", () => {
       igazolas: (await api.portalIgazolasok(nezoA)).data.map((x) => x._id),
       szamla: (await api.portalSzamlak(nezoA)).data.map((x) => x.id),
       jotallas: (await api.portalJotallasok(nezoA)).data.map((x) => x.id),
-      telepites: (await api.portalTelepitesek(nezoA)).map((x) => x.id),
+      telepites: (await api.portalOldalak(nezoA)).map((x) => x.id),
     };
     for (const k of Object.keys(ids) as Array<keyof typeof ids>) {
       expect(ids[k], k).toContain(seed.A[k]);
       expect(ids[k], `${k} (B)`).not.toContain(seed.B[k]);
-      expect(ids[k]).toHaveLength(1);
+      expect(ids[k]).toHaveLength(k === "telepites" ? 2 : 1);
     }
   });
 
   it("the dashboard counts only own data", async () => {
     const d = await api.portalMuszerfal(nezoA);
-    expect(d).toMatchObject({ nyitottHibajegy: 1, fuggoIgazolas: 1, telepitesDb: 1 });
+    expect(d).toMatchObject({ nyitottHibajegy: 1, fuggoIgazolas: 1, oldalDb: 2 });
   });
 });
 
@@ -323,23 +329,6 @@ describe("partner A can never WRITE to partner B's data", () => {
     expect((await api.portalIgazolas(nezoB, seed.B.igazolas))?.allapot).toBe("elkuldve");
   });
 
-  it("cannot grant access to B's deployment, nor grant B's colleague access to its own", async () => {
-    const otherDeployment = await api.portalHozzaferesBeallit(nezoA, {
-      portalFelhasznaloId: seed.A.kolléga,
-      telepitesId: seed.B.telepites,
-      engedelyezve: true,
-    });
-    expect(otherDeployment.ok).toBe(false);
-    const foreignUser = await api.portalHozzaferesBeallit(nezoA, {
-      portalFelhasznaloId: seed.B.kolléga,
-      telepitesId: seed.A.telepites,
-      engedelyezve: true,
-    });
-    expect(foreignUser.ok).toBe(false);
-    expect(await api.portalHozzaferesek(nezoA, seed.B.telepites)).toEqual([]);
-    expect(await deploymentsApi.listHozzaferesek(seed.B.telepites)).toEqual([]);
-  });
-
   it("cannot manage B's colleagues", async () => {
     expect((await api.portalCsapattagAktiv(nezoA, seed.B.kolléga, false)).ok).toBe(false);
     expect(
@@ -366,25 +355,18 @@ describe("partner A can never WRITE to partner B's data", () => {
   });
 });
 
-describe("deployment access grants scope a partner viewer", () => {
-  it("a non-admin sees only granted deployments of its own partner", async () => {
-    const kolléga = buildPortalNezo(identity("partner-A", seed.A.kolléga, false));
-    expect(await api.portalTelepitesek(kolléga)).toEqual([]);
-    const g = await api.portalHozzaferesBeallit(nezoA, {
-      portalFelhasznaloId: seed.A.kolléga,
-      telepitesId: seed.A.telepites,
-      engedelyezve: true,
-    });
-    expect(g.ok).toBe(true);
-    expect((await api.portalTelepitesek(kolléga)).map((t) => t.id)).toEqual([
-      seed.A.telepites,
+describe("sites follow the partner, never another partner's", () => {
+  it("a partner sees its own sites and the ones inherited from its stacks, nothing else", async () => {
+    const hostok = (await api.portalOldalak(nezoA)).map((o) => o.hostnev).sort();
+    expect(hostok).toEqual(["oldal-a.hu", "stack-a.hu"]);
+    expect((await api.portalOldalak(nezoB)).map((o) => o.hostnev).sort()).toEqual([
+      "oldal-b.hu",
+      "stack-b.hu",
     ]);
-    await api.portalHozzaferesBeallit(nezoA, {
-      portalFelhasznaloId: seed.A.kolléga,
-      telepitesId: seed.A.telepites,
-      engedelyezve: false,
-    });
-    expect(await api.portalTelepitesek(kolléga)).toEqual([]);
+  });
+  it("exposes no infrastructure detail", async () => {
+    for (const o of await api.portalOldalak(nezoA))
+      expect(Object.keys(o).sort()).toEqual(["hostnev", "hostnevek", "id", "nev", "url"]);
   });
 });
 
@@ -444,8 +426,7 @@ describe("internal data never appears in any portal response", () => {
     noLeak("szamla", await api.portalSzamla(nezoA, seed.A.szamla));
     noLeak("jotallasok", await api.portalJotallasok(nezoA));
     noLeak("jotallas", await api.portalJotallas(nezoA, seed.A.jotallas));
-    noLeak("telepitesek", await api.portalTelepitesek(nezoA));
-    noLeak("fizetesek", await api.portalFizetesek(nezoA));
+    noLeak("telepitesek", await api.portalOldalak(nezoA));
     noLeak("muszerfal", await api.portalMuszerfal(nezoA));
     noLeak("csapat", await api.portalCsapat(nezoA));
   });
@@ -473,6 +454,6 @@ describe("an empty partner id matches nothing", () => {
     expect((await api.portalIgazolasok(ghost)).total).toBe(0);
     expect((await api.portalSzamlak(ghost)).total).toBe(0);
     expect((await api.portalJotallasok(ghost)).total).toBe(0);
-    expect(await api.portalTelepitesek(ghost)).toEqual([]);
+    expect(await api.portalOldalak(ghost)).toEqual([]);
   });
 });

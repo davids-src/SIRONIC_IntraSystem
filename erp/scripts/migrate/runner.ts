@@ -1138,100 +1138,35 @@ async function stepSecrets(ctx: Ctx): Promise<void> {
 }
 
 async function stepDeployments(ctx: Ctx): Promise<void> {
+  // Infra module: only the provider connections are migrated. Stacks and sites are synced live
+  // (`sironic-infra sync`); packages, payments and templates were dropped with the billing scope.
   const d = await import("./deployments");
-  const { Telepites } = await import("../../packages/deployments/src/models/Telepites");
-  const egyeb = await import("../../packages/deployments/src/models/egyeb");
-  const deployments = await legacyRows(ctx, "deployments", "deployments_telepitesek");
-  const events = await legacyRows(ctx, "deploymentevents", "deployments_esemenyek");
-  const packages = await legacyRows(ctx, "deploymentpackages", "deployments_csomagok");
+  const egyeb = await import("../../packages/infra/src/models");
   const integrations = await legacyRows(
     ctx,
     "integrationconnections",
     "deployments_integraciok",
   );
-  const templates = await legacyRows(ctx, "stacktemplates", "deployments_sablonok");
-  await guardNoAdapter(ctx, "deploymentpayments", "no fizetés persistence adapter yet");
-  await guardNoAdapter(ctx, "partnerdeploymentaccesses", "needs migrated portal users");
-  await guardNoAdapter(ctx, "domainhostingrecords", "no persistence adapter yet");
+  for (const g of [
+    "deployments",
+    "deploymentevents",
+    "deploymentpackages",
+    "deploymentpayments",
+    "stacktemplates",
+    "partnerdeploymentaccesses",
+    "domainhostingrecords",
+  ])
+    await guardNoAdapter(ctx, g, "replaced by the live infra sync (not migrated)");
   const userIds = ctx.ids.kind("user");
-  for (const l of templates) {
-    const m = d.mapSablon(l as never, { userIds });
-    await writeDoc(ctx, {
-      target: "deployments_sablonok",
-      kind: "stacksablon",
-      legacyId: l._id,
-      model: M(egyeb.StackSablon),
-      natural: { nev: m.nev },
-      doc: withCreated(m, l),
-    });
-  }
-  for (const l of packages) {
-    const m = d.mapCsomag(l as never);
-    await writeDoc(ctx, {
-      target: "deployments_csomagok",
-      kind: "csomag",
-      legacyId: l._id,
-      model: M(egyeb.Csomag),
-      natural: { kod: m.kod },
-      doc: withCreated(m, l),
-    });
-  }
-  const partnerIds = ctx.ids.union("partner:contact");
-  const ctxMap = {
-    partnerIds,
-    userIds,
-    sablonIds: ctx.ids.kind("stacksablon"),
-    csomagIds: ctx.ids.kind("csomag"),
-    telepitesIds: ctx.ids.kind("telepites"),
-  };
-  const plan = d.migraljDeployments(
-    { telepitesek: deployments as never, integraciok: integrations as never },
-    ctxMap,
-  );
-  for (const w of plan.figyelmeztetesek)
-    ctx.report.warn("deployments_telepitesek", `${w.forras}: ${w.uzenet}`);
-  seed(
-    ctx,
-    "deployments:telepites",
-    maxTrailing(deployments.map((x) => x.deployment_number)),
-  );
-  for (const [i, m] of plan.integraciok.entries()) {
+  for (const l of integrations) {
+    const m = d.mapIntegracio(l as never, { userIds });
     await writeDoc(ctx, {
       target: "deployments_integraciok",
       kind: "integracio",
-      legacyId: integrations[i]!._id,
+      legacyId: l._id,
       model: M(egyeb.IntegracioKapcsolat),
       natural: { szolgaltato: m.szolgaltato, cimke: m.cimke },
-      doc: withCreated(m, integrations[i]),
-    });
-  }
-  for (const t of plan.telepitesek) {
-    await writeDoc(ctx, {
-      target: "deployments_telepitesek",
-      kind: "telepites",
-      legacyId: t._legacyId,
-      model: M(Telepites),
-      natural: { azonosito: t.azonosito },
-      doc: strip(t, "_legacyId"),
-    });
-  }
-  const telepitesIds = ctx.ids.kind("telepites");
-  for (const l of events) {
-    const m = d.mapEsemeny(l as never, { ...ctxMap, telepitesIds });
-    if (!m) {
-      ctx.report.row("deployments_esemenyek").skipped++;
-      ctx.report.warn(
-        "deployments_esemenyek",
-        `${l._id}: unknown deployment ${l.deployment_id}`,
-      );
-      continue;
-    }
-    await writeDoc(ctx, {
-      target: "deployments_esemenyek",
-      kind: "telepites_esemeny",
-      legacyId: l._id,
-      model: M(egyeb.TelepitesEsemeny),
-      doc: m,
+      doc: withCreated(m, l),
     });
   }
 }

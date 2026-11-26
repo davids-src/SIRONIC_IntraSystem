@@ -104,15 +104,20 @@ export class CloudflareClient {
   }
 
   async listZones(query?: { name?: string }): Promise<Zone[]> {
-    const params = new URLSearchParams({ per_page: "50" });
-    if (query?.name) params.set("name", query.name);
-    const res = await httpRequest(this.url(`/zones?${params.toString()}`), {
-      provider: "cloudflare",
-      headers: this.headers(),
-    });
-    this.throwIfError(res.json, "Cloudflare zónák listázása sikertelen.");
-    const parsed = zCfEnvelope(zZoneListResult).parse(res.json);
-    return parsed.result ?? [];
+    const all: Zone[] = [];
+    for (let page = 1; page <= 20; page += 1) {
+      const params = new URLSearchParams({ per_page: "50", page: String(page) });
+      if (query?.name) params.set("name", query.name);
+      const res = await httpRequest(this.url(`/zones?${params.toString()}`), {
+        provider: "cloudflare",
+        headers: this.headers(),
+      });
+      this.throwIfError(res.json, "Cloudflare zónák listázása sikertelen.");
+      const batch = zCfEnvelope(zZoneListResult).parse(res.json).result ?? [];
+      all.push(...batch);
+      if (batch.length < 50) break;
+    }
+    return all;
   }
 
   async triggerActivationCheck(zoneId: string): Promise<void> {

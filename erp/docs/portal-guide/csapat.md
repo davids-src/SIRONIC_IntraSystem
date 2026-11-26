@@ -1,6 +1,6 @@
 ---
 title: Csapat és hozzáférések
-description: Munkatársak meghívása, szerepkörök, letiltás és telepítés-hozzáférés (adminisztrátoroknak).
+description: Munkatársak meghívása, szerepkörök, letiltás  (adminisztrátoroknak).
 order: 11
 ---
 
@@ -26,14 +26,9 @@ A táblázatban látod az állapotot (Meghívva / Aktív / Letiltva) és az utol
 megszünteti a belépést; az **Engedélyezés** visszaadja. A szerepkör-gombbal váltasz adminisztrátor és megtekintő
 között. Saját fiókodat nem tilthatod le, és az **utolsó aktív adminisztrátor** jogosultsága nem vonható vissza.
 
-## Telepítés-hozzáférés
-
-Megtekintő szerepkörű munkatársnál a **Telepítés-hozzáférés** hivatkozásra kattintva kiválaszthatod, mely
-telepítéseket láthatja (**Engedélyezés** / **Megvonás**). Az adminisztrátorok minden telepítést látnak.
-
 ## Kapcsolódó fejezetek
 
 - [Belépés, meghívó, jelszó](belepes.md)
-- [Telepítések](telepitesek.md)
+- [Weboldalak](oldalak.md)
 
 _Utolsó frissítés: 2026-11_

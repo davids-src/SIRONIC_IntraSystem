@@ -8,7 +8,7 @@ import { szervizApi } from "@erp/szerviz";
 import { bizonylatApi } from "@erp/bizonylat";
 import { projektApi } from "@erp/projekt";
 import { eszkozApi } from "@erp/eszkoz";
-import { deploymentsApi } from "@erp/deployments";
+import { infraApi } from "@erp/infra";
 
 /**
  * Dashboard contributions of the domain modules (docs/02 §5). The app asks every provider the
@@ -267,41 +267,22 @@ export const DASHBOARD_PROVIDERS: DashboardProvider[] = [
     },
   },
   {
-    permission: "deployments:telepites:read",
+    permission: "infra:stack:read",
     async load(v) {
-      const o = await deploymentsApi.getOsszegzes();
-      const bajok = o.serult + o.akadalyosLepes;
+      const o = await infraApi.getOsszegzes();
       return {
         tiles: [
           {
-            label: "Élő telepítések",
-            value: o.elo,
-            hint: bajok > 0 ? `${bajok} figyelmet igényel` : undefined,
-            href: "/telepitesek",
-            tone: tone(bajok, "danger"),
+            label: "Stackek",
+            value: o.stackek,
+            hint: `${o.oldalak} oldal`,
+            href: "/infra",
             icon: "server" as const,
           },
         ],
-        quickActions: jog(v, "deployments:telepites:write")
-          ? [{ label: "Új telepítés", href: "/telepitesek/new" }]
+        quickActions: jog(v, "infra:oldal:write")
+          ? [{ label: "Új oldal", href: "/infra/oldalak/new" }]
           : [],
-      };
-    },
-  },
-  {
-    permission: "deployments:fizetes:read",
-    async load() {
-      const o = await deploymentsApi.osszegzes();
-      return {
-        tiles: [
-          {
-            label: "Késedelmes díjak",
-            value: o.keso,
-            href: "/telepitesek/fizetesek",
-            tone: tone(o.keso, "danger"),
-            icon: "receipt" as const,
-          },
-        ],
       };
     },
   },

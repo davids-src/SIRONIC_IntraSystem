@@ -14,7 +14,7 @@
   "dependencies": {
     "@erp/bizonylat": "workspace:*",
     "@erp/db-core": "workspace:*",
-    "@erp/deployments": "workspace:*",
+    "@erp/infra": "workspace:*",
     "@erp/lib": "workspace:*",
     "@erp/mail": "workspace:*",
     "@erp/media": "workspace:*",

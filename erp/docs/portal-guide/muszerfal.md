@@ -18,7 +18,7 @@ Hat csempe, mindegyik a saját cégedre vonatkozik, és rákattintva a megfelel�
 - **Aláírásra váró igazolások** — a teljesítésigazolások, amelyek a te döntésedre várnak.
 - **Lezárt munkalapok** — az elvégzett, lezárt munkák száma.
 - **Folyamatban lévő projektek** — a veled megosztott, nyitott projektek.
-- **Telepítések** — a számodra látható telepítések (weboldalak) száma.
+- **Weboldalak** — a céged weboldalainak száma.
 - **Lejárt számlák** — a határidőn túli, még ki nem fizetett számlák.
 
 ## Kapcsolódó fejezetek

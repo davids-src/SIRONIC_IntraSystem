@@ -138,19 +138,21 @@ describe("load-help integration", () => {
     );
   });
 
-  it("gates the Telepítések articles on their page permissions", () => {
+  it("gates the Infrastruktúra articles on their page permissions", () => {
     const slugs = (perms: string[]) => getHelpArticlesForUser(perms).map((a) => a.slug);
-    expect(slugs([])).not.toContain("telepitesek-lista");
-    expect(slugs(["deployments:telepites:read"])).toContain("telepitesek-lista");
-    expect(slugs(["deployments:telepites:read"])).not.toContain("telepitesek-fizetesek");
-    expect(slugs(["deployments:fizetes:read"])).toContain("telepitesek-fizetesek");
-    expect(slugs(["deployments:csomag:read"])).toContain("telepitesek-fizetesek");
-    expect(slugs(["deployments:sablon:read"])).toContain("telepitesek-integraciok");
-    expect(slugs(["deployments:integracio:read"])).toContain("telepitesek-integraciok");
+    expect(slugs([])).not.toContain("infra-attekintes");
+    expect(slugs(["infra:stack:read"])).toContain("infra-attekintes");
+    expect(slugs(["infra:stack:read"])).toContain("infra-stackek");
+    expect(slugs(["infra:stack:read"])).not.toContain("infra-oldalak");
+    expect(slugs(["infra:oldal:read"])).toContain("infra-oldalak");
+    expect(slugs(["infra:integracio:read"])).toContain("infra-integraciok");
+    expect(slugs(["infra:webhely:read"])).toContain("infra-webhelyek");
+    expect(slugs(["infra:stack:read"])).not.toContain("infra-webhelyek");
+    expect(slugs(["infra:sablon:read"])).toContain("infra-sablonok");
     const sections = groupHelpArticlesBySection(
-      getHelpArticlesForUser(["deployments:telepites:read"]),
+      getHelpArticlesForUser(["infra:stack:read"]),
     );
-    expect(sections.some((s) => s.name === "Telepítések")).toBe(true);
+    expect(sections.some((s) => s.name === "Infrastruktúra")).toBe(true);
   });
 
   it("gates the Készlet articles on their page permissions", () => {

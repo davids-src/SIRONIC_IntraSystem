@@ -13,7 +13,7 @@ látod** — más partnerek adatai sehol nem jelennek meg.
 ## Menü
 
 A felső menüsor elemei: **Műszerfal**, **Hibajegyek**, **Munkalapok**, **Teljesítésigazolások**,
-**Projektek**, **Telepítések**, **Számlák**, **Jótállások**. Cégadminisztrátorként a **Csapat** menüpontot is látod.
+**Projektek**, **Weboldalak**, **Számlák**, **Jótállások**. Cégadminisztrátorként a **Csapat** menüpontot is látod.
 
 ## Fejezetek
 
@@ -23,7 +23,7 @@ A felső menüsor elemei: **Műszerfal**, **Hibajegyek**, **Munkalapok**, **Telj
 - [Munkalapok](munkalapok.md)
 - [Teljesítésigazolások](teljesitesigazolasok.md)
 - [Projektek](projektek.md)
-- [Telepítések](telepitesek.md)
+- [Weboldalak](oldalak.md)
 - [Számlák](szamlak.md)
 - [Jótállások](jotallasok.md)
 - [Csapat és hozzáférések (adminisztrátoroknak)](csapat.md)

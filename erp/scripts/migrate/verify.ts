@@ -32,8 +32,7 @@ async function main(): Promise<void> {
     "szerviz_munkalapok",
     "bizonylat_szallitolevelek",
     "bizonylat_jotallasi_jegyek",
-    "deployments_telepitesek",
-    "deployments_esemenyek",
+    "deployments_integraciok",
     "_migration_idmap",
   ])
     counts[c] = await mongoose.connection.db!.collection(c).countDocuments();

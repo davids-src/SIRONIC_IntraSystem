@@ -8,7 +8,7 @@ import { keszletNav } from "./keszlet-nav";
 import { ertekesitesNav } from "./ertekesites-nav";
 import { szervizNav } from "./szerviz-nav";
 import { bizonylatNav } from "./bizonylat-nav";
-import { telepitesekNav } from "./telepitesek-nav";
+import { infraNav } from "./infra-nav";
 
 /**
  * Sidebar menu groups of the domain modules — the one place a new module adds its navigation
@@ -29,7 +29,7 @@ export const MODULE_NAV: ModuleNavGroup[] = [
   ertekesitesNav,
   szervizNav,
   bizonylatNav,
-  telepitesekNav,
+  infraNav,
   {
     label: "Eszközök",
     tourId: "nav-eszkoz",

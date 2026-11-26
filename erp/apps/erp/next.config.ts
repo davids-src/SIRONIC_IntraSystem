@@ -22,7 +22,7 @@ const nextConfig: NextConfig = {
     "@erp/bizonylat",
     "@erp/core",
     "@erp/db-core",
-    "@erp/deployments",
+    "@erp/infra",
     "@erp/ertekesites",
     "@erp/eszkoz",
     "@erp/feladat",

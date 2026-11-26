@@ -13,7 +13,7 @@ describe("Teendőim kategóriák", () => {
       ertekesites: "ertekesites",
       szerviz: "szerviz",
       bizonylat: "bizonylat",
-      deployments: "telepitesek",
+      infra: "infra",
     };
     for (const [modul, kat] of Object.entries(eloleg))
       expect(kategoriaOf({ module: modul, entityType: "x" })).toBe(kat);

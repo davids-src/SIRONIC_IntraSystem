@@ -19,7 +19,7 @@ költségeket nem látod.
 
 ## Kapcsolódó fejezetek
 
-- [Telepítések](telepitesek.md)
+- [Weboldalak](oldalak.md)
 - [Teljesítésigazolások](teljesitesigazolasok.md)
 
 _Utolsó frissítés: 2026-11_

@@ -29,6 +29,7 @@ export type {
 export { PortainerClient } from "./portainer/client";
 export type {
   ContainerSummary,
+  ImageSummary,
   PortainerClientConfig,
   PortainerCredentials,
   PortainerStack,

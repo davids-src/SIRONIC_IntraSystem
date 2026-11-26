@@ -18,7 +18,7 @@ export default async function MuszerfalPage() {
     },
     { href: "/munkalapok", cim: "Lezárt munkalapok", ertek: d.munkalapDb },
     { href: "/projektek", cim: "Folyamatban lévő projektek", ertek: d.nyitottProjekt },
-    { href: "/telepitesek", cim: "Telepítések", ertek: d.telepitesDb },
+    { href: "/oldalak", cim: "Weboldalak", ertek: d.oldalDb },
     { href: "/szamlak", cim: "Lejárt számlák", ertek: d.lejartSzamla },
   ];
   return (

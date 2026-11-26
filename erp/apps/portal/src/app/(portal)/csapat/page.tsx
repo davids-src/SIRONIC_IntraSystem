@@ -75,14 +75,6 @@ export default async function CsapatPage() {
                   label={t.isActive ? "Letiltás" : "Engedélyezés"}
                   variant={t.isActive ? "destructive" : "outline"}
                 />
-                {!t.rolak.includes(PORTAL_ROLE_ADMIN) && (
-                  <Link
-                    href={`/csapat/${t.id}`}
-                    className="text-primary text-sm underline-offset-2 hover:underline"
-                  >
-                    Telepítés-hozzáférés
-                  </Link>
-                )}
               </span>
             ),
           },

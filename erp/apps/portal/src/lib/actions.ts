@@ -16,7 +16,6 @@ import {
   portalCsapattagSzerepkor,
   portalHibajegyHozzaszol,
   portalHibajegyLetrehoz,
-  portalHozzaferesBeallit,
   portalIgazolasElfogad,
   portalIgazolasElutasit,
   portalMeghiv,
@@ -172,21 +171,6 @@ export async function setColleagueRoleAction(formData: FormData): Promise<Action
   if (!r.ok) return { ok: false, message: r.message };
   revalidatePath("/csapat");
   return { ok: true, message: "Szerepkör módosítva." };
-}
-
-export async function setDeploymentAccessAction(
-  formData: FormData,
-): Promise<ActionResult> {
-  const nezo = await getPortalNezo();
-  const userId = str(formData, "userId");
-  const r = await portalHozzaferesBeallit(nezo, {
-    portalFelhasznaloId: userId,
-    telepitesId: str(formData, "telepitesId"),
-    engedelyezve: str(formData, "engedelyezve") === "1",
-  });
-  if (!r.ok) return { ok: false, message: r.message };
-  revalidatePath(`/csapat/${userId}`);
-  return { ok: true };
 }
 
 // ── Public magic link (no login): the one-time token is the credential ──────────

@@ -12,7 +12,7 @@ import { szervizApi } from "@erp/szerviz";
 import { bizonylatApi } from "@erp/bizonylat";
 import { projektApi } from "@erp/projekt";
 import { eszkozApi } from "@erp/eszkoz";
-import { deploymentsApi } from "@erp/deployments";
+import { infraApi } from "@erp/infra";
 import { secretsApi } from "@erp/secrets";
 import { toSecretViewer } from "./secrets-viewer";
 
@@ -27,7 +27,7 @@ export const KERESES_MODUL_LABELS: Record<string, string> = {
   bizonylat: "Bizonylat",
   projekt: "Projekt",
   eszkoz: "Eszköz",
-  deployments: "Telepítések",
+  infra: "Infrastruktúra",
   secrets: "Titoktár",
 };
 
@@ -47,7 +47,7 @@ const ALAP: KeresesForrasok = [
   { modul: "bizonylat", kereses: (q, v) => bizonylatApi.search(q, v) },
   { modul: "projekt", kereses: (q, v) => projektApi.search(q, v) },
   { modul: "eszkoz", kereses: (q, v) => eszkozApi.search(q, v) },
-  { modul: "deployments", kereses: (q, v) => deploymentsApi.search(q, v) },
+  { modul: "infra", kereses: (q, v) => infraApi.search(q, v) },
   {
     modul: "secrets",
     // The secrets list needs the viewer's role ids (role shares); read from the DB here.

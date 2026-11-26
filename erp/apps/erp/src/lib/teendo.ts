@@ -16,7 +16,7 @@ export const TEENDO_KATEGORIAK = [
   "ertekesites",
   "szerviz",
   "bizonylat",
-  "telepitesek",
+  "infra",
   "egyeb",
 ] as const;
 export type TeendoKategoria = (typeof TEENDO_KATEGORIAK)[number];
@@ -31,7 +31,7 @@ export const TEENDO_KATEGORIA_LABELS: Record<TeendoKategoria, string> = {
   ertekesites: "Értékesítés",
   szerviz: "Szerviz",
   bizonylat: "Bizonylatok",
-  telepitesek: "Telepítések",
+  infra: "Infrastruktúra",
   egyeb: "Egyéb",
 };
 

@@ -9,7 +9,7 @@ import { szervizApi } from "@erp/szerviz";
 import { bizonylatApi } from "@erp/bizonylat";
 import { projektApi } from "@erp/projekt";
 import { eszkozApi } from "@erp/eszkoz";
-import { deploymentsApi } from "@erp/deployments";
+import { infraApi } from "@erp/infra";
 import { secretsApi } from "@erp/secrets";
 import { globalisKereses } from "./kereses";
 
@@ -55,7 +55,7 @@ describe("modul facade search — jogosultság-kapu", () => {
     bizonylat: bizonylatApi,
     projekt: projektApi,
     eszkoz: eszkozApi,
-    deployments: deploymentsApi,
+    infra: infraApi,
     secrets: secretsApi,
   };
   for (const [nev, api] of Object.entries(apis)) {

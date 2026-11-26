@@ -13,8 +13,6 @@ import { keszletApi } from "@erp/keszlet";
 import { ertekesitesApi } from "@erp/ertekesites";
 import { szervizApi } from "@erp/szerviz";
 import { bizonylatApi } from "@erp/bizonylat";
-import { deploymentsApi } from "@erp/deployments";
-import { userHasPermission } from "@erp/auth";
 import { FELADAT_ALLAPOT_LABELS } from "@erp/feladat/client";
 import { budapestNap } from "@erp/lib/utils";
 import {
@@ -34,7 +32,7 @@ const MODUL_LABELS: Record<string, string> = {
   ertekesites: "Értékesítés",
   szerviz: "Szerviz",
   bizonylat: "Bizonylat",
-  deployments: "Telepítések",
+  infra: "Infrastruktúra",
 };
 
 /** Everything assigned to the user in every module (incl. responsibilities), one fetch per request. */
@@ -49,7 +47,6 @@ export const getSajatTaskRefs = cache(async (userId: string): Promise<TaskRef[]>
     ertekesitesApi.listMyAssignments(userId),
     szervizApi.listMyAssignments(userId),
     bizonylatApi.listMyAssignments(userId),
-    telepitesTeendok(userId),
   ]);
   return all.flat();
 });
@@ -66,7 +63,7 @@ export function kategoriaOf(t: Pick<TaskRef, "module" | "entityType">): TeendoKa
   return modul ?? "egyeb";
 }
 
-/** TaskRef `module` → "Teendőim" category (deployments surfaces as "telepitesek"). */
+/** TaskRef `module` → "Teendőim" category (infra surfaces as "infra"). */
 const MODUL_KATEGORIA: Record<string, TeendoKategoria> = {
   eszkoz: "eszkoz",
   partner: "partner",
@@ -75,7 +72,7 @@ const MODUL_KATEGORIA: Record<string, TeendoKategoria> = {
   ertekesites: "ertekesites",
   szerviz: "szerviz",
   bizonylat: "bizonylat",
-  deployments: "telepitesek",
+  infra: "infra",
 };
 
 /** A due date from any module → Budapest calendar day (`YYYY-MM-DD`). */
@@ -151,14 +148,4 @@ export function refTeendo(t: TaskRef): Teendo {
     uj: false,
     url: t.url,
   };
-}
-
-/** Failed/manual pipeline steps, overdue payments and expiring records — only what the user may see. */
-async function telepitesTeendok(userId: string): Promise<TaskRef[]> {
-  const [telepites, fizetes] = await Promise.all([
-    userHasPermission(userId, "deployments:telepites:read"),
-    userHasPermission(userId, "deployments:fizetes:read"),
-  ]);
-  if (!telepites && !fizetes) return [];
-  return deploymentsApi.listTeendok({ telepites, fizetes });
 }

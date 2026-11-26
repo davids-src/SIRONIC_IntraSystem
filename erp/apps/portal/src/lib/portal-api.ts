@@ -6,7 +6,7 @@
  * `scripts/verify-portal-isolation.mjs` fails CI if a facade call here lacks a `nezo` argument.
  */
 import { bizonylatApi } from "@erp/bizonylat";
-import { deploymentsApi } from "@erp/deployments";
+import { infraApi } from "@erp/infra";
 import { projektApi } from "@erp/projekt";
 import { szervizApi } from "@erp/szerviz";
 import type { HibajegyPortalInput } from "@erp/szerviz/validation";
@@ -28,13 +28,13 @@ const NINCS_JOG: PortalFail = { ok: false, message: "Ehhez nincs jogosultsága."
 // ── Dashboard ───────────────────────────────────────────────────────────────────
 
 export async function portalMuszerfal(nezo: PortalNezo) {
-  const [hibajegyek, munkalapok, igazolasok, szamlak, telepitesek, projektek] =
+  const [hibajegyek, munkalapok, igazolasok, szamlak, oldalak, projektek] =
     await Promise.all([
       szervizApi.listHibajegyek(PAGE, nezo),
       szervizApi.listMunkalapok(PAGE, nezo),
       bizonylatApi.osszesitesIgazolas(nezo),
       bizonylatApi.listSzamlakPortal(PAGE, nezo),
-      deploymentsApi.listPortalTelepitesek(nezo),
+      infraApi.portalOldalak(nezo),
       projektApi.listProjektek(PAGE, nezo),
     ]);
   return {
@@ -42,7 +42,7 @@ export async function portalMuszerfal(nezo: PortalNezo) {
     munkalapDb: munkalapok.total,
     fuggoIgazolas: igazolasok.fuggoDb,
     lejartSzamla: szamlak.data.filter((s) => s.allapot === "lejart").length,
-    telepitesDb: telepitesek.length,
+    oldalDb: oldalak.length,
     nyitottProjekt: projektek.data.filter((p) => p.allapot === "nyitott").length,
   };
 }
@@ -155,12 +155,10 @@ export async function portalIgazolasElutasit(
   return bizonylatApi.elutasitIgazolas(id, nezo, adat);
 }
 
-// ── Telepítések ─────────────────────────────────────────────────────────────────
+// ── Weboldalak ──────────────────────────────────────────────────────────────────
 
-export const portalTelepitesek = (nezo: PortalNezo) =>
-  deploymentsApi.listPortalTelepitesek(nezo);
-export const portalFizetesek = (nezo: PortalNezo) =>
-  deploymentsApi.listPortalFizetesek(nezo);
+/** The partner's own sites (hostnames only — no infrastructure detail). */
+export const portalOldalak = (nezo: PortalNezo) => infraApi.portalOldalak(nezo);
 
 // ── Számlák, jótállások (csak olvasás) ──────────────────────────────────────────
 
@@ -216,31 +214,4 @@ export async function portalCsapattagSzerepkor(
 export async function portalCsapattag(nezo: PortalNezo, userId: string) {
   if (!can(nezo, PORTAL_PERMISSIONS.usersManage)) return null;
   return getPortalColleague(nezo.partnerId, userId);
-}
-
-// ── Telepítés-hozzáférés (partner-admin) ────────────────────────────────────────
-
-export async function portalHozzaferesek(nezo: PortalNezo, telepitesId: string) {
-  if (!can(nezo, PORTAL_PERMISSIONS.accessManage)) return [];
-  return deploymentsApi.listHozzaferesekPortal(telepitesId, nezo);
-}
-
-/** Grants a colleague of the SAME partner access to one of the partner's own deployments. */
-export async function portalHozzaferesBeallit(
-  nezo: PortalNezo,
-  input: { portalFelhasznaloId: string; telepitesId: string; engedelyezve: boolean },
-) {
-  if (!can(nezo, PORTAL_PERMISSIONS.accessManage)) return NINCS_JOG;
-  const kollega = await getPortalColleague(nezo.partnerId, input.portalFelhasznaloId);
-  if (!kollega) return { ok: false as const, message: "A felhasználó nem található." };
-  if (!input.engedelyezve)
-    return deploymentsApi.removeHozzaferesPortal(
-      input.portalFelhasznaloId,
-      input.telepitesId,
-      nezo,
-    );
-  return deploymentsApi.setHozzaferesPortal(
-    { portalFelhasznaloId: input.portalFelhasznaloId, telepitesId: input.telepitesId },
-    nezo,
-  );
 }

@@ -13,7 +13,7 @@ export default async function PortalLayout({ children }: { children: React.React
     { href: "/munkalapok", label: "Munkalapok" },
     { href: "/teljesitesigazolasok", label: "Teljesítésigazolások" },
     { href: "/projektek", label: "Projektek" },
-    { href: "/telepitesek", label: "Telepítések" },
+    { href: "/oldalak", label: "Weboldalak" },
     { href: "/szamlak", label: "Számlák" },
     { href: "/jotallasok", label: "Jótállások" },
     ...(can(nezo, PORTAL_PERMISSIONS.usersManage)
