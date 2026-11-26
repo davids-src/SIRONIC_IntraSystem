@@ -29,7 +29,8 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 9
+          # the ERP workspace's own pin (pnpm@9.15.0); the root package.json pins pnpm 10 for the CRM
+          package_json_file: erp/package.json
 
       - uses: actions/setup-node@v4
         with:
@@ -78,7 +79,8 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 9
+          # the ERP workspace's own pin (pnpm@9.15.0); the root package.json pins pnpm 10 for the CRM
+          package_json_file: erp/package.json
 
       - uses: actions/setup-node@v4
         with:
