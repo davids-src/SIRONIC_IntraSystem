@@ -189,6 +189,23 @@ export class NpmClient {
     return { id: parsed.id };
   }
 
+  /** Re-issues a Let's Encrypt certificate now (NPM renews automatically ~30 days before expiry). */
+  async renewCertificate(id: number): Promise<void> {
+    await this.request(`/api/nginx/certificates/${id}/renew`, {
+      method: "POST",
+    });
+  }
+
+  async deleteCertificate(id: number): Promise<void> {
+    await this.request(`/api/nginx/certificates/${id}`, { method: "DELETE" });
+  }
+
+  async setProxyHostEnabled(id: number, enabled: boolean): Promise<void> {
+    await this.request(`/api/nginx/proxy-hosts/${id}/${enabled ? "enable" : "disable"}`, {
+      method: "POST",
+    });
+  }
+
   async updateProxyHost(id: number, input: Partial<CreateProxyHostInput>): Promise<void> {
     input.domainNames?.forEach(assertValidNpmDomain);
     await this.request(`/api/nginx/proxy-hosts/${id}`, {
@@ -199,6 +216,10 @@ export class NpmClient {
         ...(input.forwardHost ? { forward_host: input.forwardHost } : {}),
         ...(input.forwardPort ? { forward_port: input.forwardPort } : {}),
         ...(input.certificateId ? { certificate_id: input.certificateId } : {}),
+        ...(input.allowWebsocketUpgrade !== undefined
+          ? { allow_websocket_upgrade: input.allowWebsocketUpgrade }
+          : {}),
+        ...(input.sslForced !== undefined ? { ssl_forced: input.sslForced } : {}),
       },
     });
   }

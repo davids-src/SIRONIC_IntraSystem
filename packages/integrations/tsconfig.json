@@ -1,9 +1,10 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "@erp/tsconfig/base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": ".",
-    "types": ["node", "jest"]
+    "rootDir": "src",
+    "types": ["node"]
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

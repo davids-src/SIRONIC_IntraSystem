@@ -1,1 +1,3 @@
-pnpm build && pnpm test
+#!/bin/sh
+# Fast gate before push (matches CI).
+pnpm run preflight

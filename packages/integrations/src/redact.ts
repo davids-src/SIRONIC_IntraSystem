@@ -12,8 +12,9 @@ const SENSITIVE_KEYS = [
 ];
 
 function isSensitiveKey(key: string): boolean {
-  const lower = key.toLowerCase();
-  return SENSITIVE_KEYS.some((needle) => lower.includes(needle));
+  // Separators are ignored so "X-API-Key", "api_key" and "apiKey" all match (Portainer sends X-API-Key).
+  const lower = key.toLowerCase().replace(/[-_\s]/g, "");
+  return SENSITIVE_KEYS.some((needle) => lower.includes(needle.replace(/_/g, "")));
 }
 
 /** Deep-clones `value`, replacing any key that looks like a credential with "***". Safe for logs/events. */
