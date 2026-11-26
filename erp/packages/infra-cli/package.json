@@ -1,0 +1,32 @@
+{
+  "name": "@erp/infra-cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "CLI and MCP server for the SIRONIC infra module (stacks, sites, SSL) — for operators and AI agents.",
+  "bin": {
+    "sironic-infra": "./bin/sironic-infra.mjs",
+    "sironic-infra-mcp": "./bin/sironic-infra-mcp.mjs"
+  },
+  "scripts": {
+    "cli": "tsx src/cli.ts",
+    "mcp": "tsx src/mcp.ts",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@erp/db-core": "workspace:*",
+    "@erp/infra": "workspace:*",
+    "@erp/partner": "workspace:*"
+  },
+  "devDependencies": {
+    "@erp/eslint-config": "workspace:*",
+    "@erp/tsconfig": "workspace:*",
+    "@types/node": "^20",
+    "eslint": "^9.17.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.18"
+  }
+}

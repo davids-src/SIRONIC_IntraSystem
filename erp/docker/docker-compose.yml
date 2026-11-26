@@ -1,0 +1,58 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: sironic_erp
+
+  mongo-express:
+    image: mongo-express:1
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongo
+      ME_CONFIG_BASICAUTH: "false"
+    depends_on:
+      - mongo
+
+  erp:
+    build:
+      context: ..
+      dockerfile: apps/erp/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_DB_NAME: sironic_erp
+      AUTH_SECRET: ${AUTH_SECRET:-dev-secret-change-in-production-min-32-chars}
+      AUTH_URL: http://localhost:3000
+      # Titoktár: exactly 32 bytes or 64 hex chars. Local placeholder only — never a real key.
+      SECRETS_ENCRYPTION_KEY: ${SECRETS_ENCRYPTION_KEY:-local-dev-only-key-not-for-prod!}
+    depends_on:
+      - mongo
+
+  portal:
+    build:
+      context: ..
+      dockerfile: apps/portal/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_DB_NAME: sironic_erp
+      # Own secret: a portal session is never valid in the staff app, nor the other way round.
+      PORTAL_AUTH_SECRET: ${PORTAL_AUTH_SECRET:-dev-portal-secret-change-in-production-min-32}
+      PORTAL_URL: http://localhost:3001
+      APP_URL: http://localhost:3001
+    depends_on:
+      - mongo
+
+volumes:
+  mongo_data:

@@ -1,0 +1,36 @@
+{
+  "name": "@erp/portal-auth",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./session": "./src/session-token.ts",
+    "./constants": "./src/constants.ts"
+  },
+  "scripts": {
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:integration": "vitest run --passWithNoTests integration.test"
+  },
+  "dependencies": {
+    "@erp/db-core": "workspace:*",
+    "@erp/mail": "workspace:*",
+    "bcryptjs": "^2.4.3",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@erp/eslint-config": "workspace:*",
+    "@erp/test-utils": "workspace:*",
+    "@erp/tsconfig": "workspace:*",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20",
+    "eslint": "^9.17.0",
+    "mongodb-memory-server": "^11.2.0",
+    "mongoose": "^9.0.0",
+    "next-auth": "5.0.0-beta.30",
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.18"
+  }
+}

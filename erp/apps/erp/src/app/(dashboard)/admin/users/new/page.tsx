@@ -1,0 +1,49 @@
+import Link from "next/link";
+import { requirePermission, requireAuth } from "@erp/auth";
+import { Container } from "@erp/ui";
+import { Button } from "@erp/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@erp/ui";
+import { getUsersEditorData } from "../actions";
+import { UserForm } from "../_components/user-form";
+
+export default async function NewUserPage() {
+  await requirePermission("users:write");
+  const current = await requireAuth();
+  if (!current) return null;
+  const { roles, permissions } = await getUsersEditorData();
+
+  return (
+    <Container className="flex max-w-3xl flex-col gap-4 md:gap-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Új felhasználó</h1>
+          <p className="text-muted-foreground text-sm">
+            Fiók, szerepkörök és opcionális dolgozói profil egy lépésben.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/users/invite">Meghívó e-mail</Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/users">Vissza a listához</Link>
+          </Button>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Adatok</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <UserForm
+            mode="create"
+            roles={roles}
+            permissions={permissions}
+            currentUserId={current.id}
+          />
+        </CardContent>
+      </Card>
+    </Container>
+  );
+}

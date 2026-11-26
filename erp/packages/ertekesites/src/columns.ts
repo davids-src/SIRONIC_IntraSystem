@@ -1,0 +1,193 @@
+import type { ColumnDef } from "@erp/ui";
+import {
+  AJANLAT_ALLAPOTOK,
+  AJANLAT_ALLAPOT_LABELS,
+  AJANLAT_ALLAPOT_TONES,
+  MEGRENDELO_ALLAPOTOK,
+  MEGRENDELO_ALLAPOT_LABELS,
+  MEGRENDELO_ALLAPOT_TONES,
+  SZERZODES_ALLAPOTOK,
+  SZERZODES_ALLAPOT_LABELS,
+  SZERZODES_ALLAPOT_TONES,
+  SZERZODES_TIPUSOK,
+  SZERZODES_TIPUS_LABELS,
+} from "./constants";
+import type { AjanlatListItem, MegrendeloListItem, SzerzodesListItem } from "./types";
+
+export const AJANLAT_LIST_COLUMNS: Array<ColumnDef<AjanlatListItem>> = [
+  {
+    key: "azonosito",
+    label: "Azonosító",
+    type: "string",
+    sortable: true,
+    searchable: true,
+  },
+  { key: "cim", label: "Cím", type: "string", sortable: true, searchable: true },
+  {
+    key: "partnerNev",
+    label: "Partner",
+    type: "string",
+    sortable: true,
+    searchable: true,
+  },
+  {
+    key: "allapot",
+    mongoKey: "status.key",
+    label: "Állapot",
+    type: "enum",
+    sortable: true,
+    filterable: true,
+    enumValues: AJANLAT_ALLAPOTOK.map((v) => ({
+      value: v,
+      label: AJANLAT_ALLAPOT_LABELS[v],
+    })),
+    badgeTones: AJANLAT_ALLAPOT_TONES,
+  },
+  {
+    key: "bruttoOsszeg",
+    mongoKey: "osszegek.bruttoOsszeg",
+    label: "Bruttó összeg",
+    type: "number",
+    sortable: true,
+    filterable: true,
+    align: "right",
+  },
+  { key: "penznem", label: "Pénznem", type: "string", defaultVisible: false },
+  {
+    key: "ervenyesseg",
+    label: "Érvényes",
+    type: "date",
+    sortable: true,
+    defaultVisible: false,
+  },
+  {
+    key: "utankovetes",
+    label: "Utánkövetés",
+    type: "date",
+    sortable: true,
+    filterable: true,
+  },
+  {
+    key: "archivalt",
+    label: "Archivált",
+    type: "boolean",
+    filterable: true,
+    defaultVisible: false,
+  },
+  {
+    key: "createdAt",
+    label: "Létrehozva",
+    type: "date",
+    sortable: true,
+    filterable: true,
+  },
+];
+
+export const SZERZODES_LIST_COLUMNS: Array<ColumnDef<SzerzodesListItem>> = [
+  {
+    key: "azonosito",
+    label: "Azonosító",
+    type: "string",
+    sortable: true,
+    searchable: true,
+  },
+  { key: "nev", label: "Név", type: "string", sortable: true, searchable: true },
+  {
+    key: "partnerNev",
+    label: "Partner",
+    type: "string",
+    sortable: true,
+    searchable: true,
+  },
+  {
+    key: "kategoria",
+    label: "Kategória",
+    type: "string",
+    filterable: true,
+    defaultVisible: false,
+  },
+  {
+    key: "tipus",
+    label: "Típus",
+    type: "enum",
+    filterable: true,
+    enumValues: SZERZODES_TIPUSOK.map((v) => ({
+      value: v,
+      label: SZERZODES_TIPUS_LABELS[v],
+    })),
+  },
+  {
+    key: "allapot",
+    mongoKey: "status.key",
+    label: "Állapot",
+    type: "enum",
+    sortable: true,
+    filterable: true,
+    enumValues: SZERZODES_ALLAPOTOK.map((v) => ({
+      value: v,
+      label: SZERZODES_ALLAPOT_LABELS[v],
+    })),
+    badgeTones: SZERZODES_ALLAPOT_TONES,
+  },
+  { key: "ervenyessegVege", label: "Érvényes eddig", type: "date", sortable: true },
+  {
+    key: "createdAt",
+    label: "Létrehozva",
+    type: "date",
+    sortable: true,
+    defaultVisible: false,
+  },
+];
+
+export const MEGRENDELO_LIST_COLUMNS: Array<ColumnDef<MegrendeloListItem>> = [
+  {
+    key: "azonosito",
+    label: "Azonosító",
+    type: "string",
+    sortable: true,
+    searchable: true,
+  },
+  {
+    key: "beszallitoNev",
+    label: "Beszállító",
+    type: "string",
+    sortable: true,
+    searchable: true,
+  },
+  {
+    key: "allapot",
+    mongoKey: "status.key",
+    label: "Állapot",
+    type: "enum",
+    sortable: true,
+    filterable: true,
+    enumValues: MEGRENDELO_ALLAPOTOK.map((v) => ({
+      value: v,
+      label: MEGRENDELO_ALLAPOT_LABELS[v],
+    })),
+    badgeTones: MEGRENDELO_ALLAPOT_TONES,
+  },
+  {
+    key: "bruttoOsszeg",
+    label: "Bruttó összeg",
+    type: "number",
+    sortable: true,
+    filterable: true,
+    align: "right",
+  },
+  { key: "varhatoSzallitas", label: "Várható szállítás", type: "date", sortable: true },
+  {
+    key: "archivalt",
+    label: "Archivált",
+    type: "boolean",
+    filterable: true,
+    defaultVisible: false,
+  },
+  {
+    key: "createdAt",
+    label: "Létrehozva",
+    type: "date",
+    sortable: true,
+    defaultVisible: false,
+  },
+];
