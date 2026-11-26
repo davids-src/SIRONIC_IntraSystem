@@ -35,7 +35,10 @@ export {
 } from "./access";
 export {
   MEDIA_UPLOAD_ACCEPT,
+  DOCUMENT_UPLOAD_ACCEPT,
   MEDIA_UPLOAD_MAX_BYTES,
+  isOfficeDocument,
+  officeContentType,
   isPdfContentType,
   isImageContentType,
   isPdfFilename,

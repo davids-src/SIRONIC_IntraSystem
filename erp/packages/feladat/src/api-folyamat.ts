@@ -37,7 +37,7 @@ import {
   type FolyamatReszlet,
   type FolyamatSablonSor,
 } from "./folyamat";
-import { kategoriaKulcs, tisztaKategoria } from "./kategoria";
+import { kategoriaFeloldas, kategoriaHiba } from "./kategoria-lista";
 import type { KapcsoltFeladatEsemeny } from "./hooks";
 import { Feladat } from "./models/Feladat";
 import {
@@ -84,19 +84,6 @@ async function aktivUserek(ids: string[]): Promise<Map<string, string>> {
     .lean()
     .exec();
   return new Map(rows.map((u) => [String(u._id), userNev(u)]));
-}
-
-/** Same spelling rule as a task's category (#65). */
-async function kategoriaMezok(s: string | undefined) {
-  const kategoria = tisztaKategoria(s);
-  if (!kategoria) return { kategoria: undefined, kategoriaKulcs: undefined };
-  const kulcs = kategoriaKulcs(kategoria);
-  const meglevo = await Feladat.findOne({ kategoriaKulcs: kulcs })
-    .sort({ createdAt: 1 })
-    .select("kategoria")
-    .lean()
-    .exec();
-  return { kategoria: meglevo?.kategoria ?? kategoria, kategoriaKulcs: kulcs };
 }
 
 const isKiado = (doc: IFeladatFolyamat, v: FeladatViewer) =>
@@ -363,7 +350,8 @@ export const feladatFolyamatApi = {
     if (!l.ok) return hiba(l.message, "lepesek");
     if (l.lepesek.length < 1) return hiba("Adj meg legalább egy lépést", "lepesek");
 
-    const kat = await kategoriaMezok(input.kategoria);
+    const kat = await kategoriaFeloldas(input.kategoria);
+    if (kategoriaHiba(kat)) return hiba(kat.hiba, "kategoria");
     const prioritas: FeladatPrioritas = input.prioritas ?? "normal";
     const doc = new FeladatFolyamat({
       cim,

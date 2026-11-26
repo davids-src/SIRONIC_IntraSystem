@@ -8,3 +8,8 @@ export {
   type KapcsoltFeladatHook,
 } from "./hooks";
 export * from "./client";
+export {
+  kategoriaAdminApi,
+  type KategoriaAdminSor,
+  type KategoriaAdminEredmeny,
+} from "./kategoria-lista";

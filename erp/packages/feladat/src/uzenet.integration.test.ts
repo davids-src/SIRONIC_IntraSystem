@@ -55,7 +55,7 @@ async function csoportos() {
     elsodlegesId: anna.id,
     cim: "Raktár leltár",
     hatarido: nap(3),
-    kategoria: "Raktár",
+    kategoria: "Projektek",
   });
   const peldany = (userId: string) =>
     r.peldanyok!.find((p) => p.felelosId === userId)!.id;
@@ -137,7 +137,7 @@ describe("közös beszélgetés (#68)", () => {
       felelosIds: [anna.id],
       cim: "Másik",
       hatarido: nap(2),
-      kategoria: "Raktár",
+      kategoria: "Projektek",
     });
     const idegen = await feladatUzenetApi.kuldUzenet(v(bela), mas.id, {
       szoveg: "Más szál",
@@ -199,7 +199,7 @@ describe("közös beszélgetés (#68)", () => {
       felelosIds: [anna.id],
       cim: "Ajánlat",
       hatarido: nap(3),
-      kategoria: "Beszerzés",
+      kategoria: "Projektek",
     });
     await feladatApi.dontFeladatrol(v(anna), id, { elfogad: true });
     await feladatUzenetApi.kuldUzenet(v(anna), id, { szoveg: "Elkezdtem" });
@@ -235,7 +235,7 @@ describe("közös beszélgetés (#68)", () => {
       felelosIds: [anna.id],
       cim: "Lezárandó",
       hatarido: nap(1),
-      kategoria: "Egyéb",
+      kategoria: "Projektek",
     });
     await feladatApi.dontFeladatrol(v(anna), id, { elfogad: true });
     await feladatApi.lezarFeladatot(v(anna), id);

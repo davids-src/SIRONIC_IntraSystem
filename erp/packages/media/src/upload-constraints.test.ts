@@ -4,6 +4,7 @@ import {
   isAllowedUploadContentType,
   isPdfContentType,
   isPdfFilename,
+  officeContentType,
 } from "./upload-constraints";
 
 describe("upload-constraints", () => {
@@ -14,6 +15,21 @@ describe("upload-constraints", () => {
       true,
     );
     expect(isAllowedUploadContentType("application/zip")).toBe(false);
+  });
+
+  it("allows Word / Excel only where documents are asked for", () => {
+    expect(
+      isAllowedUploadContentType("application/octet-stream", "koltsegvetes.xlsx"),
+    ).toBe(false);
+    expect(
+      isAllowedUploadContentType("application/octet-stream", "Szerzodes.DOCX", {
+        documents: true,
+      }),
+    ).toBe(true);
+    expect(
+      isAllowedUploadContentType("application/zip", "x.zip", { documents: true }),
+    ).toBe(false);
+    expect(officeContentType("a.xls")).toBe("application/vnd.ms-excel");
   });
 
   it("detects pdf by filename and content type", () => {

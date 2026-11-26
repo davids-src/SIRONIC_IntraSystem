@@ -86,7 +86,7 @@ export default async function FeladatAdatlapPage({
   const [folyamat, kategoriak, folyamatAdhato] = await Promise.all([
     // Linked task: where the contract's / request's / Feladat-folyamat's flow stands (#65, #67).
     feladat.kapcsolat ? kapcsolatAllapot(feladat.kapcsolat) : undefined,
-    kezel ? feladatApi.listKategoriak(undefined, 100) : [],
+    kezel ? feladatApi.listKategoriak() : [],
     // The kiadó may turn a plain open task into step 1 of a Feladat-folyamat (#67).
     kiado && !csoport && !feladat.kapcsolat
       ? feladatFolyamatApi.folyamatHozzaadhato(viewer, feladat.id)

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@erp/auth";
 import { getBranding, brandingMediaUrl } from "@erp/db-core";
+import { themeCss } from "@erp/core/theme";
 import "@erp/ui/globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { BrandingProvider } from "@/components/branding-provider";
@@ -61,6 +62,13 @@ export default async function RootLayout({
 
   return (
     <html lang="hu" suppressHydrationWarning>
+      <head>
+        {/* Admin-chosen role colours (Arculat) — built from validated hex values only. */}
+        <style
+          id="theme-vars"
+          dangerouslySetInnerHTML={{ __html: themeCss(branding.theme) }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} smart-min-dvh flex flex-col antialiased`}
       >

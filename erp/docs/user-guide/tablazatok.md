@@ -25,8 +25,12 @@ mindet kiszedi.
 ## Keresés és szűrés
 
 - A **kereső** a lista fontosabb szöveges mezőiben keres (pl. a Gépek listán a rendszámban és a
-  típusban).
-- A **Szűrők** panelben mezőnként adhatsz meg értéket. Ahol a mező értékei ismertek (státusz, típus, gyártó, helyszín, felelős, besorolás…), ott **jelölőnégyzetes lista** áll rendelkezésre — több érték is kipipálható, gépelni nem kell. Igen/nem mezőknél legördülő, számnál minimum/maximum, dátumnál _-tól / -ig_ tartomány, és csak a szabad szöveges mezőknél (pl. leltári szám) gépelhető részleges egyezés.
+  típusban). Nem kell pontosan megadni, amit keresel: **elég egy részlet**, a kis- és nagybetű,
+  valamint az ékezet nem számít (_hunga_ megtalálja a „Hungária”-t). Több kifejezést is írhatsz
+  szóközzel, vesszővel vagy pontosvesszővel elválasztva — **mindegyiknek** szerepelnie kell a sorban,
+  de más-más mezőben is lehet: az Ajánlatok listán a _2026; hunga_ a Hungária nevű partner 2026-os
+  ajánlatait adja.
+- A **Szűrők** panelben mezőnként adhatsz meg értéket. Ahol a mező értékei ismertek (státusz, típus, gyártó, helyszín, felelős, besorolás…), ott **jelölőnégyzetes lista** áll rendelkezésre — több érték is kipipálható, gépelni nem kell. Igen/nem mezőknél legördülő, számnál minimum/maximum, dátumnál _-tól / -ig_ tartomány, és a szabad szöveges mezőknél (pl. azonosító, partner, leltári szám) gépelhető részlet — itt is érvényes a fenti: több kifejezés, ékezet nélkül is.
 - A kipipálós szűrőknél a kiválasztott értékek **jelölőként** (kis címkeként, **×**-szel) jelennek meg a mező felett — egy kattintással levehetők —, hosszabb listánál pedig a **keresőmezővel** gyorsan megtalálható az érték (pl. egy gyártó vagy helyszín), Enterrel pedig az egyetlen találat kiválasztható. Az _Igen / Nem_ mezők háromállású kapcsolók (Mind – Igen – Nem).
 - A beállított szűrők a táblázat felett **címkékként** látszanak (pl. _Státusz: Aktív, Szervizben_); egy címkére kattintva az adott szűrő megszűnik.
 - Az állapotot jelző oszlopok (státusz, dokumentum-állapot, besorolás, készlet) **színes jelölőként** jelennek meg: zöld = rendben, sárga = figyelmet kér, piros = sürgős, kék = tájékoztató, szürke = semleges.
@@ -80,6 +84,18 @@ Hosszú listán görgetéskor az **oszlopfejléc a tetején marad**, így mindig
 Az **Oszlopok** panelben kapcsolhatók be/ki az egyes mezők, az **Összes megjelenítése** és az
 **Alapértelmezés** gombbal pedig egy kattintással visszaállítható egy teljes, illetve a gyári
 oszlopkészlet. Ez a választás is böngészőnként, listánként megmarad.
+
+### Oszlopszélesség
+
+Az oszlopfejlécek **jobb szélét megfogva és elhúzva** (az egérmutató ilyenkor ↔ alakú) bármelyik oszlop
+szélessége átállítható. A beállított szélességek **minden listán megmaradnak** a következő
+megnyitásra is, böngészőnként és listánként. A fejléc szélén a **dupla kattintás** az összes
+oszlopot visszaállítja automatikus szélességre.
+
+## Dátumok és időpontok
+
+A listák a dátumot `2026. 11. 26.` alakban mutatják, és csak ott írnak mellé időt (`2026. 11. 26. 14:30`),
+ahol az időpont is számít — magyar idő szerint, időzóna-jelölés nélkül.
 
 ## Megosztható link
 

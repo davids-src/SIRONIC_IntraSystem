@@ -10,6 +10,8 @@ export type TablePreferences = {
   /** Last sort the user applied on this table, re-applied on later visits so an a–z ordering
    * survives navigation. `null` means "the user explicitly cleared it" — don't re-apply. */
   sort?: string | null;
+  /** Column widths in px the user dragged to, by column key. Absent = automatic widths. */
+  columnWidths?: Record<string, number>;
 };
 
 type PrefsStore = Record<string, TablePreferences>;

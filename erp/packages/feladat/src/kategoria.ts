@@ -1,5 +1,6 @@
 /**
- * Feladat kategória (PROJECT_PLAN #65): a free label users type or reuse. Pure helpers — no
+ * Feladat kategória (PROJECT_PLAN #65): picked from the admin-managed list (`kategoria-lista`,
+ * defaults = module names). Pure helpers — no
  * runtime imports, so the client barrel, the facade and the KPI share them.
  */
 import type { FeladatAllapot } from "./constants";
@@ -22,20 +23,38 @@ export function kategoriaKulcs(s: string): string {
   return (tisztaKategoria(s) ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
 
-/** Default category of a linked task by its owning module's entity (`modul:tipus`). */
+/** The categories the admin list starts with: the ERP module names. */
+export const ALAP_KATEGORIAK = [
+  "Partnerek",
+  "Értékesítés",
+  "Projektek",
+  "Készlet",
+  "Szerviz",
+  "Bizonylatok",
+  "Eszközök",
+  "Infrastruktúra",
+] as const;
+
+/**
+ * Default category of a linked task by its owning module (`modul`), optionally refined per entity
+ * (`modul:tipus`). The values must be entries of `ALAP_KATEGORIAK`.
+ */
 export const KAPCSOLAT_KATEGORIAK: Record<string, string> = {
-  "vallalkozas:szerzodes": "Szerződés",
-  "vallalkozas:ajanlatkeres": "Ajánlatkérés",
-  "hr:belepes": "Beléptetés",
-  "hr:kilepes": "Kiléptetés",
-  "gepeszet:szervizjegy": "Szervizjegy",
+  partner: "Partnerek",
+  ertekesites: "Értékesítés",
+  projekt: "Projektek",
+  keszlet: "Készlet",
+  szerviz: "Szerviz",
+  bizonylat: "Bizonylatok",
+  eszkoz: "Eszközök",
+  infra: "Infrastruktúra",
 };
 
 export function kapcsolatKategoria(k: {
   modul: string;
   tipus: string;
 }): string | undefined {
-  return KAPCSOLAT_KATEGORIAK[`${k.modul}:${k.tipus}`];
+  return KAPCSOLAT_KATEGORIAK[`${k.modul}:${k.tipus}`] ?? KAPCSOLAT_KATEGORIAK[k.modul];
 }
 
 /** One task copy as the grouping needs it. */

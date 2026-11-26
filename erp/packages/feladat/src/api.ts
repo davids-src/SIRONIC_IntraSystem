@@ -36,13 +36,8 @@ import { Feladat, type IFeladat } from "./models/Feladat";
 import { LepesSablon } from "./models/LepesSablon";
 import { fireKapcsoltFeladatHook, type KapcsoltFeladatEsemeny } from "./hooks";
 import { csoportHaladas } from "./egyseg";
-import {
-  csoportStatisztika,
-  kapcsolatKategoria,
-  kategoriaKulcs,
-  tisztaKategoria,
-  type KategoriaTetel,
-} from "./kategoria";
+import { csoportStatisztika, kapcsolatKategoria, type KategoriaTetel } from "./kategoria";
+import { kategoriaAdminApi, kategoriaFeloldas, kategoriaHiba } from "./kategoria-lista";
 import type {
   FeladatCimzett,
   FeladatCsoportTag,
@@ -570,24 +565,6 @@ function naploSor(f: IFeladat, kiId: string, megjegyzes: string): void {
   appendStatusChange(f, allapotOf(f), kiId, megjegyzes);
 }
 
-/**
- * The category as stored (#65): a spelling that matches an existing category (ignoring case and
- * accents) takes the existing spelling, so the list of categories does not fork. `''` = none.
- */
-async function kategoriaMezok(
-  s: string | undefined,
-): Promise<{ kategoria?: string; kategoriaKulcs?: string }> {
-  const kategoria = tisztaKategoria(s);
-  if (!kategoria) return {};
-  const kulcs = kategoriaKulcs(kategoria);
-  const meglevo = await Feladat.findOne({ kategoriaKulcs: kulcs })
-    .sort({ createdAt: 1 })
-    .select("kategoria")
-    .lean()
-    .exec();
-  return { kategoria: meglevo?.kategoria ?? kategoria, kategoriaKulcs: kulcs };
-}
-
 const napSzoveg = (ymd: string) => `${ymd.replaceAll("-", ". ")}.`;
 
 export const feladatApi = {
@@ -622,38 +599,10 @@ export const feladatApi = {
       .sort((a, b) => a.nev.localeCompare(b.nev, "hu"));
   },
 
-  /**
-   * Categories used so far (#65), most used first — the category field's suggestions. `q`
-   * filters case- and accent-insensitively. Shared vocabulary: every user sees every category
-   * name (names only, no task data).
-   */
-  async listKategoriak(
-    q?: string,
-    limit = 20,
-  ): Promise<Array<{ nev: string; db: number }>> {
+  /** The selectable categories (admin list, active ones, list order) — the category pickers. */
+  async listKategoriak(): Promise<Array<{ nev: string }>> {
     await connectDB();
-    const kulcs = q ? kategoriaKulcs(q) : "";
-    const match: Record<string, unknown> = {
-      kategoriaKulcs: { $exists: true, $ne: null },
-    };
-    if (kulcs) {
-      const minta = kulcs.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      match.kategoriaKulcs = { $regex: minta };
-    }
-    const rows = await Feladat.aggregate<{ _id: string; nev: string; db: number }>([
-      { $match: match },
-      { $sort: { createdAt: 1 } },
-      {
-        $group: {
-          _id: "$kategoriaKulcs",
-          nev: { $first: "$kategoria" },
-          db: { $sum: 1 },
-        },
-      },
-      { $sort: { db: -1, nev: 1 } },
-      { $limit: Math.min(Math.max(limit, 1), 100) },
-    ]).exec();
-    return rows.filter((r) => r.nev).map((r) => ({ nev: r.nev, db: r.db }));
+    return (await kategoriaAdminApi.listAktiv()).map((nev) => ({ nev }));
   },
 
   /**
@@ -675,6 +624,8 @@ export const feladatApi = {
       mediaIds?: string[];
       /** Free category (#65) — on every copy of a group. */
       kategoria?: string;
+      /** Module-created tasks: accept a retired category too. */
+      kategoriaRendszer?: boolean;
     },
   ): Promise<{
     id: string;
@@ -728,7 +679,8 @@ export const feladatApi = {
     const mediaIds = (input.mediaIds ?? [])
       .filter((id) => Types.ObjectId.isValid(id))
       .map((id) => new Types.ObjectId(id));
-    const kategoria = await kategoriaMezok(input.kategoria);
+    const kategoria = await kategoriaFeloldas(input.kategoria, input.kategoriaRendszer);
+    if (kategoriaHiba(kategoria)) return { id: "", db: 0, message: kategoria.hiba };
     const docs = felelosok.map((felelos) => {
       const sajat = String(felelos._id) === String(kiado._id);
       const f = new Feladat({
@@ -1317,8 +1269,13 @@ export const feladatApi = {
     if (hiba || !f) return { ok: false, message: hiba ?? NINCS, db: 0, celok: [] };
     if (!input.hatarido && !input.prioritas && input.kategoria === undefined)
       return { ok: false, message: "Nincs mit módosítani", db: 0, celok: [] };
-    const ujKategoria =
-      input.kategoria === undefined ? undefined : await kategoriaMezok(input.kategoria);
+    const ujKategoriaEredmeny =
+      input.kategoria === undefined
+        ? undefined
+        : await kategoriaFeloldas(input.kategoria);
+    if (ujKategoriaEredmeny && kategoriaHiba(ujKategoriaEredmeny))
+      return { ok: false, message: ujKategoriaEredmeny.hiba, db: 0, celok: [] };
+    const ujKategoria = ujKategoriaEredmeny;
     let ujHatarido: Date | undefined;
     if (input.hatarido) {
       const h = hataridoHiba(input.hatarido);
@@ -1763,6 +1720,7 @@ export const feladatApi = {
         hatarido: input.hatarido,
         prioritas: input.prioritas,
         kategoria: input.kategoria ?? kapcsolatKategoria(k),
+        kategoriaRendszer: true,
       },
     );
     if (!r.id) return { id: "", message: r.message };

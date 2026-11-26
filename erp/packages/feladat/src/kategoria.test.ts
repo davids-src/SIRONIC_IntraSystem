@@ -39,11 +39,11 @@ describe("kategória (#65)", () => {
   });
 
   it("gives linked tasks their module default", () => {
-    expect(kapcsolatKategoria({ modul: "vallalkozas", tipus: "szerzodes" })).toBe(
-      "Szerződés",
+    expect(kapcsolatKategoria({ modul: "ertekesites", tipus: "szerzodes" })).toBe(
+      "Értékesítés",
     );
-    expect(kapcsolatKategoria({ modul: "vallalkozas", tipus: "ajanlatkeres" })).toBe(
-      "Ajánlatkérés",
+    expect(kapcsolatKategoria({ modul: "ertekesites", tipus: "ajanlatkeres" })).toBe(
+      "Értékesítés",
     );
     expect(kapcsolatKategoria({ modul: "x", tipus: "y" })).toBeUndefined();
   });

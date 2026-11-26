@@ -10,6 +10,10 @@ export type BrandingSettings = {
   loginTitle: string;
   loginSubtitle: string;
   footerText: string;
+  /** Stored theme role colours; missing / invalid ones fall back to the default theme. */
+  theme?: Partial<
+    Record<"primary" | "secondary" | "accent" | "success" | "warning" | "danger", string>
+  >;
 };
 
 export const DEFAULT_BRANDING: BrandingSettings = {
@@ -29,6 +33,7 @@ function toBrandingSettings(doc: {
   loginTitle: string;
   loginSubtitle: string;
   footerText: string;
+  theme?: BrandingSettings["theme"];
 }): BrandingSettings {
   return {
     appName: doc.appName,
@@ -41,6 +46,7 @@ function toBrandingSettings(doc: {
     loginTitle: doc.loginTitle,
     loginSubtitle: doc.loginSubtitle,
     footerText: doc.footerText,
+    theme: doc.theme ? { ...doc.theme } : undefined,
   };
 }
 
@@ -56,10 +62,12 @@ export async function getBranding(): Promise<BrandingSettings> {
 }
 
 export type UpdateBrandingInput = Partial<
-  Omit<BrandingSettings, "faviconId" | "logoId" | "loginBackgroundId"> & {
+  Omit<BrandingSettings, "faviconId" | "logoId" | "loginBackgroundId" | "theme"> & {
     faviconId?: string | null;
     logoId?: string | null;
     loginBackgroundId?: string | null;
+    /** `null` resets to the default theme. */
+    theme?: BrandingSettings["theme"] | null;
   }
 >;
 
@@ -76,6 +84,7 @@ export async function updateBranding(
   if (data.footerText !== undefined) update.footerText = data.footerText;
   if (data.faviconId !== undefined) update.faviconId = data.faviconId ?? null;
   if (data.logoId !== undefined) update.logoId = data.logoId ?? null;
+  if (data.theme !== undefined) update.theme = data.theme ?? null;
   if (data.loginBackgroundId !== undefined)
     update.loginBackgroundId = data.loginBackgroundId ?? null;
 

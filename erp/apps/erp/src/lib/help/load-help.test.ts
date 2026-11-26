@@ -181,4 +181,22 @@ describe("load-help integration", () => {
     expect(slugs).toContain("kereses");
     expect(slugs).toContain("vezerlopult");
   });
+
+  it("gates the feladat kategóriák and arculat articles on admin:access", () => {
+    const slugs = (keys: string[]) => getHelpArticlesForUser(keys).map((a) => a.slug);
+    expect(slugs(["admin:access"])).toEqual(
+      expect.arrayContaining(["admin-feladat-kategoriak", "admin-arculat"]),
+    );
+    expect(slugs([])).not.toContain("admin-feladat-kategoriak");
+    expect(getHelpArticleBySlug("admin-arculat", ["admin:access"])?.content).toContain(
+      "Színek beállítása",
+    );
+  });
+
+  it("documents the new table features and the separate notification settings page", () => {
+    expect(getHelpArticleBySlug("tablazatok", [])?.content).toContain("Oszlopszélesség");
+    expect(getHelpArticleBySlug("jelzesek", [])?.content).toContain(
+      "/jelzesek/beallitasok",
+    );
+  });
 });

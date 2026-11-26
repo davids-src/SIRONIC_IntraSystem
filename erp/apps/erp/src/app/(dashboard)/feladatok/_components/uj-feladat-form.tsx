@@ -265,20 +265,6 @@ export function UjFeladatForm({
                   kategoriak={kategoriak}
                   invalid={Boolean(latszik("kategoria"))}
                 />
-                {kategoriak.length > 0 && !kategoria.trim() && (
-                  <div className="flex flex-wrap gap-1.5" aria-label="Gyakori kategóriák">
-                    {kategoriak.slice(0, 5).map((k) => (
-                      <button
-                        key={k}
-                        type="button"
-                        onClick={() => setKategoria(k)}
-                        className="bg-muted hover:bg-accent rounded-full px-2.5 py-0.5 text-xs"
-                      >
-                        {k}
-                      </button>
-                    ))}
-                  </div>
-                )}
                 <Hiba id="uj-feladat-kategoria-hiba">{latszik("kategoria")}</Hiba>
               </div>
             </Szakasz>

@@ -10,6 +10,7 @@ import {
   ShieldIcon,
   ImagesIcon,
   PaletteIcon,
+  TagsIcon,
   MailIcon,
   LogOutIcon,
   UserIcon,
@@ -155,6 +156,11 @@ export function AppSidebar({
         label: "Médiatár",
       });
     }
+    items.push({
+      href: "/admin/feladat-kategoriak",
+      icon: <TagsIcon className="h-4 w-4" />,
+      label: "Feladat kategóriák",
+    });
     items.push({
       href: "/admin/branding",
       icon: <PaletteIcon className="h-4 w-4" />,

@@ -7,6 +7,7 @@ import type { BrandingSettings } from "@erp/db-core";
 import { Button, Input, Label, Textarea } from "@erp/ui";
 import { MediaSelector } from "@erp/media/components";
 import { mediaPreviewPath, type SelectedMedia } from "@erp/media/paths";
+import { ThemeEditor } from "./theme-editor";
 import { updateBrandingAction, type BrandingFormState } from "../actions";
 
 function mediaFromId(id: string | undefined, label: string): SelectedMedia[] {
@@ -120,6 +121,11 @@ export function BrandingManager({ initial }: { initial: BrandingSettings }) {
           maxCount={1}
         />
       </section>
+
+      <ThemeEditor
+        initial={initial.theme}
+        serverErrors={state.success === false ? state.fieldErrors : undefined}
+      />
 
       <section className="flex flex-col gap-4">
         <div>

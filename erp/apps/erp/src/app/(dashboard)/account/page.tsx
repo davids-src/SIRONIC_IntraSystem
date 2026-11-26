@@ -73,7 +73,7 @@ export default async function AccountPage() {
         </CardHeader>
         <CardContent>
           <Button variant="outline" asChild>
-            <Link href="/jelzesek#beallitasok">Értesítési beállítások</Link>
+            <Link href="/jelzesek/beallitasok">Értesítési beállítások</Link>
           </Button>
         </CardContent>
       </Card>

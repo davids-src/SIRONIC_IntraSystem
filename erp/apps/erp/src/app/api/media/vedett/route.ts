@@ -3,6 +3,7 @@ import { getCurrentUser } from "@erp/auth";
 import {
   getVedettMediaResolver,
   isAllowedUploadContentType,
+  officeContentType,
   MEDIA_UPLOAD_MAX_BYTES,
   uploadFileToMedia,
 } from "@erp/media";
@@ -42,10 +43,12 @@ export async function POST(request: Request) {
       { status: 413 },
     );
   }
-  const contentType = file.type || "application/octet-stream";
-  if (!isAllowedUploadContentType(contentType, file.name)) {
+  // Office files: the type browsers send varies (often empty) — store the one of the extension.
+  const contentType =
+    officeContentType(file.name) ?? (file.type || "application/octet-stream");
+  if (!isAllowedUploadContentType(contentType, file.name, { documents: true })) {
     return NextResponse.json(
-      { error: `${file.name}: csak kép vagy PDF` },
+      { error: `${file.name}: csak kép, PDF, Word vagy Excel` },
       { status: 400 },
     );
   }

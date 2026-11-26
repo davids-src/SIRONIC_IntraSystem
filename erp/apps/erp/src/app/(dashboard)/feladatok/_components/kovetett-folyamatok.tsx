@@ -35,6 +35,7 @@ const SZEREP_LABELS: Record<string, string> = {
   kerelmezo: "Kértem",
   indito: "Elindítottam",
   felelos: "Felelős vagyok",
+  korabbi: "Korábban nálam volt",
   ugyintezo: "Ügyintéző",
 };
 

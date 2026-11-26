@@ -197,7 +197,7 @@ export type FolyamatNezet = {
   /** Any open step is past its deadline. */
   kesik: boolean;
   /** How the viewer is involved (list view only). */
-  szerepek?: Array<"kerelmezo" | "indito" | "felelos" | "ugyintezo">;
+  szerepek?: Array<"kerelmezo" | "indito" | "felelos" | "korabbi" | "ugyintezo">;
   frissitve: string;
 };
 

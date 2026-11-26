@@ -61,7 +61,7 @@ A Beszélgetés úgy működik, mint egy csoportos csevegő:
 - **Üzenetek** — a te üzeneteid jobb oldalt, színes buborékban; a többieké bal oldalt, a képükkel és a nevükkel (a kiadónál és a felelősnél a szerepe is). Ugyanannak az embernek az egymás utáni üzenetei egy csokorban vannak; napváltáskor elválasztó áll („Ma”, „Tegnap”, dátum). Az üzenetek alatt a **Látta:** sor mutatja, kik nyitották meg a beszélgetést a legutóbbi üzenet óta.
 - **Frissülés** — a nyitott oldal 15 másodpercenként magától frissül, és akkor is, ha visszaváltasz a lapra; nem kell újratölteni.
 
-**Üzenet írása:** írj a lenti mezőbe, majd **Enter** (vagy a küldés gomb). Új sort **Shift + Enter**-rel kezdesz. A **Csatolás (kép, PDF)** gombbal legfeljebb 5 fájlt csatolhatsz. Az üzenet nem változtat a feladat állapotán; mindenki értesítést kap, aki a feladaton dolgozik.
+**Üzenet írása:** írj a lenti mezőbe, majd **Enter** (vagy a küldés gomb). Új sort **Shift + Enter**-rel kezdesz. A **Csatolás (kép, PDF, Word, Excel)** gombbal legfeljebb 5 fájlt csatolhatsz (kép, PDF, Word vagy Excel). Az üzenet nem változtat a feladat állapotán; mindenki értesítést kap, aki a feladaton dolgozik.
 
 **Megjelölés (@):** írj egy **@** jelet, és kezdd el a nevet — megjelenik a résztvevők listája. A **↑ / ↓** nyilakkal választasz, **Enter**-rel vagy **Tab**-bal beszúrod. A megjelölt név kiemelve látszik (ha téged jelöltek meg, erősebben), és a megjelölt „Megjelöltek: …” értesítést kap.
 

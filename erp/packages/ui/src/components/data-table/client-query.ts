@@ -1,4 +1,5 @@
 import type { ColumnDef, DataTableQuery } from "./types";
+import { matchesTerms, searchTerms } from "./text-match";
 
 function getCellValue<T>(row: T, key: string): unknown {
   return (row as Record<string, unknown>)[key];
@@ -8,7 +9,7 @@ function matchString(hay: unknown, needle: string): boolean {
   if (hay === null || hay === undefined) return false;
   // Array cells (tags, several machines…) match when any element does.
   if (Array.isArray(hay)) return hay.some((h) => matchString(h, needle));
-  return String(hay).toLowerCase().includes(needle.toLowerCase());
+  return matchesTerms(String(hay), searchTerms(needle));
 }
 
 export function applyClientQuery<T extends Record<string, unknown>>(
@@ -68,8 +69,9 @@ export function applyClientQuery<T extends Record<string, unknown>>(
     const q = query.search.trim();
     const searchable = columns.filter((c) => c.searchable);
     const cols = searchable.length > 0 ? searchable : columns;
+    const terms = searchTerms(q);
     rows = rows.filter((row) =>
-      cols.some((c) => matchString(getCellValue(row, c.key), q)),
+      terms.every((t) => cols.some((c) => matchString(getCellValue(row, c.key), t))),
     );
   }
 

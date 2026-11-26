@@ -103,8 +103,8 @@ Ha gépek vagy eszközök felelőse vagy, a lista alatt felsorolja őket, mindeg
 
 Kattints a jobb felső **Új feladat** gombra. Az ablak számozott lépésekben vezet végig; a kurzor rögtön a feladat mezőjében áll, és bárhonnan **Ctrl + Enter**-rel (Macen Cmd + Enter) elküldheted.
 
-1. **Mi a feladat?** — írd be röviden a **feladatot** (kötelező), ha kell, a **részleteket**, és a **Csatolás (kép, PDF)** gombbal legfeljebb 5 fájlt (fájlonként legfeljebb 20 MB). A csatolmányokat csak azok látják, akik a feladatot is láthatják — a Médiatárban nem jelennek meg.
-2. **Kategória** (kötelező) — válassz a korábban használtak közül (a leggyakoribbak gombként is ott vannak a mező alatt), vagy írj be újat (lásd lent).
+1. **Mi a feladat?** — írd be röviden a **feladatot** (kötelező), ha kell, a **részleteket**, és a **Csatolás (kép, PDF, Word, Excel)** gombbal legfeljebb 5 fájlt — kép, PDF, Word vagy Excel (fájlonként legfeljebb 20 MB). A csatolmányokat csak azok látják, akik a feladatot is láthatják — a Médiatárban nem jelennek meg.
+2. **Kategória** (kötelező) — válassz a listából (lásd lent).
 3. **Kinek?**
    - **Magamnak** — saját feladat;
    - kezdd el gépelni egy kolléga nevét (vagy szerepkörét), a **↑ / ↓** nyilakkal válassz, **Enter**-rel add hozzá (ezt többször is megismételheted); üres mezőben a **Backspace** az utolsót veszi le;
@@ -121,12 +121,10 @@ Végül **Kiadom** (több embernél „Kiadom N embernek”, magadnak „Felvesz
 
 ## Kategóriák
 
-A kategória egy szabadon megadható címke (pl. „Beszerzés”, „Iroda”, „M1 projekt”), amivel a feladatokat csoportosítani és kimutatásban összesíteni lehet. **Új feladatnál kötelező** — a korábbi, kategória nélküli feladatok érvényesek maradnak, a Kimutatásban a **Nincs kategória** sorban látszanak.
+A kategória egy címke, amivel a feladatokat csoportosítani és kimutatásban összesíteni lehet. **Új feladatnál kötelező**, és **csak az adminisztrátorok által kezelt listából választható** (alapból a modulok nevei: Partnerek, Értékesítés, Projektek, Készlet, Szerviz, Bizonylatok, Eszközök, Infrastruktúra) — szabadon új kategóriát nem lehet beírni. Ha hiányzik egy kategória, kérd az adminisztrátort, hogy vegye fel ([Feladat kategóriák](/help/admin-feladat-kategoriak)). A korábbi, kategória nélküli feladatok érvényesek maradnak, a Kimutatásban a **Nincs kategória** sorban látszanak.
 
-- A mezőbe gépelve a **korábban használt kategóriák** közül választhatsz (a leggyakoribbak elöl); ha olyat írsz, ami még nincs, mentéskor **új kategória** lesz — a mező alatt ezt jelzi is.
-- A kis- és nagybetű, valamint az ékezet nem számít: ha „szerzodes”-t írsz, és már van „Szerződés”, a meglévőt kapja a feladat, így nem lesz két külön kategória.
 - Csoportos feladatnál minden résztvevő példánya ugyanazt a kategóriát kapja.
-- A **szerződések** és **ajánlatkérések** lépéseihez tartozó feladatok maguktól „Szerződés”, illetve „Ajánlatkérés” kategóriát kapnak.
+- A modulok által létrehozott feladatok maguktól a modulnak megfelelő kategóriát kapják (pl. „Értékesítés”, „Szerviz”).
 - Utólag a kiadó módosíthatja a feladat oldalán: **Határidő, prioritás, kategória** gomb. Más kategóriára cserélheted, de üresre nem törölheted.
 
 ## Ha neked adtak feladatot
@@ -168,7 +166,7 @@ A **Követett folyamatok** fülön a [feladat-folyamatok](/help/feladatok-folyam
 
 Soronként: a szerződés / ajánlatkérés neve, a **típusa**, az **állapota**, hogy **most** melyik lépés fut (és hány lépés kész), **kinél van**, és a futó lépés **határideje** (a lejárt piros). A sorra kattintva a folyamat, a szerződés, illetve az ajánlatkérés oldala nyílik meg.
 
-A feladattáblázat **Haladás** oszlopa minden sornál mutatja, kik dolgoznak rajta (profilképek) és hol tart: folyamat lépésénél „2/4 · Kovács Diána” és százalékos sáv, csoportos feladatnál „3/5 kész”, részlépéseknél „2/4 részlépés”. Több ember egymás utáni munkájához a fejléc **Új folyamat** gombjával indíts [feladat-folyamatot](/help/feladatok-folyamat). A **Szerepem** oszlop (az oszlopválasztóban kapcsolható be) mutatja, miért látod.
+A feladattáblázat **Haladás** oszlopa minden sornál mutatja, kik dolgoznak rajta (profilképek) és hol tart: folyamat lépésénél „2/4 · Kovács Diána” és százalékos sáv, csoportos feladatnál „3/5 kész”, részlépéseknél „2/4 részlépés”. Több ember egymás utáni munkájához a fejléc **Új folyamat** gombjával indíts [feladat-folyamatot](/help/feladatok-folyamat). A **Szerepem** oszlop (az oszlopválasztóban kapcsolható be) mutatja, miért látod. Ha egy szakaszt továbbadtál, a folyamat **nem tűnik el** a listádról: a szerepednél **Korábban nálam volt** szerepel, és tovább követheted, hol tart.
 
 ## Kapcsolt feladatok a szerződésekből és ajánlatkérésekből
 

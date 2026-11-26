@@ -29,23 +29,23 @@ A menüpontok **jogosultságtól függenek**. Ha nem látsz egy modult, kérd a 
 
 ## Modulok röviden
 
-| Terület                 | Fő feladat                                                                                                                                                                     |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Feladatok               | Minden rád váró tétel egy listában, a legsürgősebb elöl; saját feladat felvétele, kiadás kollégának vagy csoportnak, feladat-folyamat, csevegés.                               |
-| Árlista                 | Termék- és szolgáltatás-árlista, ügyfélkategóriánkénti ármátrix, árbontás, árképzési beállítások.                                                                              |
-| Értékesítés             | Árajánlatok (varázsló, befagyasztott árak, kiküldés, utánkövetés, PDF), szerződések és sablonok, beszállítói megrendelőlapok.                                                  |
-| Szerviz                 | Hibajegyek (belső megjegyzésekkel), munkalapok aláírással és készletkiadással, karbantartási tervek lusta esedékességgel.                                                      |
-| Infrastruktúra          | Stackek (Portainer), oldalak (domain, DNS, SSL, proxy) és integrációk egy helyen; image frissítés, napló, SSL megújítás; WordPress/FTP webhelyek belépésekkel; stack sablonok. |
-| Értesítési központ      | A fejléc csengője: feladat- és rendszerjelzések, asztali értesítés, e-mail értesítés (saját döntés).                                                                           |
-| Partnerek, Érdeklődők   | Ügyfelek, alvállalkozók, beszállítók és értékesítési érdeklődők nyilvántartása; árazási profil; archiválás.                                                                    |
-| Titoktár                | Jelszavak és hozzáférések titkosítva; érték csak kérésre jelenik meg (10 mp), naplózva; megosztás felhasználóval vagy szerepkörrel.                                            |
-| Listák és táblázatok    | Keresés, szűrés, rendezés, oszlopok és oldalméret minden lista-nézetben.                                                                                                       |
-| Exportálás és nyomtatás | Bármelyik lista vagy adatlap Excelbe, illetve PDF-be.                                                                                                                          |
-| Készlet                 | Raktárkészlet, bevételezés, foglalás, leltár, RMA ügyek, raktárhelyek; készletérték csak külön jogosultsággal.                                                                 |
-| Eszközök                | Szerszámok nyilvántartása: kiadás kollégának, visszavétel, szerviz, elveszett, kivonás, mozgásnapló.                                                                           |
-| Projektek               | Projektek fázisokkal, ellenőrzőlistával és költségekkel; heti terv Kanban tábla; ellenőrzőlista-sablonok; archiválás okkal.                                                    |
-| Projektek               | Projektek fázisokkal, ellenőrzőlistával és költségekkel; heti terv Kanban tábla; ellenőrzőlista-sablonok; archiválás okkal.                                                    |
-| Bizonylatok             | Szállítólevél (kiadás készletből), teljesítésigazolás (online aláírás), számlák állapota (Billingo), jótállási jegyek.                                                         |
+| Terület                 | Fő feladat                                                                                                                                                                                               |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Feladatok               | Minden rád váró tétel egy listában, a legsürgősebb elöl; saját feladat felvétele, kiadás kollégának vagy csoportnak, feladat-folyamat, csevegés.                                                         |
+| Árlista                 | Termék- és szolgáltatás-árlista, ügyfélkategóriánkénti ármátrix, árbontás, árképzési beállítások.                                                                                                        |
+| Értékesítés             | Árajánlatok (varázsló, befagyasztott árak, kiküldés, utánkövetés, PDF), szerződések és sablonok, beszállítói megrendelőlapok.                                                                            |
+| Szerviz                 | Hibajegyek (belső megjegyzésekkel), munkalapok aláírással és készletkiadással, karbantartási tervek lusta esedékességgel.                                                                                |
+| Infrastruktúra          | Stackek (Portainer), oldalak (domain, DNS, SSL, proxy) és integrációk egy helyen; image frissítés, napló, SSL megújítás; WordPress/FTP webhelyek belépésekkel; stack sablonok.                           |
+| Értesítési központ      | A fejléc csengője: feladat- és rendszerjelzések, asztali értesítés, e-mail értesítés (saját döntés).                                                                                                     |
+| Partnerek, Érdeklődők   | Ügyfelek, alvállalkozók, beszállítók és értékesítési érdeklődők nyilvántartása; árazási profil; archiválás.                                                                                              |
+| Titoktár                | Jelszavak és hozzáférések titkosítva; érték csak kérésre jelenik meg (10 mp), naplózva; megosztás felhasználóval vagy szerepkörrel.                                                                      |
+| Listák és táblázatok    | Keresés, szűrés, rendezés, oszlopok és oldalméret minden lista-nézetben.                                                                                                                                 |
+| Exportálás és nyomtatás | Bármelyik lista vagy adatlap Excelbe, illetve PDF-be.                                                                                                                                                    |
+| Készlet                 | Raktárkészlet, bevételezés, foglalás, leltár, RMA ügyek, raktárhelyek; készletérték csak külön jogosultsággal.                                                                                           |
+| Eszközök                | Szerszámok nyilvántartása: kiadás kollégának, visszavétel, szerviz, elveszett, kivonás, mozgásnapló.                                                                                                     |
+| Projektek               | Projektek fázisokkal, ellenőrzőlistával és költségekkel; heti terv Kanban tábla; ellenőrzőlista-sablonok; archiválás okkal.                                                                              |
+| Adminisztráció          | Felhasználók, szerepkörök, e-mail sablonok, médiatár; arculat és az alkalmazás színei szerepenként (a rendszer ellenőrzi, hogy a szín illik a szerephez); a feladatoknál választható kategóriák listája. |
+| Bizonylatok             | Szállítólevél (kiadás készletből), teljesítésigazolás (online aláírás), számlák állapota (Billingo), jótállási jegyek.                                                                                   |
 
 Az üzleti modulok (Partnerek, Árlista, Készlet, Értékesítés, …) bevezetésükkel együtt kapják meg a saját súgócikküket.
 
@@ -61,6 +61,8 @@ Az üzleti modulok (Partnerek, Árlista, Készlet, Értékesítés, …) bevezet
 - [Feladat-folyamat — lépések egymás után](/help/feladatok-folyamat)
 - [Értesítési központ — jelzések és értesítési beállítások](/help/jelzesek)
 - [E-mail értesítések](/help/ertesitesek-email)
+- [Arculat és színek](/help/admin-arculat)
+- [Feladat kategóriák](/help/admin-feladat-kategoriak)
 - [Eszközök — lista és összesítő](/help/eszkoz-lista)
 - [Eszköz adatlapja — kiadás, visszavétel, szerviz](/help/eszkoz-adatlap)
 - [Projektek — lista és összesítő](/help/projekt-lista)

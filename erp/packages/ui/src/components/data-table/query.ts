@@ -1,5 +1,6 @@
 import { parsePagination } from "@erp/lib/utils";
 import type { ColumnDef, DataTableQuery } from "./types";
+import { searchTerms, termRegexSource } from "./text-match";
 
 /** Selectable "hány sor legyen egy oldalon" values, offered by the pagination bar. */
 export const DATA_TABLE_PAGE_SIZES = [10, 25, 50, 100, 250] as const;
@@ -87,10 +88,6 @@ export function resolveClientDataTableQuery(
   };
 }
 
-function escapeRegex(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 function mongoField<T>(col: ColumnDef<T>): string {
   return col.mongoKey ?? col.key;
 }
@@ -168,20 +165,31 @@ export function buildDataTableMongoQuery<T>(
     }
 
     // string default
-    const v = String(values[0] ?? "").trim();
-    if (v) filter[field] = { $regex: escapeRegex(v), $options: "i" };
+    const terms = searchTerms(String(values[0] ?? ""));
+    if (terms.length === 1)
+      filter[field] = { $regex: termRegexSource(terms[0]!), $options: "i" };
+    else if (terms.length > 1) {
+      // Several terms: every one has to occur in the field, in any order.
+      const and = terms.map((t) => ({
+        [field]: { $regex: termRegexSource(t), $options: "i" },
+      }));
+      filter.$and = [...((filter.$and as unknown[]) ?? []), ...and];
+    }
   }
 
   // Search: $text if available, else regex across searchable columns
   if (query.search) {
     const searchable = columns.filter((c) => c.searchable);
+    const terms = searchTerms(query.search);
     if (searchable.length > 0) {
-      const or = searchable.map((c) => ({
-        [mongoField(c)]: { $regex: escapeRegex(query.search!), $options: "i" },
+      // Each term must match some searchable column; different terms may match different ones
+      // ("086 hunga" = DMS-szám + partner).
+      const ands = terms.map((t) => ({
+        $or: searchable.map((c) => ({
+          [mongoField(c)]: { $regex: termRegexSource(t), $options: "i" },
+        })),
       }));
-      filter.$and = filter.$and
-        ? [...(filter.$and as unknown[]), { $or: or }]
-        : [{ $or: or }];
+      if (ands.length > 0) filter.$and = [...((filter.$and as unknown[]) ?? []), ...ands];
     } else {
       filter.$text = { $search: query.search };
     }

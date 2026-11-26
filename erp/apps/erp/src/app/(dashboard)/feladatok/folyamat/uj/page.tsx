@@ -20,7 +20,7 @@ export default async function UjFolyamatPage({
   const { feladat: feladatId } = await searchParams;
   const [cimzettek, kategoriak, sablonok] = await Promise.all([
     feladatApi.listFeladatCimzettek(viewer),
-    feladatApi.listKategoriak(undefined, 200),
+    feladatApi.listKategoriak(),
     feladatFolyamatApi.listFolyamatSablonok(viewer),
   ]);
   let alap: UjFolyamatAlap | undefined;

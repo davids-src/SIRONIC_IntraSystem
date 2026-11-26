@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { FileTextIcon, PaperclipIcon, XIcon } from "lucide-react";
 import { FileUploadButton, cn } from "@erp/ui";
-import { MEDIA_UPLOAD_ACCEPT } from "@erp/media/upload-constraints";
+import { DOCUMENT_UPLOAD_ACCEPT } from "@erp/media/upload-constraints";
 import { FELADAT_CSATOLMANY_MAX } from "@erp/feladat/client";
 
 export type Csatolmany = {
@@ -75,7 +75,7 @@ export function CsatolmanyFeltolto({
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <FileUploadButton
-        accept={MEDIA_UPLOAD_ACCEPT}
+        accept={DOCUMENT_UPLOAD_ACCEPT}
         multiple
         size="sm"
         variant="ghost"
@@ -83,7 +83,7 @@ export function CsatolmanyFeltolto({
         disabled={disabled || marad <= 0}
         onFilesSelected={feltolt}
       >
-        Csatolás (kép, PDF)
+        Csatolás (kép, PDF, Word, Excel)
       </FileUploadButton>
       {value.map((c) => (
         <span

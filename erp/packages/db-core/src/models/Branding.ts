@@ -10,6 +10,10 @@ export interface IBranding extends Document {
   loginTitle: string;
   loginSubtitle: string;
   footerText: string;
+  /** Theme role colours as `#rrggbb`; validated by `@erp/core/theme` on save. */
+  theme?: Partial<
+    Record<"primary" | "secondary" | "accent" | "success" | "warning" | "danger", string>
+  >;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -35,6 +39,20 @@ const BrandingSchema = new Schema<IBranding>(
       type: String,
       required: true,
       default: "© 2026 SIRONIC. Minden jog fenntartva.",
+    },
+    theme: {
+      type: new Schema(
+        {
+          primary: String,
+          secondary: String,
+          accent: String,
+          success: String,
+          warning: String,
+          danger: String,
+        },
+        { _id: false },
+      ),
+      default: undefined,
     },
   },
   { timestamps: true },

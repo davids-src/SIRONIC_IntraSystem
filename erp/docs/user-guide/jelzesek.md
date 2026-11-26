@@ -8,7 +8,7 @@ section: Áttekintés
 ## Hol találod
 
 - A fejléc jobb oldalán a **csengő** ikon — rajta az olvasatlan jelzéseid száma. Rákattintva oldalt megnyílik a legutóbbi jelzések panelje.
-- **Oldalsáv → Általános → Értesítések** (`/jelzesek`) — az **Értesítési központ**: a teljes előzmény szűréssel és lapozással, felül a **Beállítások** blokkal.
+- **Oldalsáv → Általános → Értesítések** (`/jelzesek`) — az **Értesítési központ**: a teljes előzmény szűréssel és lapozással. A jobb felső **Beállítások** gomb külön oldalra (`/jelzesek/beallitasok`) visz, ahol az asztali és az e-mail értesítéseket állíthatod — így a központ rögtön a jelzésekkel nyílik.
 - A csengő paneljén a **Beállítások** gomb egyenesen az értesítési beállításokhoz visz; a [Fiók](/help/fiok) oldalról is elérhető.
 
 ## Mi kerül ide
@@ -28,7 +28,7 @@ A **feladatokról** (új feladat, elfogadás, készre jelölés, továbbadás, m
 - Egy jelzésre kattintva olvasottnak jelölöd, és megnyílik a hozzá tartozó oldal (például a szabadságkérelem).
 - **Mind olvasott** — az összes jelzésedet egyszerre olvasottnak jelöli.
 - **Összes értesítés** — az Értesítési központ (`/jelzesek`).
-- **Beállítások** — asztali és e-mail értesítések (lásd lent).
+- **Beállítások** gomb — az asztali és e-mail értesítések külön oldala (lásd lent).
 - A panel alján kapcsolhatod be vagy ki az asztali értesítéseket ezen az eszközön.
 
 A szám percenként és az ablakba visszatérve magától frissül.
@@ -44,11 +44,11 @@ Az olvasott állapot személyes: ha te elolvasol egy jelzést, a többi címzett
 
 ## Asztali értesítések
 
-Bekapcsolva a jelzések és a feladatokról szóló értesítések rendszerértesítésként is felugranak, akkor is, ha a RecPlus nincs nyitva. Minden eszközön és böngészőben külön kell bekapcsolni: a csengő paneljén vagy az Értesítési központ **Beállítások** blokkjában az **Asztali értesítések bekapcsolása** gombbal.
+Bekapcsolva a jelzések és a feladatokról szóló értesítések rendszerértesítésként is felugranak, akkor is, ha a SIRONIC ERP nincs nyitva. Minden eszközön és böngészőben külön kell bekapcsolni: a csengő paneljén vagy az Értesítési központ **Beállítások** oldalán (`/jelzesek/beallitasok`) az **Asztali értesítések bekapcsolása** gombbal.
 
 ## E-mail értesítések
 
-Ugyanitt, a **Beállítások** blokkban kérhetsz e-mailt is **új feladatról**, **feladataid változásáról** és **jelzésekről** — alapértelmezetten mind ki van kapcsolva. Részletek: [E-mail értesítések](/help/ertesitesek-email).
+Ugyanezen a **Beállítások** oldalon kérhetsz e-mailt is **új feladatról**, **feladataid változásáról** és **jelzésekről** — alapértelmezetten mind ki van kapcsolva. Részletek: [E-mail értesítések](/help/ertesitesek-email).
 
 - Az **Értesítések bekapcsolva · Teszt** gomb tesztértesítést küld, és eszközönként megmutatja az eredményt (**Elküldve**, vagy **Sikertelen** az okkal).
 - A RecPlus minden betöltéskor ellenőrzi a feliratkozást, és ha kell, magától megújítja.
@@ -60,7 +60,7 @@ A böngésző megkapta az értesítést, de az operációs rendszer elnémítja:
 
 - **macOS:** Rendszerbeállítások → Értesítések → a böngésző (Chrome, Edge, Safari): engedélyezve, „Figyelmeztetés” vagy „Szalaghirdetés” stílussal. A **Fókusz / Ne zavarjanak** legyen kikapcsolva.
 - **Windows:** Gépház → Rendszer → Értesítések: a böngésző értesítései bekapcsolva, a **Ne zavarjanak** (Fókuszsegéd) kikapcsolva.
-- **Android:** Beállítások → Alkalmazások → a böngésző vagy a telepített RecPlus → Értesítések: bekapcsolva.
+- **Android:** Beállítások → Alkalmazások → a böngésző vagy a telepített SIRONIC ERP → Értesítések: bekapcsolva.
 - **iPhone / iPad:** csak a kezdőképernyőre telepített RecPlus kaphat értesítést (iOS 16.4 vagy újabb), Safariban megnyitva nem.
 
 A jelzés ilyenkor sem vész el: a csengőnél mindig megtalálod.

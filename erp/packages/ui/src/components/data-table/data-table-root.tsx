@@ -12,6 +12,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { DataTableHeaderHint } from "./header-hint";
+import { formatDateCell } from "./format-cell";
 import {
   columnPickerLabel,
   getFactoryDefaultVisibleColumns,
@@ -192,6 +193,51 @@ export function DataTableRoot<T extends Record<string, unknown>>({
     setVisibleKeys(getDefaultVisibleColumns(tableId, columns));
   }, [tableId, columnKeySignature, columns]);
 
+  /** Widths the user dragged the columns to (px by key); remembered per table in the browser. */
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+  const headRef = useRef<HTMLTableRowElement>(null);
+
+  useEffect(() => {
+    setColumnWidths(getTablePreferences(tableId).columnWidths ?? {});
+  }, [tableId]);
+
+  const startResize = (e: React.PointerEvent, key: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const ths = Array.from(
+      headRef.current?.querySelectorAll<HTMLElement>("th[data-col]") ?? [],
+    );
+    // Freeze every column at its current width first, so dragging one never reflows the others.
+    const frozen: Record<string, number> = { ...columnWidths };
+    for (const th of ths) {
+      const k = th.dataset.col!;
+      if (frozen[k] === undefined)
+        frozen[k] = Math.round(th.getBoundingClientRect().width);
+    }
+    const startX = e.clientX;
+    const startW = frozen[key] ?? 120;
+    let latest = frozen;
+    const move = (ev: PointerEvent) => {
+      latest = {
+        ...frozen,
+        [key]: Math.max(48, Math.round(startW + ev.clientX - startX)),
+      };
+      setColumnWidths(latest);
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      setTablePreferences(tableId, { columnWidths: latest });
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+
+  const resetWidths = () => {
+    setColumnWidths({});
+    setTablePreferences(tableId, { columnWidths: {} });
+  };
+
   /** Keeps the list the way the user left it (#62). A list opened without any table params
    * (sidebar, breadcrumb, an adatlap's „Vissza” link) gets the query remembered for this path in
    * the browser tab — unless it is a browser back/forward step or the user cleared the list on
@@ -359,6 +405,10 @@ export function DataTableRoot<T extends Record<string, unknown>>({
       );
     }
     if (col.type === "boolean") return value ? "Igen" : "Nem";
+    // Dates read as `2026. 11. 26. 14:30`, never as the raw `Date` string with `GMT+1:00`.
+    const date =
+      value instanceof Date || col.type === "date" ? formatDateCell(value) : undefined;
+    if (date) return date;
     return String(value);
   };
 
@@ -514,6 +564,11 @@ export function DataTableRoot<T extends Record<string, unknown>>({
   };
 
   const compact = variant === "compact";
+  const hasWidths = displayColumns.some((c) => columnWidths[c.key] !== undefined);
+  const totalWidth =
+    displayColumns.reduce((n, c) => n + (columnWidths[c.key] ?? 120), 0) +
+    (selectable ? 40 : 0) +
+    (rowOpen === "both" && rowHref ? 40 : 0);
   const cellPad = compact ? "px-2 py-1.5 text-xs" : "px-3 py-2 text-sm";
 
   return (
@@ -617,9 +672,25 @@ export function DataTableRoot<T extends Record<string, unknown>>({
         data-table-box=""
         className="max-h-[75vh] overflow-auto rounded-lg border"
       >
-        <table className="w-full">
+        <table
+          className="w-full"
+          style={
+            hasWidths
+              ? { tableLayout: "fixed", width: Math.max(totalWidth, 0), minWidth: "100%" }
+              : undefined
+          }
+        >
+          {hasWidths && (
+            <colgroup>
+              {selectable && <col style={{ width: 40 }} />}
+              {displayColumns.map((col) => (
+                <col key={col.key} style={{ width: columnWidths[col.key] }} />
+              ))}
+              {rowOpen === "both" && rowHref && <col style={{ width: 40 }} />}
+            </colgroup>
+          )}
           <thead className="bg-background sticky top-0 z-10 shadow-[0_1px_0_0_var(--border)]">
-            <tr>
+            <tr ref={headRef}>
               {selectable && (
                 <th className={cn(cellPad, "w-10")}>
                   <input
@@ -637,9 +708,10 @@ export function DataTableRoot<T extends Record<string, unknown>>({
               {displayColumns.map((col) => (
                 <th
                   key={col.key}
+                  data-col={col.key}
                   className={cn(
                     cellPad,
-                    "text-left font-medium",
+                    "relative text-left font-medium",
                     col.align === "right" && "text-right",
                     col.align === "center" && "text-center",
                   )}
@@ -661,6 +733,15 @@ export function DataTableRoot<T extends Record<string, unknown>>({
                       <DataTableHeaderHint text={col.headerHint} />
                     ) : null}
                   </span>
+                  <span
+                    role="separator"
+                    aria-orientation="vertical"
+                    aria-label={`${col.label || col.key} oszlop szélessége`}
+                    title="Húzd az oszlop szélességének állításához · dupla kattintás: alaphelyzet"
+                    onPointerDown={(e) => startResize(e, col.key)}
+                    onDoubleClick={resetWidths}
+                    className="hover:bg-primary/40 absolute inset-y-0 right-0 w-1.5 cursor-col-resize touch-none select-none"
+                  />
                 </th>
               ))}
               {rowOpen === "both" && rowHref && (
@@ -747,6 +828,7 @@ export function DataTableRoot<T extends Record<string, unknown>>({
                           key={col.key}
                           className={cn(
                             cellPad,
+                            hasWidths && "[overflow-wrap:anywhere]",
                             col.align === "right" && "text-right",
                             col.align === "center" && "text-center",
                           )}

@@ -128,7 +128,7 @@ export default async function FeladatokPage({
   const [cimzettek, nezetDb, kategoriaLista] = await Promise.all([
     feladatApi.listFeladatCimzettek(viewer),
     feladatApi.countFeladatNezetek(viewer),
-    feladatApi.listKategoriak(undefined, 100),
+    feladatApi.listKategoriak(),
   ]);
   const kategoriak = kategoriaLista.map((k) => k.nev);
   // Grouped list (#65): `?csoport=kategoria|felelos|kiado` on the task lists.

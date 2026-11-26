@@ -21,7 +21,10 @@ async function streamGridFs(
     headers: vedett
       ? {
           "Content-Type": contentType,
-          "Content-Disposition": `inline; filename*=UTF-8''${encodeURIComponent(vedett.filename)}`,
+          // Images / PDFs open in the browser; a Word or Excel file downloads.
+          "Content-Disposition": `${
+            /^(image\/|application\/pdf)/.test(contentType) ? "inline" : "attachment"
+          }; filename*=UTF-8''${encodeURIComponent(vedett.filename)}`,
           "Cache-Control": "private, no-store",
           "X-Content-Type-Options": "nosniff",
         }

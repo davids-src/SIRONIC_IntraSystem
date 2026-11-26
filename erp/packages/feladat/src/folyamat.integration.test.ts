@@ -73,7 +73,7 @@ describe("Feladat-folyamat (#67)", () => {
     const r = await feladatFolyamatApi.createFolyamat(v(kiado), {
       cim: "Új gép beszerzése",
       hatarido: nap(10),
-      kategoria: "Beszerzés",
+      kategoria: "Projektek",
       lepesek: [
         { nev: "Árajánlatok bekérése", felelosId: a.id, hatarido: nap(3) },
         { nev: "Jóváhagyás", felelosId: b.id },
@@ -102,7 +102,7 @@ describe("Feladat-folyamat (#67)", () => {
     // A's task is linked to the step and carries the flow's category.
     const elso = await Feladat.findById(f.lepesek[0]!.feladatId).lean();
     expect(elso).toMatchObject({
-      kategoria: "Beszerzés",
+      kategoria: "Projektek",
       kapcsolat: {
         modul: "feladat",
         tipus: "folyamat",

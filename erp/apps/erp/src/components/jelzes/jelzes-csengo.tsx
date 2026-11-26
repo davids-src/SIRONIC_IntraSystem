@@ -120,7 +120,7 @@ export function JelzesCsengo({ olvasatlan: kezdo }: { olvasatlan: number }) {
                 </Link>
               </Button>
               <Button size="sm" variant="ghost" asChild>
-                <Link href="/jelzesek#beallitasok" onClick={() => setNyitva(false)}>
+                <Link href="/jelzesek/beallitasok" onClick={() => setNyitva(false)}>
                   <SettingsIcon className="h-4 w-4" /> Beállítások
                 </Link>
               </Button>

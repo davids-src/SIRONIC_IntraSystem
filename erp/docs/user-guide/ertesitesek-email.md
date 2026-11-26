@@ -7,7 +7,7 @@ section: Áttekintés
 
 ## Hol találod
 
-- **Oldalsáv → Általános → Értesítések** (`/jelzesek`) → **Beállítások** blokk → **E-mail értesítések**.
+- **Oldalsáv → Általános → Értesítések** (`/jelzesek`) → jobb felül a **Beállítások** gomb (`/jelzesek/beallitasok`) → **E-mail értesítések**.
 - A fejléc **csengőjén** a **Beállítások** gomb, vagy a [Fiók](/help/fiok) oldalon az **Értesítési beállítások** gomb ugyanide visz.
 
 ## Mit kapcsolhatsz be

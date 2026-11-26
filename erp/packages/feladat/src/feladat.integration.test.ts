@@ -5,6 +5,8 @@ import { createTestMongo } from "@erp/test-utils/mongo-memory";
 import { connectDB, getNativeClient, User } from "@erp/db-core";
 import { budapestNap } from "@erp/lib/utils";
 import { feladatApi as hrApi } from "./api";
+import { kategoriaAdminApi } from "./kategoria-lista";
+import { ALAP_KATEGORIAK } from "./kategoria";
 import { FELADAT_PERMISSIONS, type FeladatViewer } from "./constants";
 import { Feladat } from "./models/Feladat";
 import {
@@ -750,14 +752,14 @@ describe("lépések és kapcsolt feladatok (8c, #50)", () => {
     const anna = await fiok("Kiss Anna");
     const csaba = await fiok("Tóth Csaba");
     const esemenyek: KapcsoltFeladatEsemeny[] = [];
-    registerKapcsoltFeladatHook("vallalkozas", (e) => {
+    registerKapcsoltFeladatHook("ertekesites", (e) => {
       esemenyek.push(e);
     });
     registerKapcsoltFeladatHook("masik", () => {
       throw new Error("nem dől el tőle semmi");
     });
     const kapcsolat = {
-      modul: "vallalkozas",
+      modul: "ertekesites",
       tipus: "ajanlatkeres",
       id: "AK-1",
       szakasz: "onkoltseg",
@@ -778,7 +780,7 @@ describe("lépések és kapcsolt feladatok (8c, #50)", () => {
     expect(sor?.lepesek.map((l) => l.nev)).toEqual(["Beszállítói árak", "Kalkuláció"]);
     expect(
       await hrApi.listKapcsoltFeladatok({
-        modul: "vallalkozas",
+        modul: "ertekesites",
         tipus: "ajanlatkeres",
         id: "AK-1",
       }),
@@ -843,7 +845,7 @@ describe("lépések és kapcsolt feladatok (8c, #50)", () => {
     });
     expect(
       await hrApi.lezarKapcsoltFeladatok(
-        { modul: "vallalkozas", tipus: "ajanlatkeres", id: "AK-1" },
+        { modul: "ertekesites", tipus: "ajanlatkeres", id: "AK-1" },
         bela.id,
         "Elvetve",
       ),
@@ -1091,57 +1093,77 @@ describe("csoportos feladat kezelése (8m, #61)", () => {
 });
 
 describe("kategória (#65)", () => {
-  it("stores a category on every copy, reuses an existing spelling, lists them most used first", async () => {
+  it("only accepts categories of the admin list, stores the list spelling, renames and retires", async () => {
     const bela = await fiok("Nagy Béla");
     const anna = await fiok("Kiss Anna");
     const ede = await fiok("Tóth Ede");
+
+    // The list starts with the module names.
+    expect(await kategoriaAdminApi.listAktiv()).toEqual([...ALAP_KATEGORIAK]);
 
     const csoport = await hrApi.createFeladat(v(bela), {
       felelosIds: [anna.id, ede.id],
       cim: "Ajánlatok bekérése",
       hatarido: nap(3),
-      kategoria: "  Beszerzés ",
+      kategoria: "  ertekesites ",
     });
     const peldanyok = await Feladat.find({}).lean().exec();
-    expect(peldanyok.map((p) => p.kategoria)).toEqual(["Beszerzés", "Beszerzés"]);
+    expect(peldanyok.map((p) => p.kategoria)).toEqual(["Értékesítés", "Értékesítés"]);
 
-    // Another spelling of the same category takes the existing one.
-    const masik = await hrApi.createFeladat(v(anna), {
+    // A free-text category is refused.
+    const szabad = await hrApi.createFeladat(v(anna), {
       felelosIds: [anna.id],
       cim: "Saját",
       hatarido: nap(1),
-      kategoria: "BESZERZES",
+      kategoria: "Beszerzés",
     });
-    const [sajat] = await hrApi
-      .listFeladatok(v(anna), { nezet: "kapott", allapot: "nyitott" })
-      .then((l) => l.filter((f) => f.id === masik.id));
-    expect(sajat?.kategoria).toBe("Beszerzés");
+    expect(szabad).toMatchObject({ id: "", message: "Válassz kategóriát a listából" });
 
-    await hrApi.createFeladat(v(bela), {
+    // The admin adds one; now it is accepted.
+    expect(await kategoriaAdminApi.hozzaad("Beszerzés")).toEqual({ ok: true });
+    expect(await kategoriaAdminApi.hozzaad("beszerzes")).toMatchObject({ ok: false });
+    const uj = await hrApi.createFeladat(v(bela), {
       felelosIds: [ede.id],
       cim: "Irodaszer",
       hatarido: nap(2),
-      kategoria: "Iroda",
+      kategoria: "BESZERZES",
     });
-    expect(await hrApi.listKategoriak()).toEqual([
-      { nev: "Beszerzés", db: 3 },
-      { nev: "Iroda", db: 1 },
-    ]);
-    expect(await hrApi.listKategoriak("irod")).toEqual([{ nev: "Iroda", db: 1 }]);
-    expect(await hrApi.listKategoriak("beszerzés")).toEqual([
-      { nev: "Beszerzés", db: 3 },
-    ]);
+    expect(uj.id).not.toBe("");
+    expect(
+      (await kategoriaAdminApi.listAdmin()).find((k) => k.nev === "Beszerzés")?.db,
+    ).toBe(1);
 
     // The kiadó changes it on the whole group (log line), or clears it.
-    const r = await hrApi.modositFeladatot(v(bela), csoport.id, { kategoria: "iroda" });
+    const r = await hrApi.modositFeladatot(v(bela), csoport.id, { kategoria: "szerviz" });
     expect(r).toMatchObject({ ok: true, db: 2 });
     const utana = await Feladat.find({ csoportId: { $exists: true } })
       .lean()
       .exec();
-    expect(utana.map((p) => p.kategoria)).toEqual(["Iroda", "Iroda"]);
-    expect(utana[0]!.statusHistory.at(-1)?.note).toContain("kategória Beszerzés → Iroda");
+    expect(utana.map((p) => p.kategoria)).toEqual(["Szerviz", "Szerviz"]);
+    expect(utana[0]!.statusHistory.at(-1)?.note).toContain(
+      "kategória Értékesítés → Szerviz",
+    );
+    expect(
+      await hrApi.modositFeladatot(v(bela), csoport.id, { kategoria: "Egyéb" }),
+    ).toMatchObject({
+      ok: false,
+    });
     await hrApi.modositFeladatot(v(bela), csoport.id, { kategoria: "", csakEz: true });
     expect((await Feladat.findById(csoport.id).lean().exec())?.kategoria).toBeUndefined();
+
+    // Renaming carries over to the tasks; a used entry cannot be deleted, a retired one cannot be picked.
+    const besz = (await kategoriaAdminApi.listAdmin()).find(
+      (k) => k.nev === "Beszerzés",
+    )!;
+    expect(await kategoriaAdminApi.atnevez(besz.id, "Beszerzés és logisztika")).toEqual({
+      ok: true,
+    });
+    expect((await Feladat.findById(uj.id).lean().exec())?.kategoria).toBe(
+      "Beszerzés és logisztika",
+    );
+    expect(await kategoriaAdminApi.torol(besz.id)).toMatchObject({ ok: false });
+    await kategoriaAdminApi.beallitAktiv(besz.id, false);
+    expect(await kategoriaAdminApi.listAktiv()).not.toContain("Beszerzés és logisztika");
 
     // A copy handed on keeps it.
     const edeCopy = utana.find((p) => String(p.assignee?.userId) === ede.id)!;
@@ -1151,8 +1173,6 @@ describe("kategória (#65)", () => {
       indok: "Ő érti",
     });
     expect(t.ok).toBe(true);
-    const uj = await Feladat.findOne({ elozmenyId: edeCopy._id }).lean().exec();
-    expect(uj?.kategoria).toBe("Iroda");
   });
 
   it("gives linked tasks their module default and groups the KPI by category", async () => {
@@ -1165,14 +1185,14 @@ describe("kategória (#65)", () => {
       cim: "Véleményezd a szerződést",
       hatarido: nap(2),
       kapcsolat: {
-        modul: "vallalkozas",
+        modul: "ertekesites",
         tipus: "szerzodes",
         id: "x1",
         szakasz: "velemenyezes",
         url: "/vallalkozas/szerzodesek/x1",
       },
     });
-    expect((await hrApi.getFeladat(v(anna), k.id))?.kategoria).toBe("Szerződés");
+    expect((await hrApi.getFeladat(v(anna), k.id))?.kategoria).toBe("Értékesítés");
     await hrApi.createFeladat(v(bela), {
       felelosIds: [anna.id],
       cim: "Más",
@@ -1181,7 +1201,7 @@ describe("kategória (#65)", () => {
 
     const kpi = await hrApi.getFeladatKimutatas(v(vezeto));
     expect(kpi?.csoportok.kategoria.map((c) => [c.nev, c.osszes, c.nyitott])).toEqual([
-      ["Szerződés", 1, 1],
+      ["Értékesítés", 1, 1],
       ["Nincs kategória", 1, 1],
     ]);
     expect(kpi?.csoportok.felelos.map((c) => [c.nev, c.osszes])).toEqual([
