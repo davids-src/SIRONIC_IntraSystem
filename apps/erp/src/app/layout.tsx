@@ -24,7 +24,7 @@ const geistMono = Geist_Mono({
 
 export async function generateMetadata(): Promise<Metadata> {
   const branding = await getBranding();
-  const faviconUrl = brandingMediaUrl(branding.faviconId) ?? "/favicon.ico";
+  const faviconUrl = brandingMediaUrl(branding.faviconId) ?? "/icons/sironic-mark.svg";
   return {
     title: {
       default: branding.appName,

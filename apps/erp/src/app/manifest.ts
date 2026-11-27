@@ -28,12 +28,17 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
         type: "image/png",
         purpose: "maskable",
       },
-      {
-        src: "/icons/pwa-icon.svg",
-        sizes: "any",
-        type: "image/svg+xml",
-        purpose: "any",
-      },
+      // The built-in mark also ships as SVG; a custom icon only exists as the PNGs above.
+      ...(branding.pwaIconId
+        ? []
+        : [
+            {
+              src: "/icons/pwa-icon.svg",
+              sizes: "any",
+              type: "image/svg+xml",
+              purpose: "any" as const,
+            },
+          ]),
     ],
   };
 }

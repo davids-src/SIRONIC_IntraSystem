@@ -5,6 +5,8 @@ export type BrandingSettings = {
   appName: string;
   companyName: string;
   faviconId?: string;
+  /** Home-screen / PWA icon; unset = the built-in SIRONIC mark. */
+  pwaIconId?: string;
   logoId?: string;
   loginBackgroundId?: string;
   loginTitle: string;
@@ -28,6 +30,7 @@ function toBrandingSettings(doc: {
   appName: string;
   companyName: string;
   faviconId?: { toString(): string };
+  pwaIconId?: { toString(): string };
   logoId?: { toString(): string };
   loginBackgroundId?: { toString(): string };
   loginTitle: string;
@@ -39,6 +42,7 @@ function toBrandingSettings(doc: {
     appName: doc.appName,
     companyName: doc.companyName,
     faviconId: doc.faviconId ? doc.faviconId.toString() : undefined,
+    pwaIconId: doc.pwaIconId ? doc.pwaIconId.toString() : undefined,
     logoId: doc.logoId ? doc.logoId.toString() : undefined,
     loginBackgroundId: doc.loginBackgroundId
       ? doc.loginBackgroundId.toString()
@@ -62,8 +66,9 @@ export async function getBranding(): Promise<BrandingSettings> {
 }
 
 export type UpdateBrandingInput = Partial<
-  Omit<BrandingSettings, "faviconId" | "logoId" | "loginBackgroundId" | "theme"> & {
+  Omit<BrandingSettings, "faviconId" | "pwaIconId" | "logoId" | "loginBackgroundId" | "theme"> & {
     faviconId?: string | null;
+    pwaIconId?: string | null;
     logoId?: string | null;
     loginBackgroundId?: string | null;
     /** `null` resets to the default theme. */
@@ -83,6 +88,7 @@ export async function updateBranding(
   if (data.loginSubtitle !== undefined) update.loginSubtitle = data.loginSubtitle;
   if (data.footerText !== undefined) update.footerText = data.footerText;
   if (data.faviconId !== undefined) update.faviconId = data.faviconId ?? null;
+  if (data.pwaIconId !== undefined) update.pwaIconId = data.pwaIconId ?? null;
   if (data.logoId !== undefined) update.logoId = data.logoId ?? null;
   if (data.theme !== undefined) update.theme = data.theme ?? null;
   if (data.loginBackgroundId !== undefined)

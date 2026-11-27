@@ -34,6 +34,9 @@ export function BrandingManager({ initial }: { initial: BrandingSettings }) {
   const [favicon, setFavicon] = useState<SelectedMedia[]>(() =>
     mediaFromId(initial.faviconId, "Favicon"),
   );
+  const [pwaIcon, setPwaIcon] = useState<SelectedMedia[]>(() =>
+    mediaFromId(initial.pwaIconId, "Alkalmazás ikon"),
+  );
   const [loginBackground, setLoginBackground] = useState<SelectedMedia[]>(() =>
     mediaFromId(initial.loginBackgroundId, "Háttér"),
   );
@@ -86,7 +89,7 @@ export function BrandingManager({ initial }: { initial: BrandingSettings }) {
           <h2 className="text-base font-semibold">Képek</h2>
           <p className="text-muted-foreground text-sm">
             Válasszon a médiatárból vagy töltsön fel újat. A favicon ajánlott méret: 32×32
-            vagy 64×64 px.
+            vagy 64×64 px. Ha nincs kiválasztva, a beépített SIRONIC jel jelenik meg.
           </p>
         </div>
         <input type="hidden" name="logoId" value={logo[0]?.id ?? ""} />
@@ -104,6 +107,15 @@ export function BrandingManager({ initial }: { initial: BrandingSettings }) {
           description="Böngésző fül ikon."
           value={favicon}
           onChange={setFavicon}
+          multiple={false}
+          maxCount={1}
+        />
+        <input type="hidden" name="pwaIconId" value={pwaIcon[0]?.id ?? ""} />
+        <MediaSelector
+          label="Alkalmazás ikon (PWA)"
+          description="Telepített alkalmazás és kezdőképernyő ikonja. Négyzetes PNG vagy SVG, legalább 512×512 px."
+          value={pwaIcon}
+          onChange={setPwaIcon}
           multiple={false}
           maxCount={1}
         />

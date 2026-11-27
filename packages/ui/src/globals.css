@@ -9,7 +9,9 @@
  * (Sheet, Sidebar, Button, …) ship with missing utilities.
  */
 @source './**/*.{ts,tsx}';
-@source '../../../apps/crm/src/**/*.{ts,tsx}';
+@source '../../*/src/**/*.{ts,tsx}';
+@source '../../../apps/erp/src/**/*.{ts,tsx}';
+@source '../../../apps/portal/src/**/*.{ts,tsx}';
 
 @custom-variant dark (&:is(.dark *));
 

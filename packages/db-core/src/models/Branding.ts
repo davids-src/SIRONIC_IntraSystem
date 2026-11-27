@@ -5,6 +5,8 @@ export interface IBranding extends Document {
   appName: string;
   companyName: string;
   faviconId?: Types.ObjectId;
+  /** Home-screen / PWA icon; unset = the built-in SIRONIC mark. */
+  pwaIconId?: Types.ObjectId;
   logoId?: Types.ObjectId;
   loginBackgroundId?: Types.ObjectId;
   loginTitle: string;
@@ -23,6 +25,7 @@ const BrandingSchema = new Schema<IBranding>(
     appName: { type: String, required: true, default: "SIRONIC" },
     companyName: { type: String, required: true, default: "SIRONIC ERP" },
     faviconId: { type: Schema.Types.ObjectId, ref: "Media" },
+    pwaIconId: { type: Schema.Types.ObjectId, ref: "Media" },
     logoId: { type: Schema.Types.ObjectId, ref: "Media" },
     loginBackgroundId: { type: Schema.Types.ObjectId, ref: "Media" },
     loginTitle: {

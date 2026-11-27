@@ -1,6 +1,6 @@
 ---
 title: Arculat testreszabása
-description: Alkalmazásnév, logó, favicon, színek és a bejelentkezési oldal megjelenésének beállítása.
+description: Alkalmazásnév, logó, favicon, alkalmazás ikon, színek és a bejelentkezési oldal megjelenésének beállítása.
 order: 5
 section: Adminisztráció
 permissions:
@@ -14,7 +14,8 @@ permissions:
 ## Mit tehetsz itt
 
 - **Alkalmazásnév és cégnév** — az oldalsáv fejlécében és a böngésző címében megjelenő szöveg.
-- **Logó és favicon** — a Médiatárból választható, vagy közvetlenül feltölthető kép.
+- **Logó és favicon** — a Médiatárból választható, vagy közvetlenül feltölthető kép. Ha nincs favicon kiválasztva, a beépített SIRONIC jel jelenik meg a böngészőfülön.
+- **Alkalmazás ikon (PWA)** — a telepített alkalmazás és a telefon kezdőképernyőjének ikonja. Négyzetes PNG vagy SVG képet válassz, legalább 512×512 px méretben; a kép teljes felületén jelenik meg, ezért a fontos részek ne érjenek a széléig. Ha üresen hagyod, a beépített SIRONIC jel lesz az ikon. A már telepített alkalmazásokon az új ikon csak a következő frissítéskor (vagy újratelepítés után) jelenik meg.
 - **Színek** — az alkalmazás hat színszerepe (lásd lent).
 - **Bejelentkezési oldal megjelenése** — a `/login` oldal háttere és megjelenítése.
 

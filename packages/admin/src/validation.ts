@@ -75,6 +75,7 @@ export const brandingUpdateSchema = z.object({
   loginSubtitle: z.string().min(1, "Login subtitle is required").max(200),
   footerText: z.string().max(300).optional().default(""),
   faviconId: optionalObjectId,
+  pwaIconId: optionalObjectId,
   logoId: optionalObjectId,
   loginBackgroundId: optionalObjectId,
 });

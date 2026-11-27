@@ -28,6 +28,7 @@ export async function updateBrandingAction(
     loginSubtitle: formData.get("loginSubtitle"),
     footerText: formData.get("footerText") ?? "",
     faviconId: formData.get("faviconId") ?? undefined,
+    pwaIconId: formData.get("pwaIconId") ?? undefined,
     logoId: formData.get("logoId") ?? undefined,
     loginBackgroundId: formData.get("loginBackgroundId") ?? undefined,
   });
@@ -75,12 +76,14 @@ export async function updateBrandingAction(
     loginSubtitle: data.loginSubtitle,
     footerText: data.footerText || "© 2026 SIRONIC. Minden jog fenntartva.",
     faviconId: data.faviconId ?? null,
+    pwaIconId: data.pwaIconId ?? null,
     logoId: data.logoId ?? null,
     loginBackgroundId: data.loginBackgroundId ?? null,
   });
 
   revalidatePath("/", "layout");
   revalidatePath("/admin/branding");
+  revalidatePath("/manifest.webmanifest");
 
   return { success: true, message: "Arculat mentve." };
 }
