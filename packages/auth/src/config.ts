@@ -85,8 +85,10 @@ export const authConfig: NextAuthConfig = {
             token.picture = dbUser.image ?? undefined;
           }
         }
-        const { permissions } = await getSessionAccess(token.id as string);
-        token.permissions = Array.from(permissions);
+        // Permissions are NOT stored in the token: session() reloads them from the DB on every
+        // read, and the full list bloated the session cookie enough that the login response
+        // headers overflowed the reverse proxy's buffer (502 on the login server action).
+        delete token.permissions;
       }
       return token;
     },
